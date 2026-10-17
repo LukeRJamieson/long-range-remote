@@ -1,0 +1,1730 @@
+Protocol usage (codes):
+  NEC         124466
+  RAW          48152
+  RC5          27513
+  SONY12       13210
+  KASEIKYO     12528
+  NEC2         12052
+  NECX          9531
+  PIONEER       8490
+  JVC           8237
+  SONY15        7347
+  SONY20        6992
+  DENON         4462
+  RC6           4229
+  AIWA          3166
+  SHARP         2904
+  MITSUBISHI    2341
+  (via IrpTransmogrifier) MCE   2156
+  RECS80        1465
+  (via IrpTransmogrifier) G.I.Cable   1335
+  (via IrpTransmogrifier) Dish_Network   1296
+  (via IrpTransmogrifier) Proton   1151
+  (via IrpTransmogrifier) DirecTV   1044
+  (via IrpTransmogrifier) Tivo    927
+  RCA            852
+  (via IrpTransmogrifier) Panasonic_Old    564
+  (via IrpTransmogrifier) Nokia32    547
+  JVC2           426
+  (via IrpTransmogrifier) Fujitsu    409
+  RCA38          387
+  AKAI           338
+  (via IrpTransmogrifier) Sharp{1}    323
+  (via IrpTransmogrifier) XMP-1    299
+  (via IrpTransmogrifier) XMP-2    289
+  (via IrpTransmogrifier) Dgtec    263
+  (via IrpTransmogrifier) Velleman    202
+  DENON1         190
+  EMERSON        186
+  (via IrpTransmogrifier) Blaupunkt    185
+  (via IrpTransmogrifier) Zenith    177
+  (via IrpTransmogrifier) RCA(Old)    164
+  (via IrpTransmogrifier) Thomson    156
+  (via IrpTransmogrifier) Kathrein    146
+  (via IrpTransmogrifier) Barco    143
+  (via IrpTransmogrifier) RC5-7F    139
+  (via IrpTransmogrifier) Nokia    138
+  (via IrpTransmogrifier) Replay    131
+  (via IrpTransmogrifier) RC6-6-20    111
+  (via IrpTransmogrifier) Apple     89
+  (via IrpTransmogrifier) Sejin-1-56     80
+  (via IrpTransmogrifier) CanalSat     75
+  (via IrpTransmogrifier) Nokia12     70
+  (via IrpTransmogrifier) StreamZap     68
+  (via IrpTransmogrifier) Konka     67
+  (via IrpTransmogrifier) ScAtl-6     64
+  (via IrpTransmogrifier) NRC17     60
+  (via IrpTransmogrifier) 48-NEC2     58
+  RCA38OLD        57
+  (via IrpTransmogrifier) Panasonic2     54
+  (via IrpTransmogrifier) 48-NEC1     54
+  (via IrpTransmogrifier) Jerrold     54
+  (via IrpTransmogrifier) Logitech     51
+  (via IrpTransmogrifier) SharpDVD     42
+  (via IrpTransmogrifier) Zaptor-56     40
+  (via IrpTransmogrifier) Samsung36     39
+  (via IrpTransmogrifier) Dishplayer     39
+  TEACK           37
+  (via IrpTransmogrifier) F12     34
+  (via IrpTransmogrifier) G.I.4DTV     30
+  (via IrpTransmogrifier) PaceMSS     29
+  (via IrpTransmogrifier) NRC16     29
+  (via IrpTransmogrifier) GXB     27
+  BOSE            26
+  (via IrpTransmogrifier) Lumagen     26
+  (via IrpTransmogrifier) Grundig16-30     23
+  (via IrpTransmogrifier) Samsung20     22
+  (via IrpTransmogrifier) Sejin-1-38     10
+  (via IrpTransmogrifier) XMP      8
+  DENON2           7
+  (via IrpTransmogrifier) NEC1-rnc      3
+  (via IrpTransmogrifier) Sharp{2}      2
+  (via IrpTransmogrifier) Grundig16      2
+  (via IrpTransmogrifier) Thomson7      1
+
+Skipped (unsupported/non-hifi protocols):
+  irdb:bad-row                135
+  flipper:raw-size             54
+  converted:undecodable/unsupported     13
+  flipper:raw-bad               5
+
+Brands (1639):
+  20Q Challenge                   1 profiles
+  2Wire                           2 profiles
+  3D Clock                        2 profiles
+  3M                              9 profiles
+  AAXA                            1 profiles
+  ABB                             1 profiles
+  ABIT                            2 profiles
+  ABOX                            1 profiles
+  ABS                             1 profiles
+  Ac Ryan                         1 profiles
+  AccessHD                        2 profiles
+  AccessMedia                     1 profiles
+  Accupel                         1 profiles
+  Acer                           13 profiles
+  Acesonic                        2 profiles
+  Aconatic                        2 profiles
+  Acoolir                         1 profiles
+  Acorn                           1 profiles
+  Acorp                           2 profiles
+  Acoustic Solutions              1 profiles
+  ADA                             9 profiles
+  Adafruit                        1 profiles
+  Adaptec                         1 profiles
+  Adastra                         1 profiles
+  ADB                             6 profiles
+  Adcom                          15 profiles
+  Adelphia                        3 profiles
+  ADJ                             1 profiles
+  ADLER                           1 profiles
+  Admiral                         1 profiles
+  ADS                             2 profiles
+  Advance Acoustic                2 profiles
+  Advanced FM Car Transmitter     1 profiles
+  AEG                            10 profiles
+  AEG Cooker Hood Haube           1 profiles
+  Aesthetix                       1 profiles
+  Aethra                          1 profiles
+  Agfaphoto                       1 profiles
+  Aigo                            1 profiles
+  AIM                             2 profiles
+  Airfel                          1 profiles
+  Airivo                          1 profiles
+  Airmate                         1 profiles
+  Airmax                          1 profiles
+  Airmet                          1 profiles
+  Airtel                          2 profiles
+  AIRUEEK Sonic LED Lamp          1 profiles
+  Airwell                         2 profiles
+  Aiwa                           39 profiles
+  Akai                           21 profiles
+  Aki                             1 profiles
+  Akira                           2 profiles
+  Aldi                            1 profiles
+  Algolith                        1 profiles
+  Allsat                          1 profiles
+  AlohaBreeze                     1 profiles
+  Alpine                          3 profiles
+  AltraFlame                      1 profiles
+  Amazon                          6 profiles
+  AmazonBasics                    1 profiles
+  AMC                             8 profiles
+  Amcor                           1 profiles
+  American Lighting               2 profiles
+  Amerlife                        1 profiles
+  AMI                             1 profiles
+  Amibot                          1 profiles
+  Amino                           2 profiles
+  Ampro                           9 profiles
+  Amstrad                         7 profiles
+  AMX                             2 profiles
+  Amytel                          1 profiles
+  Andonstar                       1 profiles
+  Android                         1 profiles
+  ANIMAX                          1 profiles
+  ANITECH                         1 profiles
+  Anker                           3 profiles
+  Ansio                           1 profiles
+  Anslut                          1 profiles
+  Antex Electronics               1 profiles
+  Anthem                          2 profiles
+  Antizer Flameless Candles       1 profiles
+  anysee                          1 profiles
+  AOC                             4 profiles
+  Aoguerbe                        1 profiles
+  Aopen                           2 profiles
+  Aorus                           1 profiles
+  Apeman                          1 profiles
+  Apex                            7 profiles
+  Apple                          13 profiles
+  APTI                            1 profiles
+  Aragon                          4 profiles
+  Arcadyan                        1 profiles
+  Arcam                          16 profiles
+  Architectural Audio             2 profiles
+  Arctic King                     1 profiles
+  Argo                            3 profiles
+  ArgonOne                        1 profiles
+  Ariston                         1 profiles
+  Aristona                        2 profiles
+  Arizer                          2 profiles
+  Arlec                           2 profiles
+  Arrakis Systems                 3 profiles
+  ARRIS                           3 profiles
+  Artika                          1 profiles
+  Artlii                          2 profiles
+  Ashley Furniture                1 profiles
+  ASK                             1 profiles
+  Askey                           1 profiles
+  Aspire                          1 profiles
+  Aspire Digital                  1 profiles
+  ASR                             1 profiles
+  Astra                           2 profiles
+  Astro                           2 profiles
+  Asus                            5 profiles
+  Aten                            1 profiles
+  Atlanta DTH                     1 profiles
+  Atlantic Technology             4 profiles
+  Atlas                           2 profiles
+  Atlona                          2 profiles
+  Atomberg                        1 profiles
+  Audac                           1 profiles
+  Audio Access                    2 profiles
+  Audio Authority                 4 profiles
+  Audio Design Associates         2 profiles
+  Audio International             1 profiles
+  Audio Refinement                3 profiles
+  Audio Request                   1 profiles
+  Audio Research                  1 profiles
+  AudioControl                    5 profiles
+  AudioEase                       4 profiles
+  Audioengine                     1 profiles
+  Audiola                         2 profiles
+  Audiosonic                      1 profiles
+  AudioSource                     2 profiles
+  Audiovox                        3 profiles
+  August                          1 profiles
+  Auna                            2 profiles
+  AuraGlow                        1 profiles
+  AuraLED                         1 profiles
+  Aurus                           1 profiles
+  Austar                          3 profiles
+  AutumnWave                      1 profiles
+  Auvisio                         1 profiles
+  Avanit                          2 profiles
+  AVer                            1 profiles
+  AVer Document Camera            1 profiles
+  Avermedia                       4 profiles
+  Avex                            1 profiles
+  Avfabul                         1 profiles
+  AVOL                            1 profiles
+  Avtoolbox                       1 profiles
+  AWA                             1 profiles
+  AXAS                            1 profiles
+  Axion                           1 profiles
+  Axonix                          2 profiles
+  Ayre                            1 profiles
+  Az America                      5 profiles
+  Azbox                           5 profiles
+  Azulle                          2 profiles
+  B&K Components                 74 profiles
+  B.A.T                           1 profiles
+  Baird                           1 profiles
+  Ballu                           1 profiles
+  Baltimore                       1 profiles
+  Bang & Olufsen                 27 profiles
+  Barco                          10 profiles
+  Barix                           1 profiles
+  Bauhn                           3 profiles
+  Bawoo                           1 profiles
+  BBK                             5 profiles
+  BeamZ                           2 profiles
+  Beelink                         1 profiles
+  Beko                            4 profiles
+  Belkin                          1 profiles
+  Bell                           11 profiles
+  Bell ExpressVu                  5 profiles
+  Bell+Howell                     1 profiles
+  Bellagio                        1 profiles
+  Bench                           3 profiles
+  Benchmark                       1 profiles
+  BenQ                           21 profiles
+  Berbel Kitchen Hoods            1 profiles
+  Bestisan                        1 profiles
+  Better Homes and Gardens        1 profiles
+  BEXA                            1 profiles
+  Beyonwiz                        9 profiles
+  BGH                             1 profiles
+  Biamp                           1 profiles
+  Big Ass Fans                    1 profiles
+  Big Ben                         1 profiles
+  Bio                             1 profiles
+  BioBidet                        3 profiles
+  Bionaire                        7 profiles
+  biOrb                           1 profiles
+  Biseoamz                        1 profiles
+  Black and Decker                2 profiles
+  Blaupunkt                       3 profiles
+  Blitzwolf                       1 profiles
+  Blueair                         1 profiles
+  Bluesky                         1 profiles
+  Bluetech                        1 profiles
+  Bluetooth Amplifier             1 profiles
+  Blyss                           1 profiles
+  BMB                             2 profiles
+  Bogen                           1 profiles
+  Bolva                           1 profiles
+  Bomaker                         1 profiles
+  Bonaire                         1 profiles
+  BoomTone                        1 profiles
+  BORK                            1 profiles
+  Bose                           67 profiles
+  Boston Bay                      1 profiles
+  Botti                           1 profiles
+  Boulanger                       2 profiles
+  BOUYGUES                        1 profiles
+  Bower                           1 profiles
+  Bowers & Wilkins                1 profiles
+  BoxLight                        7 profiles
+  BPL                             1 profiles
+  Bqeel                           1 profiles
+  Brandell                        1 profiles
+  Brandson                        2 profiles
+  Brandt                          3 profiles
+  Briloner                        5 profiles
+  Brio                            3 profiles
+  Brizled LED Icicle Lights       1 profiles
+  Broksonic                       2 profiles
+  BTX                             2 profiles
+  Bulsatcom                       1 profiles
+  Bumpboxx                        1 profiles
+  Busch-Jaeger                    2 profiles
+  Bush                           11 profiles
+  ByDesign                        1 profiles
+  Byintek                         1 profiles
+  Cabelas                         1 profiles
+  Cable Matters                   1 profiles
+  Cables to Go                    1 profiles
+  Cadillac                        1 profiles
+  Cadrim                          1 profiles
+  Cahors                          1 profiles
+  Calex                           1 profiles
+  California Audio Labs           4 profiles
+  Calrad                          1 profiles
+  Calypso                         3 profiles
+  Cambridge Audio                12 profiles
+  CAME                            1 profiles
+  Cameo                           1 profiles
+  Camera                          1 profiles
+  Canalsat                        1 profiles
+  Canarm                          1 profiles
+  CandleChoice LED                1 profiles
+  Canon                          11 profiles
+  Canton                          2 profiles
+  Captain                         1 profiles
+  Carrier                         1 profiles
+  Carver                         31 profiles
+  Cary Audio Design               3 profiles
+  Cascade                         1 profiles
+  Casio                           3 profiles
+  CAT                             7 profiles
+  CaVS                            1 profiles
+  CCE                             5 profiles
+  CD Players                      5 profiles
+  Cecotec                         1 profiles
+  Celadon                         1 profiles
+  cenOmax                         1 profiles
+  Centrum                         1 profiles
+  Century                         1 profiles
+  Century Concept                 1 profiles
+  Changhong                       3 profiles
+  Channel Master                  2 profiles
+  Channel Plus                    1 profiles
+  Channel Vision                  1 profiles
+  Chaparral                       3 profiles
+  Chauvet                         1 profiles
+  Chief Manufacturing             2 profiles
+  Chigo                           2 profiles
+  Chinese                         1 profiles
+  CHINON                          1 profiles
+  Chiro                           2 profiles
+  Chisholm                        2 profiles
+  Christie Digital Systems        3 profiles
+  Chrysalis                       1 profiles
+  Chunghop                        1 profiles
+  Ciatronic                       1 profiles
+  Cinemateq                       3 profiles
+  CIS BOX                        23 profiles
+  Cisco                          16 profiles
+  Citation                        1 profiles
+  Citizen                         1 profiles
+  Citysports                      2 profiles
+  Clarion                         2 profiles
+  Clarke Tech                     1 profiles
+  Claro                           1 profiles
+  Classe Audio                   18 profiles
+  ClassicFlame                    2 profiles
+  Cleartouch                      1 profiles
+  Clever&Clean                    1 profiles
+  Clevertouch                     1 profiles
+  Clinton Electronics             1 profiles
+  Clo Systems                     1 profiles
+  Cobra                           1 profiles
+  Coby                            2 profiles
+  Cocktailaudio                   1 profiles
+  Cogeco                          1 profiles
+  Colorado Vnet                   1 profiles
+  Comag                           3 profiles
+  Combuh                          1 profiles
+  Comcast                        12 profiles
+  Comfort Aire                    1 profiles
+  ComfortZone                     2 profiles
+  Comhear                         1 profiles
+  Commodore                       1 profiles
+  Como Audio                      1 profiles
+  Compro                          2 profiles
+  ConnectPro                      1 profiles
+  Conrad                          3 profiles
+  Contemporary Research           1 profiles
+  ContinentalEdison               4 profiles
+  Contour                         1 profiles
+  Cool Sat                        2 profiles
+  Coolstream                      1 profiles
+  Coolux                          1 profiles
+  CooPark                         1 profiles
+  Copland                         2 profiles
+  Coretec                         1 profiles
+  Corlitec                        1 profiles
+  Corvo                           1 profiles
+  COSMEL                          1 profiles
+  Costco                          1 profiles
+  COTech                          2 profiles
+  Counterpoint                    1 profiles
+  CountryField                    1 profiles
+  Cox                             3 profiles
+  Cph03x                          1 profiles
+  Craig                           6 profiles
+  Cranker                         1 profiles
+  Creative                        9 profiles
+  Crestron                       10 profiles
+  Cristor Atlas                   1 profiles
+  Crown                           4 profiles
+  Crunchlabs                      1 profiles
+  Ctouch                          2 profiles
+  CTX                             1 profiles
+  CTX-Optima                      1 profiles
+  Curtis Electronics              1 profiles
+  Curtis Mathes                   2 profiles
+  Cyberhome                       3 profiles
+  Cyfrowy Polsat                  1 profiles
+  Cypress                         2 profiles
+  Cyron                           1 profiles
+  D-LINK                          4 profiles
+  Da-Lite                         3 profiles
+  Daeumling                       1 profiles
+  Daewoo                         26 profiles
+  Daikin                         10 profiles
+  Danby                           1 profiles
+  Dantax                          2 profiles
+  Danystar                        1 profiles
+  Dasinko                         1 profiles
+  Davis Technology                3 profiles
+  daytron                         1 profiles
+  dBot                            1 profiles
+  DBox                            1 profiles
+  DBPower                         1 profiles
+  Death Star Tree Topper          1 profiles
+  Dedicated Micros                1 profiles
+  Deerma                          1 profiles
+  Defiant                         1 profiles
+  Definitive Technology           2 profiles
+  Deka                            2 profiles
+  DeleyCON                        1 profiles
+  Dell                            6 profiles
+  Delmar                          1 profiles
+  DeLonghi                        5 profiles
+  Delphi                          1 profiles
+  Deluxe Homeart                  1 profiles
+  Denon                         100 profiles
+  Denver                          4 profiles
+  Devant                          1 profiles
+  Devola                          1 profiles
+  Dgtec                           1 profiles
+  Diamond Vision                  2 profiles
+  Dicra                           2 profiles
+  Diffuser                        1 profiles
+  DIFRNCE                         1 profiles
+  Digi Day                        1 profiles
+  Digihome                        2 profiles
+  Digiquest                       6 profiles
+  Digital                         1 profiles
+  Digital Music Expres            1 profiles
+  Digital Projection              4 profiles
+  Digitalstream                   5 profiles
+  DigitalView                     1 profiles
+  Digitrex                        1 profiles
+  Dikom                           2 profiles
+  Dimplex                         4 profiles
+  Diprogress                      1 profiles
+  DIRECTV                        24 profiles
+  DISH                            7 profiles
+  Dish Network                   27 profiles
+  Dk Digital                      5 profiles
+  DLO                             1 profiles
+  DMX                             2 profiles
+  DollarTec                       1 profiles
+  Domland                         1 profiles
+  Domo                            2 profiles
+  Domoova                         1 profiles
+  DotStone                        1 profiles
+  Douk Audio                      1 profiles
+  Dr Heater                       1 profiles
+  Dragonfly                       1 profiles
+  Draper                          6 profiles
+  Dream                           7 profiles
+  Dream Multimedia                1 profiles
+  Dream Vision                    1 profiles
+  Dreambox                        3 profiles
+  Dreo                            6 profiles
+  DSE                             3 profiles
+  DSTV                            1 profiles
+  Dual                            3 profiles
+  Dual Cassette                   1 profiles
+  Dualtron Victor Handlebar Lights    1 profiles
+  Dukane                          3 profiles
+  DUNE                            1 profiles
+  DuneHD                          1 profiles
+  Duni                            1 profiles
+  Duosat                          1 profiles
+  Durabrand                       3 profiles
+  Duraflame                       1 profiles
+  Dutch Originals                 1 profiles
+  DVD Players                    12 profiles
+  DVDO                            2 profiles
+  DVICO                           1 profiles
+  Dwin                            7 profiles
+  Dymond                          1 profiles
+  DynaScan                        1 profiles
+  Dynaudio                        2 profiles
+  Dynex                           5 profiles
+  Dyno Jet                        1 profiles
+  DYON                            6 profiles
+  Dyson                          32 profiles
+  E Max                           1 profiles
+  E-tech                          1 profiles
+  Eagle Aspen                     1 profiles
+  Eakins                          1 profiles
+  EAMBRITE                        1 profiles
+  Eastern                         1 profiles
+  Easy Living                     2 profiles
+  EasyHome                        1 profiles
+  Easyone                         1 profiles
+  Eberg                           1 profiles
+  Echolite                        1 profiles
+  Echostar                       19 profiles
+  Ecofort                         1 profiles
+  ECOLITE                         1 profiles
+  Ecovac RC1507 Robotics          1 profiles
+  Ecovacs                         2 profiles
+  EdenPURE                        1 profiles
+  EdenWood                        1 profiles
+  Edifier                        12 profiles
+  Edision                         6 profiles
+  EGLO                            1 profiles
+  EHP                             1 profiles
+  Eichhorn                        1 profiles
+  Eike                            2 profiles
+  Eiki                           11 profiles
+  Elac                            1 profiles
+  Elan                           27 profiles
+  ElecHome                        1 profiles
+  Electra                         1 profiles
+  electriQ                        1 profiles
+  Electrocompaniet                2 profiles
+  Electrohome                     8 profiles
+  Electrokinetics                 1 profiles
+  Electrolux                      2 profiles
+  Electronics                     1 profiles
+  Element                         2 profiles
+  Elements                        1 profiles
+  Elenberg                        2 profiles
+  Elero                           3 profiles
+  Elisa Viihde                    1 profiles
+  Elite                           1 profiles
+  Elitelux                        1 profiles
+  EliteScreens                    2 profiles
+  Elitron                         1 profiles
+  Elmark                          1 profiles
+  ELMO                            7 profiles
+  ELTA                            7 profiles
+  ELTASAT                         1 profiles
+  eltax                           1 profiles
+  Elune Vision Motorized Projector Screen    1 profiles
+  elWron                          1 profiles
+  Emerson                        15 profiles
+  Emotiva                         2 profiles
+  Emotiva XDA-2 PreAmp            1 profiles
+  Emtec                           5 profiles
+  Enido                           1 profiles
+  ENOX                            1 profiles
+  Enseo                           1 profiles
+  ENTONE                          1 profiles
+  Entone Cable Box                1 profiles
+  Epson                          25 profiles
+  Equatlon                        1 profiles
+  Erisson                         1 profiles
+  Escient                        24 profiles
+  Esoteric                        1 profiles
+  Esoteric Audio                  1 profiles
+  EssentielB                      1 profiles
+  EsyLux                          1 profiles
+  Eton                            1 profiles
+  Eufy                            4 profiles
+  Euroconsumers                   1 profiles
+  Eurolan                         1 profiles
+  Eurom                           2 profiles
+  Eurostar                        1 profiles
+  EVE                             1 profiles
+  EverQuest                       1 profiles
+  EVO                             2 profiles
+  Evolution                       2 profiles
+  Example                         3 profiles
+  Expressvu                       1 profiles
+  Extron                          2 profiles
+  Eycos                           1 profiles
+  Ezcoo                           1 profiles
+  Fagor                           1 profiles
+  Fakir                           2 profiles
+  Falcon                          1 profiles
+  Fanfare                         1 profiles
+  Fanon                           1 profiles
+  Fantec                          3 profiles
+  Fanztec                         1 profiles
+  Farenheit                       2 profiles
+  Faroudja                       13 profiles
+  Fast                            1 profiles
+  Faval                           1 profiles
+  Fedders                         1 profiles
+  fenner                          1 profiles
+  Ferguson                        1 profiles
+  Feron                           1 profiles
+  Ferroli                         1 profiles
+  Fetch                           1 profiles
+  Ffalcon                         1 profiles
+  FINLUX                          1 profiles
+  Firstline                       2 profiles
+  Fisher                         13 profiles
+  Fisher Price                    1 profiles
+  FlameMore                       1 profiles
+  FlarX                           1 profiles
+  Fluance                         1 profiles
+  Fluid                           4 profiles
+  Focus                           1 profiles
+  Formuler                        1 profiles
+  Fortec                          2 profiles
+  Fosgate                         5 profiles
+  Fosi Audio                      2 profiles
+  Fostex                          1 profiles
+  Fox                             1 profiles
+  FOXTEL                          5 profiles
+  FranSat                         1 profiles
+  FREE                            3 profiles
+  Freecom                         3 profiles
+  Freesky                         2 profiles
+  Fresat                          1 profiles
+  Frico                           1 profiles
+  Friedrich                       5 profiles
+  Frigidaire                      2 profiles
+  FSC                             1 profiles
+  Ftemaximal                      2 profiles
+  FUBA                            5 profiles
+  Fujidenzo                       1 profiles
+  Fujifilm                        1 profiles
+  Fujitsu                        16 profiles
+  Fujitsu Siemens                 2 profiles
+  Fujtech                         1 profiles
+  Funai                           7 profiles
+  Furrion                         1 profiles
+  Fusion                          1 profiles
+  Fusion Research                 1 profiles
+  Fust                            1 profiles
+  G-Story                         1 profiles
+  Gakken                          1 profiles
+  Gako                            1 profiles
+  Galaxis                         4 profiles
+  GAMEFACTORY                     1 profiles
+  GANXIN                          1 profiles
+  Gateway                         1 profiles
+  GBC                             2 profiles
+  GE                              4 profiles
+  Geant                           1 profiles
+  Gear4                           1 profiles
+  Gefen Systems                   2 profiles
+  General                         2 profiles
+  General Electric                7 profiles
+  General Instrument             21 profiles
+  Generic                        50 profiles
+  Genesis                         1 profiles
+  Geneva                          1 profiles
+  Geniatech                       1 profiles
+  Genius                          2 profiles
+  Genus                           1 profiles
+  Gericom                         1 profiles
+  Get                             2 profiles
+  Getner                          3 profiles
+  Gigablue                        1 profiles
+  Gigabyte                        2 profiles
+  Globalsat                       1 profiles
+  GlobeCast                       1 profiles
+  Globo                           3 profiles
+  Gogen                           1 profiles
+  GOLD                            1 profiles
+  Gold Lough LED Color Changing Ball    1 profiles
+  Golden Interstar                2 profiles
+  Golden Media                    2 profiles
+  Golden Power                    2 profiles
+  GoldenVantage                   1 profiles
+  Goldmaster                      1 profiles
+  Goldmund                        1 profiles
+  GoldStar                        6 profiles
+  GoodHome                        1 profiles
+  Goodmans                        4 profiles
+  Goofy Htwon                     1 profiles
+  Gospell                         1 profiles
+  Govee                           1 profiles
+  GoVideo                         5 profiles
+  GPX                             5 profiles
+  Grace Digital                   1 profiles
+  Gradiente                       2 profiles
+  Gran Prix                       1 profiles
+  Grand Channel                   1 profiles
+  Grand Tech                      2 profiles
+  Grandin                         3 profiles
+  GREE                            4 profiles
+  Griffin                         1 profiles
+  Groview                         1 profiles
+  Grundig                        33 profiles
+  Gryphon                         1 profiles
+  GuestTek                        1 profiles
+  Guillemot                       1 profiles
+  GVA                             1 profiles
+  GVC                             1 profiles
+  Gym HIIT                        1 profiles
+  Haier                           9 profiles
+  Haivision                       1 profiles
+  Hallmark                        1 profiles
+  Hama                            2 profiles
+  Hampton Bay                     2 profiles
+  Hannspree                       4 profiles
+  Hantarex                        2 profiles
+  Harman Kardon                  56 profiles
+  Harman Video                    2 profiles
+  Harmony                         1 profiles
+  Hasbro                          2 profiles
+  Hatari                          1 profiles
+  Hauppauge                      10 profiles
+  Hayear                          1 profiles
+  HB                              1 profiles
+  Hb Digital                      1 profiles
+  HE@D                            2 profiles
+  Hello Kitty                     1 profiles
+  Herma                           1 profiles
+  Hermstedt                       1 profiles
+  Hewlett Packard                 2 profiles
+  HexBug Remote                   3 profiles
+  HGomx                           1 profiles
+  Hieneking Media                 1 profiles
+  HiFi                            1 profiles
+  Hikvision                       1 profiles
+  Himedia                         1 profiles
+  Hinen Electronics               1 profiles
+  Hip Interactive                 1 profiles
+  HIPHOPTOY                       1 profiles
+  Hirschmann                      3 profiles
+  Hisense                        18 profiles
+  Hitachi                        62 profiles
+  Hiteker                         3 profiles
+  Hivion                          1 profiles
+  HLKZine                         1 profiles
+  Hob2Hood                        1 profiles
+  HOBOT                           2 profiles
+  Hokkaido                        1 profiles
+  Holmes                          2 profiles
+  Homday                          1 profiles
+  Homecast                        3 profiles
+  Homedics                        4 profiles
+  HomeMost LED                    1 profiles
+  Homezest                        1 profiles
+  Honeywell                      11 profiles
+  Hotels                          2 profiles
+  Houston Tracking Systems        1 profiles
+  Hovvida                         1 profiles
+  HP                              5 profiles
+  HQ                              1 profiles
+  HQV                             1 profiles
+  Huawei                          3 profiles
+  Hughes                         16 profiles
+  Hughes JVC                      1 profiles
+  Humax                          25 profiles
+  Hunter Douglas                  3 profiles
+  huth                            1 profiles
+  Hxweiye                         1 profiles
+  Hyundai                         2 profiles
+  I-O Data                        1 profiles
+  I-Point                         1 profiles
+  I24                             1 profiles
+  i3-Technologies                 1 profiles
+  IAMM                            1 profiles
+  Ibiza Sound                     1 profiles
+  iCLEBO                          1 profiles
+  Id Digital                      1 profiles
+  iDual                           2 profiles
+  IECC                            1 profiles
+  Igenix                          1 profiles
+  iHome                           2 profiles
+  iiyama                          1 profiles
+  iLife                           3 profiles
+  iLive                           3 profiles
+  Illusion                        1 profiles
+  iLukodu                         1 profiles
+  IMerge                         10 profiles
+  imon                            1 profiles
+  Imperial                        3 profiles
+  In-Tech                         1 profiles
+  InFocus                        14 profiles
+  InFocus Systems                 8 profiles
+  Inno-Hit                        1 profiles
+  Innova                          1 profiles
+  Insigna                         1 profiles
+  Insignia                        8 profiles
+  Instant Replay                  5 profiles
+  Integra                        37 profiles
+  IntelliNet Controls             1 profiles
+  Interact                        1 profiles
+  Intervideo                      1 profiles
+  Intervision                     1 profiles
+  Inventum                        1 profiles
+  Inverto                         1 profiles
+  Iomega                          1 profiles
+  ION                             1 profiles
+  ione                            1 profiles
+  iPort                           1 profiles
+  IQAir                           1 profiles
+  IR4PS3                          1 profiles
+  iRobot                          4 profiles
+  Irradio                         3 profiles
+  ISY                             1 profiles
+  italtel                         1 profiles
+  iTrekkings                      1 profiles
+  ITT                             2 profiles
+  Jamara                          1 profiles
+  Jamo                            1 profiles
+  Jaton                           1 profiles
+  Jaytech                         1 profiles
+  JB Systems                      1 profiles
+  JBK                             1 profiles
+  JBL                            18 profiles
+  Jensen                          2 profiles
+  Jepssen                         1 profiles
+  Jerrold                        10 profiles
+  Jet                             1 profiles
+  JETTools                        1 profiles
+  Jialine Candle                  1 profiles
+  Jinhoo                          1 profiles
+  Jukebox                         3 profiles
+  JVC                           144 profiles
+  JYSK                            1 profiles
+  K-Line                          1 profiles
+  Kaleidescape                    3 profiles
+  Kanto                           1 profiles
+  KAON                            3 profiles
+  Kathrein                        4 profiles
+  KAWA                            1 profiles
+  KDK                             2 profiles
+  KDS                             1 profiles
+  Keepsmile                       1 profiles
+  KEF                             1 profiles
+  Kelon                           1 profiles
+  Kenavision                      1 profiles
+  Kendo                           3 profiles
+  Kenmore                         2 profiles
+  Kensington                      1 profiles
+  Kenwood                        57 profiles
+  Kernowo                         1 profiles
+  KEY DIGITAL                     3 profiles
+  Khl                             1 profiles
+  KidLand                         1 profiles
+  Kikilive                        1 profiles
+  Kinergetics Research            3 profiles
+  Kinivo                          1 profiles
+  Kinyo                           1 profiles
+  Kinzo                           1 profiles
+  KISS                            2 profiles
+  Kiwong                          1 profiles
+  Klarstein                       4 profiles
+  Klipsch                         5 profiles
+  Kloss                           1 profiles
+  Klytronic                       1 profiles
+  Knoll                           1 profiles
+  KODA                            2 profiles
+  Kodak                           3 profiles
+  KOENIC                          3 profiles
+  Kogan                           2 profiles
+  Kohree                          1 profiles
+  Koldfront                       1 profiles
+  konig                           1 profiles
+  Konka                           2 profiles
+  Konwin                          1 profiles
+  KooPower                        1 profiles
+  KopBeauAireplus                 1 profiles
+  Koscom                          2 profiles
+  kosmos                          1 profiles
+  Kraft                           1 profiles
+  Krell                           8 profiles
+  Krinner                         1 profiles
+  Kustom                          1 profiles
+  Kworld                          3 profiles
+  Kyocera                         1 profiles
+  L+S                             2 profiles
+  L8Star                          1 profiles
+  Lacie                           2 profiles
+  Lamborghini                     1 profiles
+  Larksound                       1 profiles
+  LaserX                          2 profiles
+  Lasko                          12 profiles
+  Lasonic                         1 profiles
+  LeaderPro                       3 profiles
+  Leadership                      1 profiles
+  LeadTek                         3 profiles
+  LED                             4 profiles
+  Led-Universum                   1 profiles
+  Legamaster                      2 profiles
+  Legent                          1 profiles
+  Legion                          1 profiles
+  LEGO                            3 profiles
+  Leicke                          1 profiles
+  LEMON                           1 profiles
+  Lenco                           1 profiles
+  Lencore Acoustics               1 profiles
+  Lennox                          1 profiles
+  Lenovo                          1 profiles
+  Lenoxx                          1 profiles
+  Lenson                          1 profiles
+  Lervia                          1 profiles
+  Lethe                           2 profiles
+  Levenhuk                        1 profiles
+  Levoit                          2 profiles
+  Lexicon                         7 profiles
+  Lexman                          1 profiles
+  LG                             94 profiles
+  Life-view                       1 profiles
+  Lifesat                         1 profiles
+  Lifesize                        2 profiles
+  Lifesmart                       1 profiles
+  Lifetec                         3 profiles
+  Lifetime Air                    1 profiles
+  Lift-Tech                       2 profiles
+  Ligawo                          3 profiles
+  LightMyBricks                   1 profiles
+  Lightolier                      1 profiles
+  Lightzone                       1 profiles
+  Liluco                          1 profiles
+  LinahiLED                       1 profiles
+  Linksys                         2 profiles
+  Linn                            9 profiles
+  Listo                           1 profiles
+  LiteOn                          1 profiles
+  LiteTouch                      21 profiles
+  Livarno                         2 profiles
+  LM                              1 profiles
+  LodgeNet                        1 profiles
+  Loewe                          18 profiles
+  Logik                           3 profiles
+  Logitech                       12 profiles
+  LolaLED                         1 profiles
+  Loncevon                        1 profiles
+  LongHua                         1 profiles
+  Lotti LED                       1 profiles
+  LP Morgan                       1 profiles
+  Lucoza                          2 profiles
+  Lumagen                         1 profiles
+  Lumens                          1 profiles
+  Luminara                        1 profiles
+  Luminarte                       1 profiles
+  Lutron                         15 profiles
+  Luxman                          3 profiles
+  Luxor                           1 profiles
+  LXI                             1 profiles
+  M3 Electronic                   1 profiles
+  Macro Image Technology          1 profiles
+  Madrigal                        4 profiles
+  Maerklin                        1 profiles
+  Mag                             3 profiles
+  Magiclighting                   1 profiles
+  MagicTV                         1 profiles
+  MAGNASONIC                      1 profiles
+  Magnavox                       20 profiles
+  Magnum                          1 profiles
+  Magnum Dynalab                  1 profiles
+  Maiko                           1 profiles
+  MainStays                       1 profiles
+  Majestic                        5 profiles
+  Majority                        1 profiles
+  Makeblock                       1 profiles
+  Makita                          1 profiles
+  Makita Electric Works           2 profiles
+  Malata                          1 profiles
+  Manhattan                       2 profiles
+  Manta                           4 profiles
+  Marantz                       116 profiles
+  Mark                            1 profiles
+  Mark Levinson                   9 profiles
+  MarshallElectronics             1 profiles
+  Mas                             3 profiles
+  Master                          1 profiles
+  Matrix Systems                  1 profiles
+  Matsui                          1 profiles
+  Maxcan                          1 profiles
+  Maxell                          2 profiles
+  Maxx                            2 profiles
+  MaxxAir                         1 profiles
+  MayTag                          1 profiles
+  McIntosh                       11 profiles
+  MCL                             1 profiles
+  MCM Custom Audio                1 profiles
+  Meaco                           1 profiles
+  Mecool                          1 profiles
+  Mede8Er                         1 profiles
+  Media-Tech                      2 profiles
+  Mediasonic                      1 profiles
+  Mediland                        1 profiles
+  Medion                         28 profiles
+  Megapower                       2 profiles
+  Megasat                         2 profiles
+  Melectronic                     1 profiles
+  Meliconi                        4 profiles
+  Memorex                         3 profiles
+  Meo                             1 profiles
+  Meridian                        6 profiles
+  METRONIC                        2 profiles
+  Metronome                       1 profiles
+  Metrox                          1 profiles
+  METZ                            2 profiles
+  MGA                             1 profiles
+  Micca                           3 profiles
+  Microlab                        4 profiles
+  Micromega                       2 profiles
+  Microsoft                      15 profiles
+  Midea                           4 profiles
+  Midiland                        1 profiles
+  MIIA                            1 profiles
+  MindPath                        3 profiles
+  Mini Laser Lightshow            1 profiles
+  MiniX                           1 profiles
+  Minolta                         1 profiles
+  Mintek                          1 profiles
+  Mirage                          2 profiles
+  Mirai                           1 profiles
+  MIRO                            1 profiles
+  Mission                         1 profiles
+  Mistral                         2 profiles
+  Mitochiba                       2 profiles
+  Mitsubishi                     82 profiles
+  Mivar                           6 profiles
+  ModernEmber                     1 profiles
+  Monivision                      2 profiles
+  MonoPrice                       4 profiles
+  Monovision                      1 profiles
+  Monster Basics                  2 profiles
+  MonsterIlluminessence           1 profiles
+  Moredig                         1 profiles
+  Moretti                         1 profiles
+  Morgans Daytona                 2 profiles
+  Motorola                       40 profiles
+  MovinFlame                      1 profiles
+  Moxi                            1 profiles
+  Mpman                           7 profiles
+  Mrocioa                         1 profiles
+  MS-Tech                         1 profiles
+  MSI                             3 profiles
+  Msmkeji                         1 profiles
+  mStation                        1 profiles
+  MT-VIKI                         1 profiles
+  Multi Canal                     1 profiles
+  Multi Video Labs                1 profiles
+  Multichoice                     1 profiles
+  multiTEC                        1 profiles
+  Muskoka                         1 profiles
+  Mustek                          5 profiles
+  Muvid                           1 profiles
+  Mvision                         1 profiles
+  Mycarbon                        1 profiles
+  Myryad                          7 profiles
+  NAD                            27 profiles
+  Nagra                           1 profiles
+  Naim                            2 profiles
+  Nakamichi                      14 profiles
+  Napa                            1 profiles
+  National                        1 profiles
+  Nav Unit                        1 profiles
+  Naviheaven                      1 profiles
+  Nazabox                         1 profiles
+  Nebula Electronics              1 profiles
+  NEC                            56 profiles
+  NEC1                            1 profiles
+  Nedis                           1 profiles
+  Neewer                          1 profiles
+  Neo                             2 profiles
+  Nerf                            2 profiles
+  NET TV                          1 profiles
+  Netgear                         1 profiles
+  Netgem                          2 profiles
+  NetWare                         1 profiles
+  Neuhaus                         3 profiles
+  Nevir                           1 profiles
+  Newline                         3 profiles
+  Nexigo                          2 profiles
+  Nexillumi                       1 profiles
+  Nexpro                          2 profiles
+  Nextwave                        1 profiles
+  Nikko                           3 profiles
+  Nikon                           3 profiles
+  Niles                          11 profiles
+  Niles Audio                     2 profiles
+  Nixplay                         1 profiles
+  Nixplay Digital Frame           1 profiles
+  No Brand                        1 profiles
+  No Manufacturer                 1 profiles
+  Nokia                           6 profiles
+  Noma                            1 profiles
+  Norcent                         1 profiles
+  Nordmende                       1 profiles
+  Nortek                          1 profiles
+  Northern                        1 profiles
+  Northerns Light                 1 profiles
+  NorthQ                          1 profiles
+  Novaplex                        2 profiles
+  Now Broadband TV                2 profiles
+  NSM                             1 profiles
+  NTL                             1 profiles
+  Nubert                          1 profiles
+  NuVico                          1 profiles
+  NuView                          1 profiles
+  NVIDIA                          1 profiles
+  NView                           2 profiles
+  Nyco-Sony                       1 profiles
+  Nytro Box                       1 profiles
+  O2                              1 profiles
+  OAK                             1 profiles
+  Ocean Digital                   1 profiles
+  oceanic                         1 profiles
+  Octagon                         6 profiles
+  Odroid                          1 profiles
+  ODYS                            2 profiles
+  OK                              4 profiles
+  OKI                             3 profiles
+  Oky                             1 profiles
+  Olevia                          3 profiles
+  OLLNY                           1 profiles
+  Olympus                         2 profiles
+  OmniBreeze                      1 profiles
+  On Command                      1 profiles
+  One For All                    18 profiles
+  oneConcept                      1 profiles
+  Onescreen                       1 profiles
+  ONG                             2 profiles
+  Onida                           4 profiles
+  Onkyo                          74 profiles
+  Onn                             3 profiles
+  ONN-Lighting                    1 profiles
+  ONOAYO                          1 profiles
+  Open Box                        1 profiles
+  Oppo                            8 profiles
+  Optex                           1 profiles
+  Opticum                         9 profiles
+  Optimus                         1 profiles
+  Optoma                         11 profiles
+  Orange                          2 profiles
+  Orbegozo                        1 profiles
+  Orbitsound                      1 profiles
+  Orbrgozo                        1 profiles
+  Ordro                           1 profiles
+  Oreck                           1 profiles
+  OREI HDMI Switcher              1 profiles
+  Oremi                           1 profiles
+  Orion                           7 profiles
+  Ortek                           1 profiles
+  Osaka                           1 profiles
+  OShine                          1 profiles
+  OSMC                            1 profiles
+  Osram                           2 profiles
+  OSSC                            2 profiles
+  Ottolives                       1 profiles
+  Ove                             1 profiles
+  Ozeri                           1 profiles
+  PACE                           20 profiles
+  Pace Sky Manual                 1 profiles
+  Packard Bell                    1 profiles
+  Palcom                          3 profiles
+  Palladine                       1 profiles
+  palmbutler                      1 profiles
+  Palsonic                        1 profiles
+  Panasat                         1 profiles
+  Panasonic                     165 profiles
+  Panavox                         1 profiles
+  Panda                           1 profiles
+  Pandigital                      1 profiles
+  Pansat                          3 profiles
+  Parasound                       8 profiles
+  Paulman                         1 profiles
+  Paulmann                        2 profiles
+  PDi                             1 profiles
+  Peachtree                       3 profiles
+  Peekton                         2 profiles
+  Pelonis                         1 profiles
+  Pentax                          2 profiles
+  Pepeo                           1 profiles
+  Phantom                         1 profiles
+  PHAST                           1 profiles
+  Pheanoo                         1 profiles
+  Philco                          1 profiles
+  Philips                       149 profiles
+  Phonotrend                      1 profiles
+  Piano Disc                      1 profiles
+  Piaozoo                         1 profiles
+  Picturetel                      3 profiles
+  Pinacl                          1 profiles
+  Pinnacle                        2 profiles
+  Pinnacle Systems                4 profiles
+  Pioneer                       111 profiles
+  PixelView                       2 profiles
+  PixMob                          3 profiles
+  Planar                          1 profiles
+  Platinum                        2 profiles
+  PlayStation                     1 profiles
+  Playtive                        1 profiles
+  Pleasant Hearth                 1 profiles
+  PLU2                            1 profiles
+  PLUS                            1 profiles
+  Plus America                    1 profiles
+  Polaroid                        3 profiles
+  Polk Audio                      3 profiles
+  Pollin                          1 profiles
+  Polycom                         8 profiles
+  Popcornhour                     1 profiles
+  Portta                          1 profiles
+  Power Lighting                  1 profiles
+  PowerAcoustik                   1 profiles
+  Powernet                        1 profiles
+  Pragmatic                       1 profiles
+  Primare                         8 profiles
+  Prime3                          1 profiles
+  Primestar                       1 profiles
+  Princess                        1 profiles
+  Princeton                       3 profiles
+  Prinz                           1 profiles
+  PrismPlus                       1 profiles
+  Pro Presenter                   1 profiles
+  Probox                          1 profiles
+  ProBreeze                       2 profiles
+  Proceed                         8 profiles
+  Profi Care                      1 profiles
+  Projectavision                  1 profiles
+  Prolights                       1 profiles
+  Promethean                      6 profiles
+  ProPlay                         1 profiles
+  Proscan                        12 profiles
+  Protek                          2 profiles
+  Proton                          9 profiles
+  Provideo                        1 profiles
+  Provision                       2 profiles
+  Prowise                         2 profiles
+  Proxima                        15 profiles
+  Prozor                          1 profiles
+  PS Audio                        1 profiles
+  PTZOptics                       4 profiles
+  Puck Button                     1 profiles
+  Pumpkin Lights                  1 profiles
+  PVO                             1 profiles
+  Pyle                            3 profiles
+  Q Acoustics                     1 profiles
+  Qbell                           1 profiles
+  Qlima                           1 profiles
+  QMAX                            1 profiles
+  QNAP                            1 profiles
+  QRS                             1 profiles
+  QTX                             1 profiles
+  QUADRAL                         1 profiles
+  Quads                           1 profiles
+  Quantis                         1 profiles
+  Quasar                          4 profiles
+  Qviart                          1 profiles
+  Rabbit Air                      1 profiles
+  Rademacher                      1 profiles
+  RadioShack                      4 profiles
+  Radix                           5 profiles
+  Raite                           1 profiles
+  Ranex                           1 profiles
+  Rayfoto                         1 profiles
+  RCA                            60 profiles
+  Re.x                            1 profiles
+  Recor                           1 profiles
+  Reflexion                       1 profiles
+  Rega                            4 profiles
+  Remko                           1 profiles
+  remotec                         3 profiles
+  RemotesReplaced                 1 profiles
+  Render                          1 profiles
+  Replay Networks                 1 profiles
+  ReplayTV                        1 profiles
+  ReQuest Multimedia              2 profiles
+  ReQuest Video                   1 profiles
+  Retro-Bit                       1 profiles
+  RetroTINK                       3 profiles
+  Revo                            2 profiles
+  Revoltec                        2 profiles
+  RevolutionHD                    1 profiles
+  Revox                           7 profiles
+  Revoy                           1 profiles
+  RFT                             4 profiles
+  RIF6                            1 profiles
+  Rinnai                          2 profiles
+  Rio                             1 profiles
+  RiTECH                          1 profiles
+  RME                             2 profiles
+  roadstar                        1 profiles
+  Roberts                         1 profiles
+  RoboMaster Blaster              1 profiles
+  Robot                           1 profiles
+  RocketFish                      1 profiles
+  Rockola                         1 profiles
+  Rohnson                         1 profiles
+  Roksan                          3 profiles
+  Roku                            8 profiles
+  Roland                          1 profiles
+  Rolsen                          5 profiles
+  Roomba                          2 profiles
+  Rostelecom                      1 profiles
+  Rotel                          20 profiles
+  Rowa                            1 profiles
+  Rowenta                         4 profiles
+  Royal Clima                     1 profiles
+  RoyalFlame                      1 profiles
+  RSQ                             3 profiles
+  Ruark                           1 profiles
+  rubin                           1 profiles
+  Rubine                          1 profiles
+  Runco                          25 profiles
+  Russound                        3 profiles
+  Rusta Christmas Tree Candle     1 profiles
+  RY King                         1 profiles
+  Rytaki                          1 profiles
+  S2 Digital                      1 profiles
+  SAB                             1 profiles
+  SABA                            3 profiles
+  Safari Technologies             1 profiles
+  Sagem                           4 profiles
+  Sagemcom                        1 profiles
+  SAKAWA                          1 profiles
+  Salora                          1 profiles
+  Samsung                       185 profiles
+  Samy                            1 profiles
+  Sangean                         1 profiles
+  Sankey                          1 profiles
+  Sansonic                        1 profiles
+  Sansui                          2 profiles
+  Sanyo                          32 profiles
+  Satelco                         1 profiles
+  Satellite Electronics           1 profiles
+  Sceptre                         2 profiles
+  Schaub-Lorenz                   4 profiles
+  Schneider                       5 profiles
+  Schwaiger                       7 profiles
+  Scientific Atlanta             21 profiles
+  Scott                           2 profiles
+  Sears                           1 profiles
+  SEG                            14 profiles
+  Seiki                           2 profiles
+  Seleco                          6 profiles
+  Sencor                          3 profiles
+  Senko                           1 profiles
+  Sennheiser                      1 profiles
+  SereneLife                      1 profiles
+  ServilleClassics                1 profiles
+  Setone                          3 profiles
+  Seville                         1 profiles
+  Seville Classics                2 profiles
+  Sgi                             1 profiles
+  Shami                           1 profiles
+  Shark                           2 profiles
+  Sharp                          82 profiles
+  Sharpsat                        1 profiles
+  SHE                             1 profiles
+  Sherbourn                       1 profiles
+  Sherwood                       10 profiles
+  Shinco                          1 profiles
+  Shinelco                        7 profiles
+  Shinic                          1 profiles
+  Shinil                          1 profiles
+  Shivaki                         1 profiles
+  Shure                           1 profiles
+  Shuttle                         1 profiles
+  Siemens                         6 profiles
+  Sigma Designs                   1 profiles
+  Sigmatek                        2 profiles
+  Siguro                          1 profiles
+  Silent Gliss                    1 profiles
+  Silver                          1 profiles
+  Silver Crest                    7 profiles
+  Silverlit                       2 profiles
+  Sima                            1 profiles
+  Simon                           1 profiles
+  Simulflame                      1 profiles
+  Sinclair                        1 profiles
+  Sinudyne                        1 profiles
+  Sirius XM                       4 profiles
+  Sitronics                       1 profiles
+  Sky                            12 profiles
+  Skymaster                       9 profiles
+  SkyQ                            2 profiles
+  SkyVue                          1 profiles
+  Slim Art                        1 profiles
+  Slim Devices                    1 profiles
+  SMART                           6 profiles
+  SMART Technologies              1 profiles
+  SmartyKat                       1 profiles
+  SMSL                            2 profiles
+  SnapStream                      1 profiles
+  Snazio                          1 profiles
+  Snell                           1 profiles
+  Socobeta                        1 profiles
+  Sole                            1 profiles
+  SoleusAir                       2 profiles
+  Solida                          1 profiles
+  Solis                           1 profiles
+  Somela                          1 profiles
+  Somfy                           5 profiles
+  Sonance                         3 profiles
+  Sonic Blue                      1 profiles
+  Sonicview                       1 profiles
+  Soniq                           3 profiles
+  Sonoff                          1 profiles
+  Sonos                           1 profiles
+  Sony                          415 profiles
+  Sony Ericsson                   1 profiles
+  Sony Experimental unlock        8 profiles
+  Soundgraph                      1 profiles
+  Southerland                     1 profiles
+  SOYO                            3 profiles
+  Spectral                        1 profiles
+  Speed-link                      1 profiles
+  ST                              2 profiles
+  Stadler Form                    1 profiles
+  Starcom                         1 profiles
+  starhub                         1 profiles
+  Starmax                         1 profiles
+  Starsat                         6 profiles
+  Startrack                       1 profiles
+  Starview                        1 profiles
+  Steljes                         1 profiles
+  Stereo Amplifiers               1 profiles
+  StereoBoomm                     1 profiles
+  Storex                          2 profiles
+  Strato                          1 profiles
+  Streamzap                       2 profiles
+  Strong                         15 profiles
+  Style Selections                1 profiles
+  Subtropic                       1 profiles
+  SuedwindAmbientika              1 profiles
+  Summit                          1 profiles
+  Sumvision                       2 profiles
+  sun                             1 profiles
+  Sunbeam                         1 profiles
+  Sunbrite                        1 profiles
+  SunBriteTV                      4 profiles
+  Sunfire                         2 profiles
+  Sungale                         1 profiles
+  Sunset Lamp                     1 profiles
+  Suntec                          1 profiles
+  Sunteca                         1 profiles
+  Superbox                        1 profiles
+  Supermax                        1 profiles
+  SUPERSQNY                       1 profiles
+  Supportplus                     1 profiles
+  Supra                           1 profiles
+  SVA                             1 profiles
+  SVEN                            4 profiles
+  Sweex                           1 profiles
+  Swisscom                        1 profiles
+  Syabas                          1 profiles
+  Sylvania                        5 profiles
+  Symphonic                       4 profiles
+  Syntax-Brillian                 1 profiles
+  T+A                             2 profiles
+  T-SUN                           1 profiles
+  Tab Electronics                 1 profiles
+  TacT                            2 profiles
+  TAG McLaren                     2 profiles
+  Tandberg                        4 profiles
+  Tangent                         1 profiles
+  TAO                             1 profiles
+  TaoTronics                      4 profiles
+  Targa                           1 profiles
+  Tascam                         10 profiles
+  Tata Sky                        1 profiles
+  Taurus                          1 profiles
+  Tayama ASAP Technology          1 profiles
+  TCL                            13 profiles
+  TCM                             6 profiles
+  TCP                             1 profiles
+  TCUAG                           1 profiles
+  TEAC                           26 profiles
+  TECHNIC                         1 profiles
+  Technicolor                     3 profiles
+  Technics                       37 profiles
+  Technika                        3 profiles
+  TechniSat                      17 profiles
+  Technoit                        1 profiles
+  Technosat                       1 profiles
+  Technosonic                     1 profiles
+  Technotrend                     3 profiles
+  Tectro                          1 profiles
+  Tefal                           1 profiles
+  Telecontrole                    1 profiles
+  Telefunken                     10 profiles
+  Teleka                          1 profiles
+  Telekom                         3 profiles
+  Telemann                        1 profiles
+  Telenet                         1 profiles
+  Telestar                        1 profiles
+  Telesystem                     30 profiles
+  Televes                         2 profiles
+  Telewire                        2 profiles
+  Telex                           1 profiles
+  Telsky                          1 profiles
+  Telus                           2 profiles
+  Tensai                          1 profiles
+  Terratec                       10 profiles
+  Terris                          2 profiles
+  Tesla                           5 profiles
+  TESmart                         1 profiles
+  Teufel                          8 profiles
+  Tevion                         17 profiles
+  THES                            2 profiles
+  Theta                           1 profiles
+  Theta Digital                   4 profiles
+  Thinkgeek                       1 profiles
+  Thinkway Toys                   1 profiles
+  Thompson                        1 profiles
+  Thomson                        10 profiles
+  Thule                           1 profiles
+  Thunrlge                        1 profiles
+  Tiger                           2 profiles
+  Tikom                           1 profiles
+  Tilview                         1 profiles
+  Timberk                         1 profiles
+  TION                            1 profiles
+  Tivo                            5 profiles
+  Tivoli                          1 profiles
+  Tkoofn                          1 profiles
+  Tocom                           1 profiles
+  Toilet Roll Dispenser           1 profiles
+  Tokai                           1 profiles
+  Tomate                          1 profiles
+  Tomlov                          1 profiles
+  Tomlov Microscope               1 profiles
+  Topcon                          1 profiles
+  Topfield                        7 profiles
+  Topping                         2 profiles
+  Topping Amplifier               1 profiles
+  Topseed                         1 profiles
+  TOPTRO                          1 profiles
+  TopVisionTec                    1 profiles
+  Tora                            1 profiles
+  Toshiba                        87 profiles
+  Tosot                           1 profiles
+  Total Control                   1 profiles
+  Total Media In Hand             1 profiles
+  ToteVision                      1 profiles
+  Toys R Us                       1 profiles
+  Travelors                       1 profiles
+  Traxis                          1 profiles
+  Trekstor                        1 profiles
+  Trevi                           1 profiles
+  Triax                           2 profiles
+  Tributaries                     1 profiles
+  Tridonic                        2 profiles
+  Trio                            2 profiles
+  Tripp Lite                      1 profiles
+  Tronfy                          1 profiles
+  Tropic                          1 profiles
+  Trotec                          2 profiles
+  TrueConf                        1 profiles
+  Truman                          1 profiles
+  Trust                           1 profiles
+  Trutech                         1 profiles
+  tuffenough                      1 profiles
+  Turtle Beach                    2 profiles
+  Tuya                            1 profiles
+  Tv Samsung                      1 profiles
+  tvONE                           3 profiles
+  Tween                           1 profiles
+  Tween lights                    2 profiles
+  Twinhan                         2 profiles
+  TwinStar                        2 profiles
+  Typhoon                         2 profiles
+  Tzumi                           1 profiles
+  U-Ultty                         1 profiles
+  UEC                             1 profiles
+  Ufesa                           1 profiles
+  UFO Sunset Lamp                 1 profiles
+  Ugreen                          1 profiles
+  Ultimea                         1 profiles
+  Ultrawave                       1 profiles
+  Umax                            1 profiles
+  UMC                             1 profiles
+  Uncle Milton                    1 profiles
+  Uncle Miltons                   1 profiles
+  Uniden                          7 profiles
+  United                          6 profiles
+  Unitymedia                      1 profiles
+  Universal                      17 profiles
+  Universal Electronics           1 profiles
+  Universum                       7 profiles
+  Unknown Brand                   5 profiles
+  UPC                             1 profiles
+  Upstar                          2 profiles
+  Urevo                           1 profiles
+  US Electronics                  7 profiles
+  User Created                    1 profiles
+  Utilitech                       1 profiles
+  V-TAC                           2 profiles
+  Vactidy                         1 profiles
+  Vamvo                           1 profiles
+  Vankyo                          1 profiles
+  Vantage                         2 profiles
+  Varilux                         1 profiles
+  Varytech                        1 profiles
+  Vaux                            1 profiles
+  VDC                             1 profiles
+  Veezio                          1 profiles
+  Velodyne                        7 profiles
+  Venex                           1 profiles
+  Venturer                        2 profiles
+  Vestel                          1 profiles
+  Viano                           1 profiles
+  VibroShaper                     1 profiles
+  Video7                          1 profiles
+  Videocon                        2 profiles
+  VideoLABS                       2 profiles
+  videologic                      1 profiles
+  Vidikron                       11 profiles
+  Viesa                           1 profiles
+  Viewmaster                      1 profiles
+  viewmaxpro                      1 profiles
+  Viewsat                         1 profiles
+  ViewSonic                      10 profiles
+  Viewtech                        1 profiles
+  Viore                           2 profiles
+  Virgin-media                    1 profiles
+  Visionetics                     1 profiles
+  Vistron                         4 profiles
+  Vitec                           1 profiles
+  Vitek                           2 profiles
+  Vivanco                         4 profiles
+  Vivax                           1 profiles
+  Vivitek                         3 profiles
+  Vizio                          18 profiles
+  VocoPro                         1 profiles
+  Vodafone                        1 profiles
+  Vornado                         5 profiles
+  Voxson                          1 profiles
+  VU+                             1 profiles
+  Vutec                           4 profiles
+  Waltham                         1 profiles
+  Wanbo                           1 profiles
+  Warmoon                         1 profiles
+  Watson                          1 profiles
+  WayneDresser                    1 profiles
+  Wbox                            1 profiles
+  WD                              1 profiles
+  Weili                           1 profiles
+  WEN                             1 profiles
+  Western Digital                 1 profiles
+  Westinghouse                    7 profiles
+  WeWatch                         1 profiles
+  Whalen Furniture                1 profiles
+  Whynter                         1 profiles
+  Wilfa                           1 profiles
+  WiMiUS                          2 profiles
+  Windfree                        3 profiles
+  Winix                           2 profiles
+  Winnes                          1 profiles
+  Winyea                          1 profiles
+  Wireless Mouse Inc              1 profiles
+  Wisetech                        1 profiles
+  WISI                            4 profiles
+  Wolf                            1 profiles
+  Woozoo                          3 profiles
+  WowWee-RoboSapien               2 profiles
+  X-10                            1 profiles
+  X4TECH                          1 profiles
+  Xantech                         9 profiles
+  Xfinity                         6 profiles
+  Xflyee                          1 profiles
+  Xiaomi                          7 profiles
+  Xiva                            1 profiles
+  Xlogic                          1 profiles
+  XMS                             1 profiles
+  XORO                           17 profiles
+  Xpelair                         1 profiles
+  xsat                            1 profiles
+  Xtreamer                        1 profiles
+  Xtreme Lit LEDs                 1 profiles
+  Xtrend                          1 profiles
+  Yakumo                          2 profiles
+  Yamada                          2 profiles
+  Yamaha                        109 profiles
+  Yamakawa                        2 profiles
+  Yarra                           1 profiles
+  Yealink                         1 profiles
+  YES                             1 profiles
+  York                            2 profiles
+  Yoton                           1 profiles
+  Yousee                          1 profiles
+  Yuan                            1 profiles
+  Zalman                          1 profiles
+  Zamil                           1 profiles
+  Zeatek                          1 profiles
+  ZeeVee                          1 profiles
+  Zehnder                         5 profiles
+  Zenith                         35 profiles
+  Zephir                          2 profiles
+  Ziglint                         1 profiles
+  Zinwell                         1 profiles
+  Zodiac                          3 profiles
+  Zolid                           1 profiles
+  Zoltrix                         1 profiles
+  Zotac                           1 profiles
+  Zyxel                           1 profiles

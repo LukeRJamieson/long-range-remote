@@ -1,0 +1,23 @@
+Quantity,Part Number,Customer Reference
+66,475-SFH4545-ND,LED head lite D1-D66
+33,ERJ-P08J240V,LED head lite R1-R33
+1,785-1565-1-ND,Control lite Q2 (LED switch)
+2,P14419-ND,Control lite C1 C2
+3,445-173265-1-ND,Control lite C3 C6 C7
+1,445-173374-1-ND,Control lite C8
+1,1.00KXBK-ND,Control lite R11
+3,100KXBK-ND,Control lite R4 R7 R14
+2,470KXBK-ND,Control lite R12 R13 (pack sense)
+2,10.0KXBK-ND,Control lite R15 R16
+1,IPD80P03P4L07ATMA2,Control lite Q5 (LED power gate)
+1,2N3904FS-ND,Control lite Q6 (gate driver)
+1,MFR-25FBF52-47R,"Control lite R6 (Q2 gate, slows the edge)"
+6,SW400-ND,Control lite SW1-SW6 (D-pad + SELECT + BACK)
+1,732-2094-ND,Control lite J5
+1,732-2095-ND,Control lite J2
+1,455-B2B-XH-A-ND,Control lite J1
+1,1528-370-ND,Cables LED head J1 - control J5
+2,LKC16H-ND,Cables 16-way ribbon: new socket after cutting it to ~70 mm (+ 1 spare)
+1,2478,Battery 4 x AA holder (wire leads to control J1)
+1,XHP-2,Battery plug for the holder's leads (mates control J1)
+4,SXH-001T-P0.6,Battery crimps for that plug (+ 2 spares)

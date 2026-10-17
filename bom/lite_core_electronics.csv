@@ -1,0 +1,4 @@
+Item,Qty,Unit (AUD inc GST),Extended (AUD inc GST),Note
+"Adafruit GPIO Ribbon Cable 2x8 IDC, 16 pins, 12in",1,4.75,4.75,control J2 <-> Waveshare header: cut to ~70 mm and re-terminated (Digi-Key LKC16H-ND)
+"Pololu 1x40 breakaway male header, double-sided",1,2.40,2.40,2x 8 pins: gender changer for the Waveshare's female header; 2x 5 pins: LED head J1
+TOTAL,,,7.15,

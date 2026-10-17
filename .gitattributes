@@ -1,0 +1,11 @@
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.bin binary
+*.zip binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.step binary
+*.stl binary
+*.csv -text

@@ -1,0 +1,1911 @@
+{
+ "led_head_lite": [
+  {
+   "ref": "D32",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -13.46,
+    -6.96
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D47",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    0.16,
+    6.66
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D54",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -47.44,
+    -40.94
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D25",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -40.64,
+    -34.14
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D63",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    13.75,
+    20.25
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D58",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -20.25,
+    -13.75
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D24",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -33.84,
+    -27.34
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D50",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -20.25,
+    -13.75
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D60",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -6.66,
+    -0.16
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D19",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    0.16,
+    6.66
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D45",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    13.75,
+    20.25
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D59",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -13.46,
+    -6.96
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D39",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    34.15,
+    40.65
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D17",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    13.75,
+    20.25
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D57",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -27.06,
+    -20.56
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D38",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    27.34,
+    33.84
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D53",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -40.64,
+    -34.14
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D16",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    20.56,
+    27.06
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D30",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -27.06,
+    -20.56
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D14",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    34.16,
+    40.66
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D10",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    20.54,
+    27.04
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D34",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    0.15,
+    6.65
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D8",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    6.94,
+    13.44
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D46",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    6.96,
+    13.46
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D61",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    0.15,
+    6.65
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D31",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -20.25,
+    -13.75
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D48",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -6.65,
+    -0.15
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D44",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    20.56,
+    27.06
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D52",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -33.84,
+    -27.34
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D27",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -47.45,
+    -40.95
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D62",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    6.94,
+    13.44
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D1",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -40.66,
+    -34.16
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D55",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -40.66,
+    -34.16
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D20",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -6.65,
+    -0.15
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D33",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -6.66,
+    -0.16
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D64",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    20.54,
+    27.04
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D65",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    27.34,
+    33.84
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D66",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    34.15,
+    40.65
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D18",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    6.96,
+    13.46
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D36",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    13.75,
+    20.25
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D21",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -13.44,
+    -6.94
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D11",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    27.34,
+    33.84
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D56",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -33.86,
+    -27.36
+   ],
+   "v": [
+    10.72,
+    17.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D41",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    40.96,
+    47.46
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D2",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -33.86,
+    -27.36
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D29",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -33.86,
+    -27.36
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D51",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -27.05,
+    -20.54
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D43",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    27.35,
+    33.85
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D28",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -40.66,
+    -34.16
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D7",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    0.15,
+    6.65
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D35",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    6.94,
+    13.44
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D23",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -27.05,
+    -20.54
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D12",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    34.15,
+    40.65
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D37",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    20.54,
+    27.04
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D9",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    13.75,
+    20.25
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D5",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -13.46,
+    -6.96
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D49",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -13.44,
+    -6.94
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D15",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    27.35,
+    33.85
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D3",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -27.06,
+    -20.56
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D42",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    34.16,
+    40.66
+   ],
+   "v": [
+    3.72,
+    10.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D40",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    40.94,
+    47.44
+   ],
+   "v": [
+    -3.28,
+    3.28
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D26",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -47.44,
+    -40.94
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D6",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -6.66,
+    -0.16
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D13",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    40.96,
+    47.46
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D4",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -20.25,
+    -13.75
+   ],
+   "v": [
+    -17.28,
+    -10.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "D22",
+   "fp": "LED_THT:LED_D5.0mm",
+   "side": "front",
+   "u": [
+    -20.25,
+    -13.75
+   ],
+   "v": [
+    -10.28,
+    -3.72
+   ],
+   "h": 8.7,
+   "lead": 2.0
+  },
+  {
+   "ref": "R30",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -3.06,
+    1.9
+   ],
+   "v": [
+    9.36,
+    11.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R20",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    41.44,
+    46.4
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R14",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -37.06,
+    -32.11
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R12",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -32.8,
+    -27.84
+   ],
+   "v": [
+    -11.64,
+    -9.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R25",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -19.19,
+    -14.25
+   ],
+   "v": [
+    2.36,
+    4.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R19",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    27.84,
+    32.79
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R16",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -9.85,
+    -4.91
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R33",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    34.64,
+    39.59
+   ],
+   "v": [
+    16.36,
+    18.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "J1",
+   "fp": "Connector_PinHeader_2.54mm:PinHeader_2x05_P2.54mm_Vertical",
+   "side": "back",
+   "u": [
+    -6.91,
+    6.9
+   ],
+   "v": [
+    16.2,
+    22.41
+   ],
+   "h": 20.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "R26",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -32.8,
+    -27.84
+   ],
+   "v": [
+    2.36,
+    4.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R23",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    4.91,
+    9.85
+   ],
+   "v": [
+    2.36,
+    4.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R17",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    0.64,
+    5.59
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R6",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    34.64,
+    39.59
+   ],
+   "v": [
+    -18.64,
+    -16.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R9",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    4.91,
+    9.85
+   ],
+   "v": [
+    -11.64,
+    -9.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R18",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    14.25,
+    19.19
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R8",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    18.5,
+    23.46
+   ],
+   "v": [
+    -11.64,
+    -9.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R5",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    21.04,
+    25.99
+   ],
+   "v": [
+    -18.64,
+    -16.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R2",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -16.66,
+    -11.71
+   ],
+   "v": [
+    -18.64,
+    -16.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R13",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -46.39,
+    -41.44
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R28",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -30.25,
+    -25.31
+   ],
+   "v": [
+    16.36,
+    18.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R7",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    32.1,
+    37.05
+   ],
+   "v": [
+    -11.64,
+    -9.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R21",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    32.1,
+    37.05
+   ],
+   "v": [
+    2.36,
+    4.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R32",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    21.04,
+    25.99
+   ],
+   "v": [
+    16.36,
+    18.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R10",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -5.59,
+    -0.65
+   ],
+   "v": [
+    -11.64,
+    -9.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R1",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -30.25,
+    -25.31
+   ],
+   "v": [
+    -18.64,
+    -16.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R15",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -23.45,
+    -18.5
+   ],
+   "v": [
+    -4.64,
+    -2.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R22",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    18.5,
+    23.46
+   ],
+   "v": [
+    2.36,
+    4.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R24",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -5.59,
+    -0.65
+   ],
+   "v": [
+    2.36,
+    4.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R29",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -16.66,
+    -11.71
+   ],
+   "v": [
+    16.36,
+    18.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R27",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -46.39,
+    -41.44
+   ],
+   "v": [
+    2.36,
+    4.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R11",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -19.19,
+    -14.25
+   ],
+   "v": [
+    -11.64,
+    -9.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R4",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    7.44,
+    12.4
+   ],
+   "v": [
+    -18.64,
+    -16.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R31",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    10.54,
+    15.5
+   ],
+   "v": [
+    16.36,
+    18.64
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  },
+  {
+   "ref": "R3",
+   "fp": "Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder",
+   "side": "back",
+   "u": [
+    -3.06,
+    1.9
+   ],
+   "v": [
+    -18.64,
+    -16.36
+   ],
+   "h": 0.8,
+   "lead": 2.0
+  }
+ ],
+ "control_lite": [
+  {
+   "ref": "SW3",
+   "fp": "Button_Switch_THT:SW_PUSH_6mm",
+   "side": "front",
+   "u": [
+    -36.78,
+    -27.22
+   ],
+   "v": [
+    -3.78,
+    3.78
+   ],
+   "h": 4.3,
+   "lead": 2.0
+  },
+  {
+   "ref": "SW6",
+   "fp": "Button_Switch_THT:SW_PUSH_6mm",
+   "side": "front",
+   "u": [
+    -12.78,
+    -3.22
+   ],
+   "v": [
+    10.22,
+    17.78
+   ],
+   "h": 4.3,
+   "lead": 2.0
+  },
+  {
+   "ref": "SW2",
+   "fp": "Button_Switch_THT:SW_PUSH_6mm",
+   "side": "front",
+   "u": [
+    -26.78,
+    -17.22
+   ],
+   "v": [
+    6.22,
+    13.78
+   ],
+   "h": 4.3,
+   "lead": 2.0
+  },
+  {
+   "ref": "SW5",
+   "fp": "Button_Switch_THT:SW_PUSH_6mm",
+   "side": "front",
+   "u": [
+    19.22,
+    28.78
+   ],
+   "v": [
+    -3.78,
+    3.78
+   ],
+   "h": 4.3,
+   "lead": 2.0
+  },
+  {
+   "ref": "SW1",
+   "fp": "Button_Switch_THT:SW_PUSH_6mm",
+   "side": "front",
+   "u": [
+    -26.78,
+    -17.22
+   ],
+   "v": [
+    -13.78,
+    -6.22
+   ],
+   "h": 4.3,
+   "lead": 2.0
+  },
+  {
+   "ref": "SW4",
+   "fp": "Button_Switch_THT:SW_PUSH_6mm",
+   "side": "front",
+   "u": [
+    -16.78,
+    -7.22
+   ],
+   "v": [
+    -3.78,
+    3.78
+   ],
+   "h": 4.3,
+   "lead": 2.0
+  },
+  {
+   "ref": "R16",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    36.88,
+    39.93
+   ],
+   "v": [
+    -17.08,
+    -7.31
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "R14",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    30.47,
+    33.53
+   ],
+   "v": [
+    -17.08,
+    -7.31
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "R4",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    4.31,
+    7.37
+   ],
+   "v": [
+    -15.58,
+    -5.81
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "J1",
+   "fp": "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical",
+   "side": "back",
+   "u": [
+    15.03,
+    23.47
+   ],
+   "v": [
+    19.08,
+    25.88
+   ],
+   "h": 20.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "R12",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    17.22,
+    27.0
+   ],
+   "v": [
+    -10.53,
+    -7.47
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "Q5",
+   "fp": "Package_TO_SOT_SMD:TO-252-2",
+   "side": "back",
+   "u": [
+    32.46,
+    39.53
+   ],
+   "v": [
+    6.58,
+    17.73
+   ],
+   "h": 2.5,
+   "lead": 2.0
+  },
+  {
+   "ref": "R7",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    -5.53,
+    -2.47
+   ],
+   "v": [
+    -14.58,
+    -4.81
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "R6",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    -9.93,
+    -6.88
+   ],
+   "v": [
+    -14.58,
+    -4.81
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "C8",
+   "fp": "Capacitor_THT:C_Disc_D5.1mm_W3.2mm_P5.00mm",
+   "side": "back",
+   "u": [
+    32.32,
+    39.47
+   ],
+   "v": [
+    2.33,
+    6.08
+   ],
+   "h": 7.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "R15",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    33.47,
+    36.53
+   ],
+   "v": [
+    -17.08,
+    -7.31
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "Q6",
+   "fp": "Package_TO_SOT_THT:TO-92_Inline_Wide",
+   "side": "back",
+   "u": [
+    33.76,
+    38.56
+   ],
+   "v": [
+    -5.03,
+    2.11
+   ],
+   "h": 5.5,
+   "lead": 2.0
+  },
+  {
+   "ref": "R13",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    17.22,
+    27.0
+   ],
+   "v": [
+    -13.53,
+    -10.47
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "J5",
+   "fp": "Connector_IDC:IDC-Header_2x05_P2.54mm_Vertical",
+   "side": "back",
+   "u": [
+    -30.28,
+    -8.88
+   ],
+   "v": [
+    -25.47,
+    -14.47
+   ],
+   "h": 18.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "J2",
+   "fp": "Connector_IDC:IDC-Header_2x08_P2.54mm_Vertical",
+   "side": "back",
+   "u": [
+    -7.41,
+    21.62
+   ],
+   "v": [
+    -25.47,
+    -14.47
+   ],
+   "h": 18.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "C1",
+   "fp": "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm",
+   "side": "back",
+   "u": [
+    8.95,
+    19.78
+   ],
+   "v": [
+    7.72,
+    18.28
+   ],
+   "h": 15.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "C6",
+   "fp": "Capacitor_THT:C_Rect_L4.0mm_W2.5mm_P2.50mm",
+   "side": "back",
+   "u": [
+    8.07,
+    11.12
+   ],
+   "v": [
+    -15.58,
+    -10.92
+   ],
+   "h": 7.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "Q2",
+   "fp": "Package_TO_SOT_SMD:TO-252-2",
+   "side": "back",
+   "u": [
+    -17.03,
+    -9.96
+   ],
+   "v": [
+    -14.53,
+    -3.39
+   ],
+   "h": 2.5,
+   "lead": 2.0
+  },
+  {
+   "ref": "C3",
+   "fp": "Capacitor_THT:C_Rect_L4.0mm_W2.5mm_P2.50mm",
+   "side": "back",
+   "u": [
+    25.43,
+    30.07
+   ],
+   "v": [
+    19.47,
+    22.53
+   ],
+   "h": 7.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "C7",
+   "fp": "Capacitor_THT:C_Rect_L4.0mm_W2.5mm_P2.50mm",
+   "side": "back",
+   "u": [
+    29.47,
+    32.53
+   ],
+   "v": [
+    -5.08,
+    -0.42
+   ],
+   "h": 7.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "C2",
+   "fp": "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm",
+   "side": "back",
+   "u": [
+    20.95,
+    31.78
+   ],
+   "v": [
+    7.72,
+    18.28
+   ],
+   "h": 15.0,
+   "lead": 2.0
+  },
+  {
+   "ref": "R11",
+   "fp": "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal",
+   "side": "back",
+   "u": [
+    -0.03,
+    3.03
+   ],
+   "v": [
+    -15.58,
+    -5.81
+   ],
+   "h": 3.0,
+   "lead": 2.0
+  }
+ ]
+}

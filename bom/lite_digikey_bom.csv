@@ -1,0 +1,26 @@
+Board,Refs,Qty,Manufacturer,MPN,Digi-Key PN,Description,Unit price,Extended,Currency,Stock (3-4 Oct 2026)
+LED head lite,D1-D66,66,ams OSRAM,SFH 4545,475-SFH4545-ND,"IR emitter 950nm 5mm radial, +/-5 deg, 100mA",0.8690,57.35,AUD ex GST,"38,056"
+LED head lite,R1-R33,33,Panasonic,ERJ-P08J240V,ERJ-P08J240V,"24R 5% 0.66W 1206 pulse-withstanding thick film, AEC-Q200 (USD: Mouser US price, 4 Oct 2026; Digi-Key PN not read - the upload uses the MPN)",0.0540,1.78,USD,"11,750 (Mouser)"
+Control lite,Q2 (LED switch),1,Alpha & Omega,AOD424,785-1565-1-ND,"N-MOSFET 20V 45A, 5.7 mOhm max @ Vgs 2.5V, DPAK - LED switch, driven straight from GPIO17 (Digi-Key AU, 11 Oct 2026)",2.2100,2.21,AUD ex GST,"32,110"
+Control lite,C1 C2,2,Panasonic,EEU-FR1E471,P14419-ND,"470uF 25V low-ESR aluminium, 10 x 12.5mm (14mm max seated), 5mm pitch",1.4600,2.92,AUD ex GST,"3,128 (12 Oct)"
+Control lite,C3 C6 C7,3,TDK,FG18X7R1H104KNT06,445-173265-1-ND,"100nF 50V X7R radial, 2.5mm pitch",0.3900,1.17,AUD ex GST,"42,546"
+Control lite,C8,1,TDK,FG24X7R1H105KRT06,445-173374-1-ND,"1uF 50V X7R radial, 5mm pitch",0.7900,0.79,AUD ex GST,"30,819"
+Control lite,R11,1,YAGEO,MFR-25FBF52-1K,1.00KXBK-ND,1k 1% 1/4W metal film axial,0.1500,0.15,AUD ex GST,"64,471"
+Control lite,R4 R7 R14,3,YAGEO,MFR-25FBF52-100K,100KXBK-ND,100k 1% 1/4W metal film axial,0.1500,0.45,AUD ex GST,"19,216"
+Control lite,R12 R13 (pack sense),2,YAGEO,MFR-25FBF52-470K,470KXBK-ND,470k 1% 1/4W metal film axial,0.1500,0.30,AUD ex GST,"10,000"
+Control lite,R15 R16,2,YAGEO,MFR-25FBF52-10K,10.0KXBK-ND,10k 1% 1/4W metal film axial,0.1500,0.30,AUD ex GST,"69,768"
+Control lite,Q5 (LED power gate),1,Infineon,IPD80P03P4L07ATMA2,IPD80P03P4L07ATMA2,"P-MOSFET -30V -80A logic-level, 12mOhm max @ -4.5V, DPAK (TO-252) - LED power gate (USD: Mouser US price for 726-IPD80P03P4L07AT2, 4 Oct 2026; the upload uses the MPN)",2.0700,2.07,USD,"9,179 (Mouser)"
+Control lite,Q6 (gate driver),1,onsemi,2N3904BU,2N3904FS-ND,"NPN 40V 0.2A, TO-92 (USD)",0.2800,0.28,USD,"109,580 (US site)"
+Control lite,"R6 (Q2 gate, slows the edge)",1,YAGEO,MFR-25FBF52-47R,MFR-25FBF52-47R,"47R 1% 1/4W metal film axial - Q2 gate (price assumed equal to the other MFR-25 values, not checked; the upload uses the MPN)",0.1500,0.15,AUD ex GST,-
+Control lite,SW1-SW6 (D-pad + SELECT + BACK),6,Omron (Aratas),B3F-1000,SW400-ND,"Tactile switch 6x6mm, 4.3mm",0.5100,3.06,AUD ex GST,"26,202"
+Control lite,J5,1,Wurth Elektronik,61201021621,732-2094-ND,"2x5 2.54mm shrouded box header, vertical",0.6600,0.66,AUD ex GST,"34,340"
+Control lite,J2,1,Wurth Elektronik,61201621621,732-2095-ND,"2x8 2.54mm shrouded box header, vertical",0.8700,0.87,AUD ex GST,"7,987"
+Control lite,J1,1,JST,B2B-XH-A(LF)(SN),455-B2B-XH-A-ND,"JST XH 2-pin header, vertical",0.1500,0.15,AUD ex GST,"293,978"
+Cables,LED head J1 - control J5,1,Adafruit,370,1528-370-ND,"10-pin 2x5 0.1in socket/socket IDC cable, 6in",2.9100,2.91,AUD ex GST,261
+Cables,16-way ribbon: new socket after cutting it to ~70 mm (+ 1 spare),2,CNC Tech,3030-16-0102-00,LKC16H-ND,"16-way IDC ribbon socket, 2.54mm, keyed - the new end when the 16-way ribbon is cut to length (Digi-Key AU, 12 Oct 2026)",0.8200,1.64,AUD ex GST,"3,015"
+Battery,4 x AA holder (wire leads to control J1),1,Keystone,2478,2478,"4 x AA battery holder, open, 6in wire leads, 63 x 58 x 16 mm (USD: Mouser US price for 534-2478, 4 Oct 2026; Digi-Key lists it too - the upload uses the MPN)",2.0800,2.08,USD,748 (Mouser)
+Battery,plug for the holder's leads (mates control J1),1,JST,XHP-2,XHP-2,"JST XH 2-way plug housing, for the AA holder's leads - price not checked",0.0000,0.00,AUD ex GST,-
+Battery,crimps for that plug (+ 2 spares),4,JST,SXH-001T-P0.6,SXH-001T-P0.6,"JST XH crimp contact, 22-28 AWG - price not checked (needs an XH crimp tool)",0.0000,0.00,AUD ex GST,-
+
+,,,TOTAL,,,AUD ex GST lines,,75.08,AUD ex GST
+,,,,,,"USD lines (R24, PFET80, 2N3904, AA4)",,6.21,USD

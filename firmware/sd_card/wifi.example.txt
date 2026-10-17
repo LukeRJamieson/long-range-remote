@@ -1,0 +1,11 @@
+# Long-range remote: home Wi-Fi network (2.4 GHz only).
+#
+# The remote creates wifi.txt on the card by itself and rewrites it when you change the network
+# in Menu > Wi-Fi network. To set the network on a PC instead, fill in the two lines below, save
+# this file on the card as wifi.txt (not wifi.example.txt), and power the remote up.
+#
+# The name is case-sensitive. Leave ssid empty to use only the remote's own LR-Remote network.
+# Leave password empty for an open network. Spaces around a value are ignored; to keep spaces at
+# the start or end of a value, put it in double quotes, e.g. password="  my password ".
+ssid=MyNetwork
+password=my wifi password
