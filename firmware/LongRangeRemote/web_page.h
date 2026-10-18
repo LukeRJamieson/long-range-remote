@@ -53,6 +53,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
 .empty{color:var(--mut);padding:30px 8px;text-align:center}
 .up{background:var(--panel);border-radius:10px;padding:12px;margin:8px 0;display:grid;gap:8px}
 .up input[type=file]{padding:8px;font-size:14px}
+.chk{display:flex;align-items:flex-start;gap:8px;margin:0;color:var(--fg);font-size:14px}.chk input{width:auto;margin:2px 0 0;flex:none}
 .warn{background:#4a3a1a;color:#ffd98a;border-radius:10px;padding:12px;margin:8px 0}
 </style></head><body>
 <header>
@@ -116,6 +117,11 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
     <button class="b" id="upirgo">Upload files</button></div>
   <div class="mut" id="upmsg"></div>
   <div class="acts"><button class="b" id="restart">Restart (load the card again)</button></div>
+  <div class="up"><b>Format the SD card</b>
+    <span class="mut">Erases everything on the card and formats it FAT32. Use it for a new card, or one the remote can't read.</span>
+    <label class="chk"><input type="checkbox" id="fmtkeep" checked><span>Put the code database and home Wi-Fi back afterwards (from the remote's memory, no upload needed). Your own .ir files can't be put back: keep copies.</span></label>
+    <button class="b del" id="fmtgo">Format SD card&hellip;</button>
+    <div class="mut" id="fmtmsg"></div></div>
   <div id="lpbox" style="display:none">
   <h3>LED power</h3>
   <p class="mut">Lowers the LED current (the carrier's on-time) to save the AA cells at close range. Use <b>Full</b> for long range. Stored on the remote.</p>
@@ -193,6 +199,17 @@ function renderPower(){
     x.onclick=async()=>{await fetch('/api/power?l='+i);await refreshState();renderInfo()};b.appendChild(x)});
 }
 $('#restart').onclick=()=>{if(confirm('Restart the remote now?'))restartRemote()};
+$('#fmtgo').onclick=async()=>{
+  const keep=$('#fmtkeep').checked;
+  if(!confirm('Format the SD card?\n\nEVERYTHING on it is erased, including your own .ir files.'+
+    (keep?' The code database and home Wi-Fi are written back afterwards.':' The card will be empty: upload irdb.bin before the remote restarts.')))return;
+  const b=$('#fmtgo');b.disabled=true;
+  $('#fmtmsg').textContent='Formatting'+(keep?' and writing the codes back':'')+' - this takes up to a minute...';
+  try{const r=await fetch('/api/format?confirm=FORMAT&keep='+(keep?1:0),{method:'POST'});
+    $('#fmtmsg').textContent=(r.ok?'':'Not formatted: ')+await r.text();await refreshState();renderInfo()}
+  catch(e){$('#fmtmsg').textContent='Lost the connection while formatting - check the Status screen on the remote'}
+  b.disabled=false;
+};
 
 // ---------- state / favourites ----------
 async function refreshState(){

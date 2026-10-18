@@ -42,4 +42,8 @@ bool wifiSaved();                  // false: the current network is not on the c
 // lasts until the remote restarts). The caller then calls wifimgr::reconnect().
 bool setWifi(const String &ssid, const String &pass, char *msg, size_t msg_len);
 
+// Write the current home network to /wifi.txt again (after the card was formatted). false + err if
+// the write failed.
+bool rewriteWifiFile(char *err, size_t err_len);
+
 }  // namespace settings

@@ -217,6 +217,18 @@ There are two ways:
   New codes and new button-name rules never change that hash. Adding a new *kind* of key does, and
   then you rebuild the firmware too.
 
+### Formatting the card
+
+Settings → **Format the SD card** erases the card and formats it FAT32 (32 KB clusters). Use it
+for a new card or one the remote can't read: it also works on a card that didn't mount at
+start-up, or one put in after it.
+- **"Put the code database and home Wi-Fi back afterwards"** (on by default) writes the database
+  the remote has in memory back to the card as `irdb.bin`, and `wifi.txt` with it. No upload is
+  needed, and the remote starts normally next time.
+- Your own `.ir` files are erased and can't be put back: keep copies.
+- With the box unticked, the card is left empty. Upload `irdb.bin` before the remote restarts.
+- It takes from a few seconds to about a minute, depending on the card.
+
 ### Your own remotes (/ir)
 
 - Use any Flipper Zero `.ir` file, either parsed or raw signals. These include remotes you

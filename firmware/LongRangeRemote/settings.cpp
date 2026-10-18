@@ -209,4 +209,13 @@ bool setWifi(const String &ssid, const String &pass, char *msg, size_t mn) {
   return true;
 }
 
+bool rewriteWifiFile(char *err, size_t en) {
+  if (saveWifi(err, en)) {
+    snprintf(g_wifi_src, sizeof(g_wifi_src), "SD card, wifi.txt");
+    return true;
+  }
+  snprintf(g_wifi_src, sizeof(g_wifi_src), "not saved (%s) - until restart", err);
+  return false;
+}
+
 }  // namespace settings

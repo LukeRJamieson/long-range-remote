@@ -29,6 +29,13 @@ bool uploadWrite(const uint8_t *data, size_t len);
 bool uploadFinish(char *msg, size_t msg_len);     // false = rejected, msg says why
 void uploadAbort();
 
+// Format the card: FAT32 (FAT16 on cards under 2 GB), 32 KB clusters. ERASES EVERYTHING ON IT.
+// Also works on a card that didn't mount (never formatted, or corrupted), and on one inserted after
+// start-up. keep_codes: the code database in memory is written back as /irdb.bin afterwards, so the
+// remote works on the next start without an upload (the caller puts wifi.txt back: settings.h).
+// Your own .ir files can't be put back - they are erased. msg says what happened.
+bool format(bool keep_codes, char *msg, size_t msg_len);
+
 // Small settings files (e.g. /wifi.txt).
 //   readFile:    the whole file; false if there is no card, the file is missing or longer than max_len.
 //   replaceFile: writes <path>.new, reads it back to check it, then swaps it in for <path>. A power

@@ -16,6 +16,8 @@
 //   POST /api/upload?kind=ir&path=P    upload one of your own .ir files to /ir/P on the SD card
 //   /api/power?l=N                     LED power level (0 = full); the level is also in /api/state (lp, lpn)
 //   /api/restart                       restart (loads the new codes)
+//   POST /api/format?confirm=FORMAT&keep=1|0   format the SD card (ERASES IT). keep=1: put the code
+//                                      database (from memory) and wifi.txt back afterwards
 #include "web.h"
 #include "web_page.h"
 #include "config.h"
@@ -308,6 +310,22 @@ void hPower() {
   server.send(200, "text/plain", String(settings::ledPower()));
 }
 
+void hFormat() {
+  if (server.method() != HTTP_POST || server.arg("confirm") != "FORMAT") return badRequest("POST with confirm=FORMAT");
+  bool keep = server.arg("keep") != "0";
+  char msg[200];
+  bool ok = sdstore::format(keep, msg, sizeof(msg));
+  if (ok && keep) {
+    char err[64];
+    size_t n = strlen(msg);
+    if (settings::rewriteWifiFile(err, sizeof(err))) snprintf(msg + n, sizeof(msg) - n, " wifi.txt put back too.");
+    else snprintf(msg + n, sizeof(msg) - n, " wifi.txt NOT written (%s).", err);
+  }
+  logf("Format: %s\n", msg);
+  ui::requestRedraw();
+  server.send(ok ? 200 : 500, "text/plain", msg);
+}
+
 void hRestart() {
   server.send(200, "text/plain", "restarting - the page reloads in a few seconds");
   restart_at = millis() + 500;
@@ -339,6 +357,7 @@ void begin() {
   on("/api/fav", hFav);
   on("/api/power", hPower);
   on("/api/restart", hRestart);
+  on("/api/format", hFormat);
   server.on("/api/upload", HTTP_POST, hUploadDone, hUploadData);
   server.onNotFound([] { server.send(404, "text/plain", "not found"); });
   server.begin();
