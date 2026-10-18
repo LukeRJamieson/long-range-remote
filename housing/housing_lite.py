@@ -188,6 +188,37 @@ BTNS_SLOT_W = 38.0                      # along x, centred
 # front edge (-9.95); the tray's front wall is at -10.2, so the opening's keep-out box still clears it.
 BTNS_SLOT_Z0, BTNS_SLOT_Z1 = -10.0, 1.0
 
+# --- PWR lever (PWR_LEVER = True; False = the open notch above instead).
+# A straight lever, the only moving part, on a 1.75 mm filament pin in two cheeks under the lid. Its tab
+# stands 3 mm proud of the lid just in front of the screen: flick the tab forwards (towards the LED head)
+# and the lever's lower end swings rearwards, so a nub on it pushes the PWR button's plunger. Like a
+# momentary switch: the button's own spring is all it needs, and a stop in the lid slot limits the throw.
+# PWR's plunger [STEP, TS24CA]: 3.0 mm wide (xf -1.5..+1.5), 1.0 mm tall, 4.15-5.15 mm below the glass
+# top; its tip 0.19 mm in from the display's front edge, its switch body 1.35 mm in. The display board's
+# edge is 2.1-3.8 mm below the glass, so the nub sits below it (4.5-5.1) and only touches the plunger.
+# KEY and BOOT can't be reached with the lever fitted - they don't need to be: KEY is the same pin as UP
+# and BOOT the same as SELECT.
+# All z below are relative to the display's front edge (ze), y to the glass top (= lid underside).
+PWR_LEVER = True
+LEV_W = 6.0                               # lever width (x)
+LEV_REAR, LEV_FRONT = -0.9, -4.7          # lever faces at rest (z); 0.9 mm clear of the display's edge
+LEV_TOP, LEV_BOT = 6.0, -5.8              # tab top 3 mm above the lid's top face; lower end
+LEV_PIVOT = (-2.9, -1.0)                  # (z, y) of the pin: the pin clears the sleeve's front wall, so it
+                                          # slides in from the side through one cheek
+LEV_PIN_D = 1.75                          # a piece of 1.75 mm filament, LEV_PIN_LEN long
+LEV_HOLE_D, CHEEK_HOLE_D = 2.0, 1.8       # free in the lever (prints vertical: true size), snug in the cheeks
+NUB_Y = (-5.1, -4.5)                      # nub height: inside the plunger's 4.15-5.15, below the board edge
+PLUNGER_TIP = 0.19                        # [STEP]
+NUB_GAP = 0.3                             # nub to plunger at rest. Lever doesn't click PWR? Make it smaller.
+SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin
+LEV_SIDE_CLEAR, LEV_REAR_CLEAR = 0.35, 0.3
+CHEEK_T, CHEEK_DROP = 2.2, 3.0            # cheek thickness (x) and how far below the lid they reach
+LEV_STROKE = NUB_GAP + SWITCH_TRAVEL + OVERTRAVEL        # nub movement at the stop (0.75)
+_NUB_ARM = LEV_PIVOT[1] - sum(NUB_Y) / 2                 # pin to nub centre (3.8)
+LEV_THETA = LEV_STROKE / _NUB_ARM                         # throw at the stop, rad (~11 deg)
+LEV_SLOT_FRONT = LEV_THETA * (H.LID_T - LEV_PIVOT[1])     # front stop: tab hits the slot's front edge at the lid top
+LEV_PIN_LEN = LEV_W + 2 * (LEV_SIDE_CLEAR + CHEEK_T) - 0.4   # just short of the cheeks' outer faces
+
 
 # ============================================================================ parts
 def corners():
@@ -454,6 +485,51 @@ def btns_access_box(y0):
     return box(-BTNS_SLOT_W / 2, BTNS_SLOT_W / 2, y0 + DY, Y_TOP + 1.0, ze + BTNS_SLOT_Z0, ze + BTNS_SLOT_Z1)
 
 
+def _ze_yg():
+    """Display front edge (z) and glass top / lid underside (y) in this housing's frame."""
+    return H.Z_DISP_C - H.DISP_H / 2, H.Y_GLASS + DY
+
+
+def make_pwr_lever(theta=0.0):
+    """The PWR lever in place (theta = rad of flick, 0 = at rest; >0 = tab forwards, nub rearwards)."""
+    ze, yg = _ze_yg()
+    zr, zf, yt, yb = LEV_REAR, LEV_FRONT, LEV_TOP, LEV_BOT
+    zn = PLUNGER_TIP - NUB_GAP                                  # nub tip at rest
+    n0, n1 = NUB_Y
+    prof = [(zf, yb), (zr, yb), (zr, n0 - 0.4), (zn, n0), (zn, n1),       # nub, with sloped faces above
+            (zr, n1 + 0.4), (zr, yt), (zf, yt)]                          # and below it
+    # YZ workplane: local x = global y, local y = global z
+    lev = (cq.Workplane("YZ").workplane(offset=-LEV_W / 2)
+           .polyline([(yg + y, ze + z) for z, y in prof]).close().extrude(LEV_W))
+    lev = lev.edges("|X and >Y").fillet(1.0)                    # round the tab's top
+    pz, py = ze + LEV_PIVOT[0], yg + LEV_PIVOT[1]
+    lev = lev.cut(cq.Workplane("YZ").workplane(offset=-LEV_W / 2 - 1).center(py, pz)
+                  .circle(LEV_HOLE_D / 2).extrude(LEV_W + 2))
+    if theta:
+        lev = lev.rotate((0, py, pz), (1, py, pz), -math.degrees(theta))
+    return lev
+
+
+def lever_lid_features(lid):
+    """Cut the lever's slot and channel into the lid, add the two pin cheeks with their holes."""
+    ze, yg = _ze_yg()
+    hw = LEV_W / 2 + LEV_SIDE_CLEAR
+    # slot through the lid: rear edge 0.3 behind the lever's rear face, front edge at the stop
+    lid = lid.cut(box(-hw, hw, yg - 0.2, Y_TOP + 1.0, ze + LEV_FRONT - LEV_SLOT_FRONT, ze + LEV_REAR + LEV_REAR_CLEAR))
+    # channel through the sleeve's front wall for the lever's lower half
+    zw0 = ze - H.SLEEVE_CLEAR - H.SLEEVE_T - 0.1
+    lid = lid.cut(box(-hw, hw, yg + LEV_BOT - 0.4, yg + 0.01, zw0, ze))
+    # cheeks either side, hanging from the lid's underside, with the pin hole
+    pz, py = ze + LEV_PIVOT[0], yg + LEV_PIVOT[1]
+    cz0, cz1 = ze + LEV_FRONT - 0.8, ze + LEV_REAR + LEV_REAR_CLEAR
+    for sx in (-1, 1):
+        x0, x1 = sorted((sx * hw, sx * (hw + CHEEK_T)))
+        lid = lid.union(box(x0, x1, yg - CHEEK_DROP, yg + 0.5, cz0, cz1))
+    lid = lid.cut(cq.Workplane("YZ").workplane(offset=-hw - CHEEK_T - 1).center(py, pz)
+                  .circle(CHEEK_HOLE_D / 2).extrude(2 * (hw + CHEEK_T) + 2))
+    return lid
+
+
 def make_lid():
     """The base lid (display sleeve, control board bosses, lid screws) moved to this housing's lid height,
     with triangular D-pad holes, the round SELECT hole, the square BACK hole and the display-button slot."""
@@ -463,7 +539,10 @@ def make_lid():
     # display buttons: slot through the lid and the sleeve's whole front wall. It must go right down past the
     # wall's bottom edge (1.2 mm below the display's back plate, where the hooks catch): stopping at the back
     # plate left a loose 38 x 1.6 x 1.2 mm strip there, cut free by the hook slits either side.
-    lid = lid.cut(btns_access_box(H.Y_DISP_BACK - 2.5))
+    if PWR_LEVER:
+        lid = lever_lid_features(lid)
+    else:
+        lid = lid.cut(btns_access_box(H.Y_DISP_BACK - 2.5))
     # 0.3 mm chamfer round the top outline (a neat shadow line against the tray's R1.5 rim) ...
     x1, z0, z1 = BHI - H.LID_CLEAR, Z_TRAY_IN0 + H.LID_CLEAR, Z_TRAY_IN1 - H.LID_CLEAR
     outer = lambda e: (abs(abs(e.Center().x) - x1) < 0.05 or abs(e.Center().z - z0) < 0.05
@@ -506,7 +585,8 @@ def access_solids():
     for name, *_ in KEYS:
         a[f"key_path_{name}"] = place_key(key_outline(name, 0.0, -1, H.LID_T + 3), name)
     # a thin tool reaching the display's side buttons: down the slot, then rearwards onto the button
-    a["display_buttons_tool"] = btns_access_box(H.Y_DISP_BACK + 2.0)
+    if not PWR_LEVER:
+        a["display_buttons_tool"] = btns_access_box(H.Y_DISP_BACK + 2.0)
     # cells out through the opening once the door is off
     a["aa_cells_out"] = box(BAY_X0 + 0.3, BAY_X1 - 0.3, Y_BOT - 30, Y_DOOR_IN, BAY_Z0 + 0.3, BAY_Z1 - 0.3)
     # 10-way ribbon (12.7 mm wide): from the LED head's J1 socket (bottom centre) straight back at floor
@@ -602,6 +682,7 @@ ORIENT = {   # print orientation: flat face on the bed, no supports
     "body": lambda s: s.rotate((0, 0, 0), (1, 0, 0), 90),
     "lid": lambda s: s.rotate((0, 0, 0), (1, 0, 0), -90),
     "door": lambda s: s.rotate((0, 0, 0), (1, 0, 0), -90),         # inner face (tongue) down
+    "pwr_lever": lambda s: s.rotate((0, 0, 0), (0, 1, 0), 90),     # on its side: pin hole vertical
 }
 
 
@@ -612,8 +693,10 @@ def oriented(name, s):
 
 
 def make_parts():
-    return {"bezel": make_bezel(), "body": make_body(), "lid": make_lid(),
-            "door": make_door()}
+    parts = {"bezel": make_bezel(), "body": make_body(), "lid": make_lid(), "door": make_door()}
+    if PWR_LEVER:
+        parts["pwr_lever"] = make_pwr_lever()
+    return parts
 
 
 def main():
@@ -671,7 +754,7 @@ def main():
 
     asm = cq.Assembly(name="long_range_remote_lite_housing")
     col = {"bezel": (0.2, 0.2, 0.22), "body": (0.32, 0.34, 0.37),
-           "lid": (0.2, 0.2, 0.22), "door": (0.2, 0.2, 0.22)}
+           "lid": (0.2, 0.2, 0.22), "door": (0.2, 0.2, 0.22), "pwr_lever": (0.85, 0.4, 0.15)}
     for name, p in parts.items():
         cq.exporters.export(p, str(out_step / f"{name}.step"))
         asm.add(p, name=name, color=cq.Color(*col[name], 1))

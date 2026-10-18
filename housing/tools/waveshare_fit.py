@@ -10,7 +10,10 @@ It places every solid of the model in the housing (glass top against the lid's u
 towards the LED head, USB-C and TF in the right wall) and:
   1. intersects each one with the printed parts (lid, body, bezel, door): any overlap is a clash;
   2. checks that the lid's four snap hooks land on the display's back case;
-  3. prints where the USB-C receptacle and TF socket sit, to compare with the wall openings.
+  3. prints where the USB-C receptacle and TF socket sit, to compare with the wall openings;
+  4. with the PWR lever fitted (housing_lite.PWR_LEVER): the lever at rest must touch nothing, and
+     flicked to its stop it must reach the PWR plunger and nothing else (not the board edge, the
+     glass or the switch body).
 The model's fold-out stand is left out (folded, it lies flush in the back case).
 
 Model frame (from the file): y up through the glass (glass top at y = +0.75), the 92.5 mm side along z,
@@ -88,6 +91,8 @@ def main():
     ws = [(n, place(s)) for n, s in read_named_solids(sys.argv[1]) if "BRACKET" not in n]
     print(f"{len(ws)} solids from the Waveshare model")
     parts = {"lid": L.make_lid(), "body": L.make_body(), "bezel": L.make_bezel(), "door": L.make_door()}
+    if L.PWR_LEVER:
+        parts["pwr_lever"] = L.make_pwr_lever()
     hits = []
     for pn, p in parts.items():
         pb = p.val().BoundingBox()
@@ -115,6 +120,27 @@ def main():
             probe = cq.Solid.makeBox(H.HOOK_W, 0.6, H.HOOK_DEPTH, pnt=cq.Vector(hx - H.HOOK_W / 2, yb, z0))
             pct = 100 * probe.intersect(base).Volume() / (H.HOOK_W * 0.6 * H.HOOK_DEPTH)
             print(f"snap hook x {hx:+.0f}, {'rear' if sz > 0 else 'front'} edge: back case under the catch {pct:.0f} %")
+
+    if L.PWR_LEVER:
+        ze, _ = L._ze_yg()
+        lev = L.make_pwr_lever(L.LEV_THETA).val()
+        lb = lev.BoundingBox()
+        print(f"PWR lever flicked to its stop ({L.LEV_THETA * 57.3:.1f} deg, nub {L.LEV_STROKE:.2f} mm):")
+        for n, s in ws:
+            b = s.BoundingBox()
+            if (b.xmax < lb.xmin or b.xmin > lb.xmax or b.ymax < lb.ymin or b.ymin > lb.ymax
+                    or b.zmax < lb.zmin or b.zmin > lb.zmax):
+                continue
+            try:
+                i = lev.intersect(s)
+                v = i.Volume()
+            except Exception:
+                v = -1.0
+            if v > 0.0005 or v < 0:
+                ib = i.BoundingBox()
+                ok = "SWITCH-TS24CA" in n and ib.zmax - ze < 1.35 - 0.05     # plunger only, not the switch body
+                print(f"  {'presses' if ok else 'CLASH  '} {n.split('/')[-1]}: {v:.3f} mm^3, "
+                      f"x {ib.xmin:.1f}..{ib.xmax:.1f}, reaches {ib.zmax - ze:.2f} mm behind the display edge")
 
     for key, what in (("SOLID-610343", "USB-C receptacle"), ("SOLID-296080", "TF socket")):
         bb = next(s for n, s in ws if n.endswith(key)).BoundingBox()

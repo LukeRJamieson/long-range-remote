@@ -22,8 +22,10 @@ front, so the whole remote reads as a single piece.
   and front bottom edge R3 (kept small because the bezel prints front-down). The lid's top edge has
   a 0.3 mm chamfer that shows as a fine line against the tray's rounded rim, and its key holes a
   0.4 mm chamfer. The side slots and the bezel window have rounded ends / corners.
-- **Parts:** four printed parts (bezel, body, lid, battery door) plus the key caps (**one
-  D-pad model printed four times**, a SELECT cap and a BACK cap). There is no power switch: the display board's own PWR button turns the remote on and off, and the ESP32 switches the AA pack for the LEDs.
+- **Parts:** five printed parts (bezel, body, lid, battery door, PWR lever) plus the key caps (**one
+  D-pad model printed four times**, a SELECT cap and a BACK cap), and an 11 mm piece of 1.75 mm
+  filament as the lever's pin. There is no power switch: the display board's own PWR button turns the
+  remote on and off (through the PWR lever), and the ESP32 switches the AA pack for the LEDs.
 - **Power:** the AA cells run the LEDs only. The display board and ESP32 run from the display
   board's own 18650, charged through its USB-C, which is reachable through the right wall.
 
@@ -70,14 +72,23 @@ front, so the whole remote reads as a single piece.
     (The first version's hooks overlapped the plate by only 0.3 mm, so the display popped out.)
   - **To take the display out:** lid off, then push each hook arm outwards with a thumbnail or a small
     screwdriver while you press the back of the display; it comes out towards you.
-- **Display buttons (PWR / BOOT / KEY).** They sit dead centre on the display's front edge and press
-  sideways, so the lid has a **38 × 11 mm notch** in its front edge, just in front of the display, cut
-  on down through the sleeve's whole front wall (between the snap hooks). It is open right to the
-  tray's front wall, so a fingertip can go in. The buttons are 6.4-8.6 mm below the lid's top with
-  their plungers flush with the board edge: push rearwards with a fingertip or fingernail, or a thin
-  tool if your fingers are too big. A short press on PWR turns the screen on, a long press turns it off. The slot is sized from
-  your description (20-40 mm group, centred) and is as wide as it can be without cutting the front snap
-  hooks; if a button is out of reach, change `BTNS_SLOT_W` / `BTNS_SLOT_Z0` / `BTNS_SLOT_Z1` in `housing_lite.py`.
+- **PWR lever.** The display's PWR button sits on its front edge and is pressed sideways, so a small
+  lever does it from the face of the lid. Its tab stands 3 mm proud of the lid just in front of the
+  screen, in the middle. **Flick the tab forwards** (towards the LED head): the lever pivots on a
+  1.75 mm filament pin in two cheeks under the lid, and a nub on its lower end pushes PWR's plunger.
+  A short flick turns the screen on; hold it forwards to turn it off. The button's own spring
+  returns it, and the slot in the lid stops the tab at 11°, so the nub can't push harder than the
+  switch needs.
+  - Checked against Waveshare's 3D model: at rest it touches nothing; at its stop the nub reaches
+    0.45 mm past the plunger's tip (the switch travels ~0.25 mm), below the board edge and well short
+    of the switch body.
+  - **If a flick doesn't click PWR,** lower `NUB_GAP` (0.3 mm) in `housing_lite.py` and reprint only
+    the lever (a 5-minute print). If PWR is pressed with the lever at rest, raise it.
+  - KEY and BOOT, either side of PWR, can't be reached with the lever fitted. They don't need to be:
+    KEY is the same GPIO as UP, and BOOT the same as SELECT (hold SELECT at power-up for the
+    bootloader).
+  - For the open notch instead (fingertip access to all three buttons, no lever), set
+    `PWR_LEVER = False` in `housing_lite.py`.
 - **Key caps.** The D-pad caps are **triangles** pointing outwards, in triangular lid holes, so they
   can't turn and the shape shows the direction: nothing is engraved. All four are the same model,
   turned. SELECT is a plain round cap and BACK a rounded square, so you can tell the three apart by
@@ -118,6 +129,7 @@ front, so the whole remote reads as a single piece.
 | `body` | floor down | 107.4 × 163.8 × 52 |
 | `lid` | top face down | 100.9 × 138.5 × 18.5 |
 | `door` | inside face (tongue) down; the countersink opens upward | 70 × 75.6 × 3 |
+| `pwr_lever` | on its side (pin hole vertical); 100 % infill | 4.6 × 11.8 × 6 |
 | `keycap_dpad` | base down — **print 4** | 13.2 Ø × 9.7 |
 | `keycap_select` | base down | 14 Ø × 9.7 |
 | `keycap_back` | base down | 13.2 Ø × 9.7 |
@@ -158,7 +170,12 @@ without support (use a brim only if your bed adhesion is marginal).
    plug it into J1 (pin 1 marked) with the board held in front of the cavity, J1 at the **bottom**, then slide the board in, then the bezel and 4 × M3 × 25. J1's pin
    tails can stay as they are: the bezel has a pocket for them.
 3. **Lid.** Drop the caps into their holes from underneath: the four triangles each point outwards
-   (UP towards the LED head), SELECT on the right, the square BACK at the D-pad's lower right. Screw on the control board and push the display
+   (UP towards the LED head), SELECT on the right, the square BACK at the D-pad's lower right.
+   **PWR lever:** with the lid upside down, push the lever's tab up through its slot from underneath,
+   nub towards the display window, and line its hole up with the cheeks'. Slide an 11 mm piece of
+   1.75 mm filament in sideways through one cheek, the lever and the other cheek (cut the end square
+   first; if the cheek holes print tight, open them with a 1.8 mm drill by hand). The lever should
+   swing freely. Then screw on the control board and push the display
    into its sleeve from underneath until the four hooks click over its back plate (glass to the
    window, USB-C on the **right**, image top towards the LED head). It takes a firm push: the crush ribs
    are meant to be tight.
@@ -177,7 +194,7 @@ and TF positions on the right edge, the side buttons and the back case. `tools/w
 <that .stp>` places the whole model (868 solids, the fold-out stand left out) in the housing. It
 intersects every solid with the printed parts and checks that each snap hook lands on the back case.
 Result: no clashes, all four hooks fully on the case, and the USB-C receptacle and TF socket inside their
-wall openings.
+wall openings. It also swings the PWR lever to its stop: the nub meets PWR's plunger and nothing else.
 
 `housing_lite.py` checks every printed part and key cap against **241 keep-out volumes**:
 
