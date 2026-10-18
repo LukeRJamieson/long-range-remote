@@ -71,9 +71,11 @@ front, so the whole remote reads as a single piece.
   - **To take the display out:** lid off, then push each hook arm outwards with a thumbnail or a small
     screwdriver while you press the back of the display; it comes out towards you.
 - **Display buttons (PWR / BOOT / KEY).** They sit dead centre on the display's front edge and press
-  sideways, so the lid has a **38 × 8 mm slot** just in front of the display, cut on down through the
-  sleeve's whole front wall (between the snap hooks). Drop a thin tool in beside the board's edge and push it rearwards onto the
-  button. A short press on PWR turns the screen on, a long press turns it off. The slot is sized from
+  sideways, so the lid has a **38 × 11 mm notch** in its front edge, just in front of the display, cut
+  on down through the sleeve's whole front wall (between the snap hooks). It is open right to the
+  tray's front wall, so a fingertip can go in. The buttons are 6.4-8.6 mm below the lid's top with
+  their plungers flush with the board edge: push rearwards with a fingertip or fingernail, or a thin
+  tool if your fingers are too big. A short press on PWR turns the screen on, a long press turns it off. The slot is sized from
   your description (20-40 mm group, centred) and is as wide as it can be without cutting the front snap
   hooks; if a button is out of reach, change `BTNS_SLOT_W` / `BTNS_SLOT_Z0` / `BTNS_SLOT_Z1` in `housing_lite.py`.
 - **Key caps.** The D-pad caps are **triangles** pointing outwards, in triangular lid holes, so they

@@ -178,11 +178,15 @@ CAP_TOP_EDGE = 0.8                       # rounded top edge
 # xf -10 / 0 / +10, pushed sideways [STEP + Waveshare schematic]. They sit dead centre on the display's top
 # (front) edge and are pressed sideways, from the LED-head side [user]. One slot goes down through the lid
 # in the gap in front of the display, and through the sleeve's front wall over the display's thickness,
-# so a thin tool can be dropped in beside the board's edge and pushed rearwards onto a button.
-# The group is 20-40 mm wide [user]; 38 mm is as wide as it can be without cutting the front snap hooks
-# (they stand at x +-20..30).
+# so a fingertip or a thin tool can go down beside the board's edge and push rearwards onto a button.
+# The buttons are at xf -12..+12 [STEP], 3.4-5.6 mm below the glass (6.4-8.6 mm below the lid's top), with
+# their plungers flush with the board edge. 38 mm is as wide as the slot can be without cutting the front
+# snap hooks' slits (x +-20.5..21). It runs forward right out through the lid's front edge [user]: a notch
+# open to the tray's front wall, 11 mm front to back, instead of an 8 mm slot with a 3 mm strip in front.
 BTNS_SLOT_W = 38.0                      # along x, centred
-BTNS_SLOT_Z0, BTNS_SLOT_Z1 = -7.0, 1.0  # along z, relative to the display's front edge (negative = towards the head)
+# along z, relative to the display's front edge (negative = towards the head). -10.0 is just past the lid's
+# front edge (-9.95); the tray's front wall is at -10.2, so the opening's keep-out box still clears it.
+BTNS_SLOT_Z0, BTNS_SLOT_Z1 = -10.0, 1.0
 
 
 # ============================================================================ parts
