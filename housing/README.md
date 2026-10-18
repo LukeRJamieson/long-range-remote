@@ -64,6 +64,12 @@ front, so the whole remote reads as a single piece.
   control board on four bosses behind it, keys up through the lid. 4 × M3 × 10 countersunk screws fix
   it (front pair at x ±43.7, back pair at x ±45.6, 136.6 mm behind the cavity's rear wall), each
   countersink fully inside the lid's rounded corner, with at least 0.8 mm of lid round it.
+  - **Display retention:** four snap hooks (x ±27, on the front and rear walls) catch the display's
+    flat back plate by 1.2 mm, on 13 mm flexing arms. Two 0.15 mm crush ribs on each of those walls
+    (x ±40) take up the sleeve's clearance, so the display sits centred and no hook loses its catch.
+    (The first version's hooks overlapped the plate by only 0.3 mm, so the display popped out.)
+  - **To take the display out:** lid off, then push each hook arm outwards with a thumbnail or a small
+    screwdriver while you press the back of the display; it comes out towards you.
 - **Display buttons (PWR / BOOT / KEY).** They sit dead centre on the display's front edge and press
   sideways, so the lid has a **38 × 8 mm slot** just in front of the display, cut on down through the
   sleeve's whole front wall (between the snap hooks). Drop a thin tool in beside the board's edge and push it rearwards onto the
@@ -108,7 +114,7 @@ front, so the whole remote reads as a single piece.
 |---|---|---|
 | `bezel` | front face down, posts up | 107.4 × 52 × 8.7 |
 | `body` | floor down | 107.4 × 163.8 × 52 |
-| `lid` | top face down | 100.9 × 138.5 × 17.7 |
+| `lid` | top face down | 100.9 × 138.5 × 18.5 |
 | `door` | inside face (tongue) down; the countersink opens upward | 70 × 75.6 × 3 |
 | `keycap_dpad` | base down — **print 4** | 13.2 Ø × 9.7 |
 | `keycap_select` | base down | 14 Ø × 9.7 |
@@ -152,7 +158,8 @@ without support (use a brim only if your bed adhesion is marginal).
 3. **Lid.** Drop the caps into their holes from underneath: the four triangles each point outwards
    (UP towards the LED head), SELECT on the right, the square BACK at the D-pad's lower right. Screw on the control board and push the display
    into its sleeve from underneath until the four hooks click over its back plate (glass to the
-   window, USB-C on the **right**, image top towards the LED head).
+   window, USB-C on the **right**, image top towards the LED head). It takes a firm push: the crush ribs
+   are meant to be tight.
 4. **Cables:** 16-way ribbon (cut to ~70 mm, see the main README) from the display header to
    control J2, both in the lid; holder plug → control J1; 10-way ribbon over the bay roof → control
    J5. Under the display's 18650 cell the two ribbons lie side by side, flat, 10-way on the left half

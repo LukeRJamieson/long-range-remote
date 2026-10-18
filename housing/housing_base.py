@@ -72,8 +72,18 @@ SLEEVE_HALF = DISP_H / 2 + SLEEVE_CLEAR + SLEEVE_T             # 36.95: display 
 Z_DISP_C = Z_TRAY_IN0 + 2 * LID_COLUMN_R + 0.3 + SLEEVE_HALF   # just behind the front lid columns
 Y_GLASS = Y_LID                                 # glass top against the lid underside
 Y_DISP_BACK = Y_GLASS - DISP_T                  # back-plate face, the snap hooks catch here
-HOOK_X = (-25.0, 25.0)
-HOOK_W, HOOK_DEPTH, HOOK_LEN = 10.0, 0.6, 11.0
+# Snap hooks: four, on the long walls, catching the back case's flat back face [STEP: square edge, full
+# width]. The catch stands 1.5 mm out from the wall, so it overlaps the display's back plate by 1.2 mm
+# (1.05 mm if the display sits hard against the opposite wall's crush ribs). It used to stand 0.6 mm
+# out: less the 0.3 mm sleeve clearance, that was a 0.3 mm overlap - 0 if the display sat over - and the
+# display popped out. The arms are 13 mm long, so the 1.2-1.35 mm they deflect on the way in strains
+# PETG / PLA under 2 %; the lead-in ramp is 1.7 mm tall (~40 deg from the wall).
+HOOK_X = (-27.0, 27.0)
+HOOK_W, HOOK_DEPTH, HOOK_LEN = 12.0, 1.5, 13.0
+HOOK_DROP, HOOK_RAMP = 2.0, 1.7                 # catch bottom below the back plate; lead-in height
+# Crush ribs on the long walls, either side of the hooks: they take up the 0.3 mm clearance so the
+# display sits centred and every hook keeps its full catch.
+RIB_X, RIB_W, RIB_H = (-40.0, 40.0), 1.0, 0.15
 WINDOW_CHAMFER = 1.2
 # right-edge openings: (yf of the centre, depth of the centre below the glass, length along the edge, height)
 USB_YF, USB_DEPTH, USB_ALONG, USB_TALL = 0.49, 4.92, 14.0, 9.0   # USB-C receptacle 9.6 x 4.2 [STEP]
@@ -150,7 +160,7 @@ def make_lid(lid_screws=None, key_holes=True):
         .chamfer(WINDOW_CHAMFER)
     # sleeve around the display, hanging from the lid, with snap hooks on the front / back edges
     iw, ih = DISP_W + 2 * SLEEVE_CLEAR, DISP_H + 2 * SLEEVE_CLEAR       # along x, along z
-    y_hook0 = Y_DISP_BACK - 1.2
+    y_hook0 = Y_DISP_BACK - HOOK_DROP
     zc = Z_DISP_C
     sleeve = (box(-iw / 2 - SLEEVE_T, iw / 2 + SLEEVE_T, y_hook0, Y_LID + 0.5, zc - ih / 2 - SLEEVE_T, zc + ih / 2 + SLEEVE_T)
               .cut(box(-iw / 2, iw / 2, y_hook0 - 1, Y_LID + 1, zc - ih / 2, zc + ih / 2)))
@@ -163,10 +173,13 @@ def make_lid(lid_screws=None, key_holes=True):
                 sleeve = sleeve.cut(box(xs - 0.5, xs + 0.5, y_hook0 - 1, y_hook0 + HOOK_LEN, zz0, zz1))
             # catch: lead-in ramp facing the insertion direction (-y), flat face at the back plate
             zt = z_in - sz * HOOK_DEPTH
-            prof_yz = [(y_hook0, z_in), (y_hook0 + HOOK_DEPTH, zt), (Y_DISP_BACK, zt), (Y_DISP_BACK, z_in)]
+            prof_yz = [(y_hook0, z_in), (y_hook0 + HOOK_RAMP, zt), (Y_DISP_BACK, zt), (Y_DISP_BACK, z_in)]
             catch = (cq.Workplane("YZ").workplane(offset=hx - HOOK_W / 2)
                      .polyline(prof_yz).close().extrude(HOOK_W))
             sleeve = sleeve.union(catch)
+        for rx in RIB_X:                         # crush ribs, from the back plate up to the glass
+            zr0, zr1 = sorted((z_in, z_in - sz * RIB_H))
+            sleeve = sleeve.union(box(rx - RIB_W / 2, rx + RIB_W / 2, Y_DISP_BACK, Y_LID, zr0 - 0.01, zr1 + 0.01))
     l = l.union(sleeve)
     # openings in the sleeve's +x wall for the display's USB-C and TF card
     for yf, depth, along, tall in ((USB_YF, USB_DEPTH, USB_ALONG, USB_TALL), (TF_YF, TF_DEPTH, TF_ALONG, TF_TALL)):
