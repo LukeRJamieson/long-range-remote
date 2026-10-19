@@ -67,11 +67,13 @@ front, so the whole remote reads as a single piece.
   it (front pair at x ±43.7, back pair at x ±45.6, 136.6 mm behind the cavity's rear wall), each
   countersink fully inside the lid's rounded corner, with at least 0.8 mm of lid round it.
   - **Display retention:** four snap hooks (x ±28, on the front and rear walls) catch the display's
-    flat back plate by 1.2 mm, on 15 mm flexing arms, 15 mm wide. The slits beside each arm have fully
-    rounded ends and the catch has a small chamfer where it meets the arm, so there are no sharp
-    corners for a crack to start from (the lid prints top-down, so the arms bend across their layer
-    lines: PETG is much tougher here than PLA). Two 0.15 mm crush ribs on each of those walls (x ±40)
-    take up the sleeve's clearance, so the display sits centred and no hook loses its catch.
+    flat back plate by 1.0 mm, on 13 mm flexing arms, 15 mm wide. The sleeve's long walls have a 2 mm
+    45° chamfer along the outside of their joint with the lid, where a hook first snapped off (the lid
+    prints top-down, so that joint bends across the layer lines: PETG is much tougher here than PLA).
+    The slits beside each arm stop 3.5 mm below the lid, so the arms flex below that joint, and their
+    ends are fully rounded; the catch has a small chamfer where it meets the arm. Two 0.15 mm crush ribs
+    on each of those walls (x ±40) take up the sleeve's clearance, so the display sits centred and no
+    hook loses its catch.
   - **Display version:** Waveshare ship a V2 board from 10 Oct 2026 (the QC label says which). Its
     thicker acrylic spacer puts the board and everything on it 0.6 mm further from the screen. Their 3D
     model is V1, so `DISP_V2 = True` in `housing_base.py` adds the 0.6 mm to every depth taken from it

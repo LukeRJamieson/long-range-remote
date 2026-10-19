@@ -88,13 +88,17 @@ Y_DISP_BACK = Y_GLASS - DISP_T                  # back-plate face, the snap hook
 # (1.05 mm if the display sits hard against the opposite wall's crush ribs). It used to stand 0.6 mm
 # out: less the 0.3 mm sleeve clearance, that was a 0.3 mm overlap - 0 if the display sat over - and the
 # display popped out. The lead-in ramp is 1.7 mm tall (~40 deg from the wall).
-# Strength (one broke off the second print [user]): the lid prints top-down, so the arms bend across
-# their layer lines - their weakest direction - and the slits' square ends concentrated the stress at the
-# arm's root. Now: 15 mm arms (strain on the way in ~1.4 %, was ~1.9 %), 15 mm wide (was 12), slits with
-# fully rounded ends, and a 0.25 mm chamfer in the corner between the catch and the arm.
+# Strength: one hook snapped off where the sleeve meets the lid [user]. The lid prints top-down, so the
+# sleeve bends across its layer lines there, at a sharp inside corner. Now: a 2 mm 45 deg chamfer along
+# the outside of that joint on both long walls (SLEEVE_CHAMFER; the display side has no room for one);
+# the slits stop 3.5 mm below the lid, so the arms flex below the chamfered joint, not at it; slits with
+# fully rounded ends; a 0.25 mm chamfer between catch and arm; and 1.3 mm catches (1.0 mm overlap with
+# the back plate) so the arms flex less on the way in (strain ~1.6 %).
 HOOK_X = (-28.0, 28.0)
-HOOK_W, HOOK_DEPTH, HOOK_LEN = 15.0, 1.5, 15.0
+HOOK_W, HOOK_DEPTH = 15.0, 1.3
+HOOK_ROOT_BELOW_LID = 3.5                       # top of the slits (the arms' root) below the lid underside
 HOOK_GUSSET = 0.25
+SLEEVE_CHAMFER = 2.0
 HOOK_DROP, HOOK_RAMP = 2.0, 1.7                 # catch bottom below its top face; lead-in height
 # The catches' top face sits this far below the back plate, to make sure the hooks get over it (at
 # 13.5 and 14.0 mm below the glass the user's display wouldn't clip in; it measures 14.35). Catches at
@@ -181,6 +185,7 @@ def make_lid(lid_screws=None, key_holes=True):
     iw, ih = DISP_W + 2 * SLEEVE_CLEAR, DISP_H + 2 * SLEEVE_CLEAR       # along x, along z
     y_catch = Y_DISP_BACK - HOOK_SLACK              # the catches' top face
     y_hook0 = y_catch - HOOK_DROP
+    hook_len = Y_LID - HOOK_ROOT_BELOW_LID - y_hook0
     zc = Z_DISP_C
     sleeve = (box(-iw / 2 - SLEEVE_T, iw / 2 + SLEEVE_T, y_hook0, Y_LID + 0.5, zc - ih / 2 - SLEEVE_T, zc + ih / 2 + SLEEVE_T)
               .cut(box(-iw / 2, iw / 2, y_hook0 - 1, Y_LID + 1, zc - ih / 2, zc + ih / 2)))
@@ -190,7 +195,7 @@ def make_lid(lid_screws=None, key_holes=True):
             for sx in (-1, 1):
                 xs = hx + sx * (HOOK_W / 2 + 0.5)
                 zz0, zz1 = (z_in - 0.1, z_in + SLEEVE_T + 0.1) if sz > 0 else (z_in - SLEEVE_T - 0.1, z_in + 0.1)
-                y_end = y_hook0 + HOOK_LEN - 0.5            # slit: 1 mm wide, its top end fully rounded
+                y_end = y_hook0 + hook_len - 0.5            # slit: 1 mm wide, its top end fully rounded
                 sleeve = sleeve.cut(box(xs - 0.5, xs + 0.5, y_hook0 - 1, y_end, zz0, zz1))
                 sleeve = sleeve.cut(cq.Workplane("XY").workplane(offset=zz0).center(xs, y_end)
                                     .circle(0.5).extrude(zz1 - zz0))
@@ -206,6 +211,16 @@ def make_lid(lid_screws=None, key_holes=True):
         for rx in RIB_X:                         # crush ribs, from the back plate up to the glass
             zr0, zr1 = sorted((z_in, z_in - sz * RIB_H))
             sleeve = sleeve.union(box(rx - RIB_W / 2, rx + RIB_W / 2, Y_DISP_BACK, Y_LID, zr0 - 0.01, zr1 + 0.01))
+    # 45 deg chamfer along the outside of the long walls' joint with the lid, either side of the middle:
+    # x 6.5..39.5 each side, which covers the hooks (x 19.5..36.5), clears the lid-screw columns at the
+    # ends and, on the front wall, leaves the middle to the PWR lever and its cheeks
+    c = SLEEVE_CHAMFER
+    for sz in (-1, 1):
+        zo = zc + sz * (ih / 2 + SLEEVE_T)                # the wall's outer face
+        tri = [(Y_LID + 0.01, zo - sz * 0.01), (Y_LID + 0.01, zo + sz * c), (Y_LID - c, zo - sz * 0.01)]
+        for xa, xb in ((-39.5, -6.5), (6.5, 39.5)):
+            sleeve = sleeve.union(cq.Workplane("YZ").workplane(offset=xa).polyline(tri).close()
+                                  .extrude(xb - xa))
     l = l.union(sleeve)
     # openings in the sleeve's +x wall for the display's USB-C and TF card
     for yf, depth, along, tall in ((USB_YF, USB_DEPTH, USB_ALONG, USB_TALL), (TF_YF, TF_DEPTH, TF_ALONG, TF_TALL)):
