@@ -181,7 +181,7 @@ CAP_TOP_EDGE = 0.8                       # rounded top edge
 # so a fingertip or a thin tool can go down beside the board's edge and push rearwards onto a button.
 # The buttons are at xf -12..+12 [STEP], 3.4-5.6 mm below the glass (6.4-8.6 mm below the lid's top), with
 # their plungers flush with the board edge. 38 mm is as wide as the slot can be without cutting the front
-# snap hooks' slits (x +-20.5..21). It runs forward right out through the lid's front edge [user]: a notch
+# snap hooks' slits (x +-20..21). It runs forward right out through the lid's front edge [user]: a notch
 # open to the tray's front wall, 11 mm front to back, instead of an 8 mm slot with a 3 mm strip in front.
 BTNS_SLOT_W = 38.0                      # along x, centred
 # along z, relative to the display's front edge (negative = towards the head). -10.0 is just past the lid's

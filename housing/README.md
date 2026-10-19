@@ -66,16 +66,18 @@ front, so the whole remote reads as a single piece.
   control board on four bosses behind it, keys up through the lid. 4 × M3 × 10 countersunk screws fix
   it (front pair at x ±43.7, back pair at x ±45.6, 136.6 mm behind the cavity's rear wall), each
   countersink fully inside the lid's rounded corner, with at least 0.8 mm of lid round it.
-  - **Display retention:** four snap hooks (x ±27, on the front and rear walls) catch the display's
-    flat back plate by 1.2 mm, on 13 mm flexing arms. Two 0.15 mm crush ribs on each of those walls
-    (x ±40) take up the sleeve's clearance, so the display sits centred and no hook loses its catch.
-    (The first version's hooks overlapped the plate by only 0.3 mm, so the display popped out.)
+  - **Display retention:** four snap hooks (x ±28, on the front and rear walls) catch the display's
+    flat back plate by 1.2 mm, on 15 mm flexing arms, 15 mm wide. The slits beside each arm have fully
+    rounded ends and the catch has a small chamfer where it meets the arm, so there are no sharp
+    corners for a crack to start from (the lid prints top-down, so the arms bend across their layer
+    lines: PETG is much tougher here than PLA). Two 0.15 mm crush ribs on each of those walls (x ±40)
+    take up the sleeve's clearance, so the display sits centred and no hook loses its catch.
   - **Display version:** Waveshare ship a V2 board from 10 Oct 2026 (the QC label says which). Its
-    thicker acrylic spacer puts the board and everything on it 0.6 mm further from the screen: 14.1 mm
-    overall instead of 13.5. Their 3D model is V1, so `DISP_V2 = True` in `housing_base.py` adds the
-    0.6 mm to every depth taken from it (snap hooks, PWR lever nub, USB-C and TF openings, 18650 and
-    header clearances). For a V1 board set it to False. The catches sit `HOOK_SLACK` (0.1 mm) beyond
-    the back plate so they always get over it.
+    thicker acrylic spacer puts the board and everything on it 0.6 mm further from the screen. Their 3D
+    model is V1, so `DISP_V2 = True` in `housing_base.py` adds the 0.6 mm to every depth taken from it
+    (PWR lever nub, USB-C and TF openings, 18650 and header clearances). The overall thickness is the
+    one measured on a V2 board, 14.35 mm (Waveshare say 14.1), and the catches sit `HOOK_SLACK`
+    (0.15 mm) beyond it. For a V1 board set `DISP_V2 = False`.
   - **To take the display out:** lid off, then push each hook arm outwards with a thumbnail or a small
     screwdriver while you press the back of the display; it comes out towards you.
 - **PWR lever.** The display's PWR button sits on its front edge and is pressed sideways, so a small
@@ -133,7 +135,7 @@ front, so the whole remote reads as a single piece.
 |---|---|---|
 | `bezel` | front face down, posts up | 107.4 × 52 × 8.7 |
 | `body` | floor down | 107.4 × 163.8 × 52 |
-| `lid` | top face down | 100.9 × 138.5 × 19.2 |
+| `lid` | top face down | 100.9 × 138.5 × 19.5 |
 | `door` | inside face (tongue) down; the countersink opens upward | 70 × 75.6 × 3 |
 | `pwr_lever` | on its side (pin hole vertical); 100 % infill | 4.9 × 12.4 × 6 |
 | `keycap_dpad` | base down — **print 4** | 13.2 Ø × 9.7 |

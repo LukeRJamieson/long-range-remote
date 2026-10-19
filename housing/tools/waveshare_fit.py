@@ -88,6 +88,8 @@ def main():
     def place(s, n):   # model (x, y, z) -> housing (z - 1.6, y - 0.75 + glass, Z_DISP_C - x - 0.5)
         # V2 board (H.DISP_V2): everything but the screen (LCD + its acrylic frame) 0.6 mm deeper
         drop = 0.0 if ("RLCD" in n.split("/")[-1].upper() and "042MN" in n) or n.endswith("PMMA") else H.DISP_DROP
+        if n.endswith("ESP32-S3-RLCD-4_2-BASE"):
+            drop += H.BACK_EXTRA                 # the back case: the board's measured overall thickness
         return s.rotate((0, 0, 0), (0, 1, 0), 90).translate((-1.6, yg - 0.75 - drop, zc - 0.5))
 
     ws = [(n, place(s, n)) for n, s in read_named_solids(sys.argv[1]) if "BRACKET" not in n]

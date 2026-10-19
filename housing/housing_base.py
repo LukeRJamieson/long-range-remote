@@ -69,7 +69,11 @@ LID_SCREWS = [(sx * 46.0, z) for z in (Z_TRAY_IN0 + LID_COLUMN_R, Z_TRAY_IN1 - 3
 # the lid, doesn't move). False = a V1 board.
 DISP_V2 = True
 DISP_DROP = 0.6 if DISP_V2 else 0.0
-DISP_W, DISP_H, DISP_T = 92.5, 70.1, 13.5 + DISP_DROP
+# Measured on the user's V2 board (calipers): 14.35 mm overall (Waveshare say 14.1), board back face
+# 4.35 mm below the glass (as Waveshare say). The board depth matches DISP_DROP; the overall thickness is
+# taken as measured, so the back case sits BACK_EXTRA deeper again.
+DISP_W, DISP_H, DISP_T = 92.5, 70.1, 14.35 if DISP_V2 else 13.5
+BACK_EXTRA = DISP_T - (13.5 + DISP_DROP)        # back case beyond the model + DISP_DROP (0.25)
 GLASS_H = 69.1
 ACTIVE_W, ACTIVE_H = 84.8, 63.6
 ACTIVE_DX = 1.5 + ACTIVE_W / 2 - DISP_W / 2     # -2.35 (front view)
@@ -83,15 +87,19 @@ Y_DISP_BACK = Y_GLASS - DISP_T                  # back-plate face, the snap hook
 # width]. The catch stands 1.5 mm out from the wall, so it overlaps the display's back plate by 1.2 mm
 # (1.05 mm if the display sits hard against the opposite wall's crush ribs). It used to stand 0.6 mm
 # out: less the 0.3 mm sleeve clearance, that was a 0.3 mm overlap - 0 if the display sat over - and the
-# display popped out. The arms are 13 mm long, so the 1.2-1.35 mm they deflect on the way in strains
-# PETG / PLA under 2 %; the lead-in ramp is 1.7 mm tall (~40 deg from the wall).
-HOOK_X = (-27.0, 27.0)
-HOOK_W, HOOK_DEPTH, HOOK_LEN = 12.0, 1.5, 13.0
+# display popped out. The lead-in ramp is 1.7 mm tall (~40 deg from the wall).
+# Strength (one broke off the second print [user]): the lid prints top-down, so the arms bend across
+# their layer lines - their weakest direction - and the slits' square ends concentrated the stress at the
+# arm's root. Now: 15 mm arms (strain on the way in ~1.4 %, was ~1.9 %), 15 mm wide (was 12), slits with
+# fully rounded ends, and a 0.25 mm chamfer in the corner between the catch and the arm.
+HOOK_X = (-28.0, 28.0)
+HOOK_W, HOOK_DEPTH, HOOK_LEN = 15.0, 1.5, 15.0
+HOOK_GUSSET = 0.25
 HOOK_DROP, HOOK_RAMP = 2.0, 1.7                 # catch bottom below its top face; lead-in height
-# The catches' top face sits this far below the back plate, to make sure the hooks get over it. With
-# the V1 13.5 mm the user's (V2, 14.1 mm) display wouldn't clip in, nor at 14.0; at 14.2 it should. Raise
-# it if the hooks still won't snap over; lower it if the display rattles up and down.
-HOOK_SLACK = 0.1
+# The catches' top face sits this far below the back plate, to make sure the hooks get over it (at
+# 13.5 and 14.0 mm below the glass the user's display wouldn't clip in; it measures 14.35). Catches at
+# 14.5 mm. Raise it if the hooks still won't snap over; lower it if the display rattles up and down.
+HOOK_SLACK = 0.15
 # Crush ribs on the long walls, either side of the hooks: they take up the 0.3 mm clearance so the
 # display sits centred and every hook keeps its full catch.
 RIB_X, RIB_W, RIB_H = (-40.0, 40.0), 1.0, 0.15
@@ -182,10 +190,16 @@ def make_lid(lid_screws=None, key_holes=True):
             for sx in (-1, 1):
                 xs = hx + sx * (HOOK_W / 2 + 0.5)
                 zz0, zz1 = (z_in - 0.1, z_in + SLEEVE_T + 0.1) if sz > 0 else (z_in - SLEEVE_T - 0.1, z_in + 0.1)
-                sleeve = sleeve.cut(box(xs - 0.5, xs + 0.5, y_hook0 - 1, y_hook0 + HOOK_LEN, zz0, zz1))
-            # catch: lead-in ramp facing the insertion direction (-y), flat face at the back plate
+                y_end = y_hook0 + HOOK_LEN - 0.5            # slit: 1 mm wide, its top end fully rounded
+                sleeve = sleeve.cut(box(xs - 0.5, xs + 0.5, y_hook0 - 1, y_end, zz0, zz1))
+                sleeve = sleeve.cut(cq.Workplane("XY").workplane(offset=zz0).center(xs, y_end)
+                                    .circle(0.5).extrude(zz1 - zz0))
+            # catch: lead-in ramp facing the insertion direction (-y), flat face at the back plate, and a
+            # small chamfer where that face meets the arm (the back plate's edge sits clear of it)
             zt = z_in - sz * HOOK_DEPTH
-            prof_yz = [(y_hook0, z_in), (y_hook0 + HOOK_RAMP, zt), (y_catch, zt), (y_catch, z_in)]
+            g = HOOK_GUSSET
+            prof_yz = [(y_hook0, z_in), (y_hook0 + HOOK_RAMP, zt), (y_catch, zt), (y_catch, z_in - sz * g),
+                       (y_catch + g, z_in)]
             catch = (cq.Workplane("YZ").workplane(offset=hx - HOOK_W / 2)
                      .polyline(prof_yz).close().extrude(HOOK_W))
             sleeve = sleeve.union(catch)
