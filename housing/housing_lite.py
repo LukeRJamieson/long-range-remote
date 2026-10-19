@@ -201,18 +201,20 @@ BTNS_SLOT_Z0, BTNS_SLOT_Z1 = -10.0, 1.0
 # All z below are relative to the display's front edge (ze), y to the glass top (= lid underside).
 PWR_LEVER = True
 LEV_W = 6.0                               # lever width (x)
-LEV_REAR, LEV_FRONT = -0.9, -4.7          # lever faces at rest (z); 0.9 mm clear of the display's edge
+LEV_REAR, LEV_FRONT = -0.9, -5.0          # lever faces at rest (z); 0.9 mm clear of the display's edge
 LEV_TOP, LEV_BOT = 6.0, -5.8              # tab top 3 mm above the lid's top face; lower end
 LEV_PIVOT = (-2.9, -1.0)                  # (z, y) of the pin: the pin clears the sleeve's front wall, so it
                                           # slides in from the side through one cheek
 LEV_PIN_D = 1.75                          # a piece of 1.75 mm filament, LEV_PIN_LEN long
-LEV_HOLE_D, CHEEK_HOLE_D = 2.0, 1.8       # free in the lever (prints vertical: true size), snug in the cheeks
+# Pin holes, generous: 2.0 / 1.8 printed far too tight to get the filament through [user, first print].
+# Small printed holes come out undersize, the cheeks' (printed sideways) most of all.
+LEV_HOLE_D, CHEEK_HOLE_D = 2.4, 2.2       # pin free in both; a melted head on one end keeps it in
 NUB_Y = (-5.1, -4.5)                      # nub height: inside the plunger's 4.15-5.15, below the board edge
 PLUNGER_TIP = 0.19                        # [STEP]
 NUB_GAP = 0.3                             # nub to plunger at rest. Lever doesn't click PWR? Make it smaller.
 SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin
 LEV_SIDE_CLEAR, LEV_REAR_CLEAR = 0.35, 0.3
-CHEEK_T, CHEEK_DROP = 2.2, 3.0            # cheek thickness (x) and how far below the lid they reach
+CHEEK_T, CHEEK_DROP = 2.2, 3.3            # cheek thickness (x) and how far below the lid they reach
 LEV_STROKE = NUB_GAP + SWITCH_TRAVEL + OVERTRAVEL        # nub movement at the stop (0.75)
 _NUB_ARM = LEV_PIVOT[1] - sum(NUB_Y) / 2                 # pin to nub centre (3.8)
 LEV_THETA = LEV_STROKE / _NUB_ARM                         # throw at the stop, rad (~11 deg)

@@ -82,9 +82,9 @@ HOOK_X = (-27.0, 27.0)
 HOOK_W, HOOK_DEPTH, HOOK_LEN = 12.0, 1.5, 13.0
 HOOK_DROP, HOOK_RAMP = 2.0, 1.7                 # catch bottom below its top face; lead-in height
 # The catches' top face sits this far below the back plate (Waveshare's model says 13.5 mm below the
-# glass). 0 left the real display unable to clip in [user, first print]: 0.5 lets it seat. Raise it if
-# the hooks still won't snap over; lower it if the display rattles up and down.
-HOOK_SLACK = 0.5
+# glass). 0 left the real display unable to clip in [user, first print], and so did 0.5 [user, second
+# print]. Raise it if the hooks still won't snap over; lower it if the display rattles up and down.
+HOOK_SLACK = 0.7
 # Crush ribs on the long walls, either side of the hooks: they take up the 0.3 mm clearance so the
 # display sits centred and every hook keeps its full catch.
 RIB_X, RIB_W, RIB_H = (-40.0, 40.0), 1.0, 0.15
