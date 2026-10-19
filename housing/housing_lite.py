@@ -537,12 +537,12 @@ def make_lid():
     for name, *_ in KEYS:
         lid = lid.cut(place_key(key_outline(name, KEY_GAP, -1, H.LID_T + 1), name))
     # display buttons: slot through the lid and the sleeve's whole front wall. It must go right down past the
-    # wall's bottom edge (1.2 mm below the display's back plate, where the hooks catch): stopping at the back
+    # wall's bottom edge (below the hooks' catches): stopping at the back
     # plate left a loose 38 x 1.6 x 1.2 mm strip there, cut free by the hook slits either side.
     if PWR_LEVER:
         lid = lever_lid_features(lid)
     else:
-        lid = lid.cut(btns_access_box(H.Y_DISP_BACK - 2.5))
+        lid = lid.cut(btns_access_box(H.Y_DISP_BACK - H.HOOK_SLACK - H.HOOK_DROP - 0.5))
     # 0.3 mm chamfer round the top outline (a neat shadow line against the tray's R1.5 rim) ...
     x1, z0, z1 = BHI - H.LID_CLEAR, Z_TRAY_IN0 + H.LID_CLEAR, Z_TRAY_IN1 - H.LID_CLEAR
     outer = lambda e: (abs(abs(e.Center().x) - x1) < 0.05 or abs(e.Center().z - z0) < 0.05

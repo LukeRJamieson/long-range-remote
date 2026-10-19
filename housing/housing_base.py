@@ -80,7 +80,11 @@ Y_DISP_BACK = Y_GLASS - DISP_T                  # back-plate face, the snap hook
 # PETG / PLA under 2 %; the lead-in ramp is 1.7 mm tall (~40 deg from the wall).
 HOOK_X = (-27.0, 27.0)
 HOOK_W, HOOK_DEPTH, HOOK_LEN = 12.0, 1.5, 13.0
-HOOK_DROP, HOOK_RAMP = 2.0, 1.7                 # catch bottom below the back plate; lead-in height
+HOOK_DROP, HOOK_RAMP = 2.0, 1.7                 # catch bottom below its top face; lead-in height
+# The catches' top face sits this far below the back plate (Waveshare's model says 13.5 mm below the
+# glass). 0 left the real display unable to clip in [user, first print]: 0.5 lets it seat. Raise it if
+# the hooks still won't snap over; lower it if the display rattles up and down.
+HOOK_SLACK = 0.5
 # Crush ribs on the long walls, either side of the hooks: they take up the 0.3 mm clearance so the
 # display sits centred and every hook keeps its full catch.
 RIB_X, RIB_W, RIB_H = (-40.0, 40.0), 1.0, 0.15
@@ -160,7 +164,8 @@ def make_lid(lid_screws=None, key_holes=True):
         .chamfer(WINDOW_CHAMFER)
     # sleeve around the display, hanging from the lid, with snap hooks on the front / back edges
     iw, ih = DISP_W + 2 * SLEEVE_CLEAR, DISP_H + 2 * SLEEVE_CLEAR       # along x, along z
-    y_hook0 = Y_DISP_BACK - HOOK_DROP
+    y_catch = Y_DISP_BACK - HOOK_SLACK              # the catches' top face
+    y_hook0 = y_catch - HOOK_DROP
     zc = Z_DISP_C
     sleeve = (box(-iw / 2 - SLEEVE_T, iw / 2 + SLEEVE_T, y_hook0, Y_LID + 0.5, zc - ih / 2 - SLEEVE_T, zc + ih / 2 + SLEEVE_T)
               .cut(box(-iw / 2, iw / 2, y_hook0 - 1, Y_LID + 1, zc - ih / 2, zc + ih / 2)))
@@ -173,7 +178,7 @@ def make_lid(lid_screws=None, key_holes=True):
                 sleeve = sleeve.cut(box(xs - 0.5, xs + 0.5, y_hook0 - 1, y_hook0 + HOOK_LEN, zz0, zz1))
             # catch: lead-in ramp facing the insertion direction (-y), flat face at the back plate
             zt = z_in - sz * HOOK_DEPTH
-            prof_yz = [(y_hook0, z_in), (y_hook0 + HOOK_RAMP, zt), (Y_DISP_BACK, zt), (Y_DISP_BACK, z_in)]
+            prof_yz = [(y_hook0, z_in), (y_hook0 + HOOK_RAMP, zt), (y_catch, zt), (y_catch, z_in)]
             catch = (cq.Workplane("YZ").workplane(offset=hx - HOOK_W / 2)
                      .polyline(prof_yz).close().extrude(HOOK_W))
             sleeve = sleeve.union(catch)

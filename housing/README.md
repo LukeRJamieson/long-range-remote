@@ -70,6 +70,9 @@ front, so the whole remote reads as a single piece.
     flat back plate by 1.2 mm, on 13 mm flexing arms. Two 0.15 mm crush ribs on each of those walls
     (x ±40) take up the sleeve's clearance, so the display sits centred and no hook loses its catch.
     (The first version's hooks overlapped the plate by only 0.3 mm, so the display popped out.)
+  - The catches sit 0.5 mm further from the lid than Waveshare's model says the back plate is
+    (`HOOK_SLACK` in `housing_base.py`): with them exactly at the model's 13.5 mm, a real display
+    wouldn't clip in. If yours still won't, raise `HOOK_SLACK`; if it rattles up and down, lower it.
   - **To take the display out:** lid off, then push each hook arm outwards with a thumbnail or a small
     screwdriver while you press the back of the display; it comes out towards you.
 - **PWR lever.** The display's PWR button sits on its front edge and is pressed sideways, so a small
@@ -127,7 +130,7 @@ front, so the whole remote reads as a single piece.
 |---|---|---|
 | `bezel` | front face down, posts up | 107.4 × 52 × 8.7 |
 | `body` | floor down | 107.4 × 163.8 × 52 |
-| `lid` | top face down | 100.9 × 138.5 × 18.5 |
+| `lid` | top face down | 100.9 × 138.5 × 19.0 |
 | `door` | inside face (tongue) down; the countersink opens upward | 70 × 75.6 × 3 |
 | `pwr_lever` | on its side (pin hole vertical); 100 % infill | 4.6 × 11.8 × 6 |
 | `keycap_dpad` | base down — **print 4** | 13.2 Ø × 9.7 |
