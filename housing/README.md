@@ -70,9 +70,12 @@ front, so the whole remote reads as a single piece.
     flat back plate by 1.2 mm, on 13 mm flexing arms. Two 0.15 mm crush ribs on each of those walls
     (x ±40) take up the sleeve's clearance, so the display sits centred and no hook loses its catch.
     (The first version's hooks overlapped the plate by only 0.3 mm, so the display popped out.)
-  - The catches sit 0.7 mm further from the lid than Waveshare's model says the back plate is
-    (`HOOK_SLACK` in `housing_base.py`): at the model's 13.5 mm, and at 0.5 mm more, a real display
-    wouldn't clip in. If yours still won't, raise `HOOK_SLACK`; if it rattles up and down, lower it.
+  - **Display version:** Waveshare ship a V2 board from 10 Oct 2026 (the QC label says which). Its
+    thicker acrylic spacer puts the board and everything on it 0.6 mm further from the screen: 14.1 mm
+    overall instead of 13.5. Their 3D model is V1, so `DISP_V2 = True` in `housing_base.py` adds the
+    0.6 mm to every depth taken from it (snap hooks, PWR lever nub, USB-C and TF openings, 18650 and
+    header clearances). For a V1 board set it to False. The catches sit `HOOK_SLACK` (0.1 mm) beyond
+    the back plate so they always get over it.
   - **To take the display out:** lid off, then push each hook arm outwards with a thumbnail or a small
     screwdriver while you press the back of the display; it comes out towards you.
 - **PWR lever.** The display's PWR button sits on its front edge and is pressed sideways, so a small
@@ -132,7 +135,7 @@ front, so the whole remote reads as a single piece.
 | `body` | floor down | 107.4 × 163.8 × 52 |
 | `lid` | top face down | 100.9 × 138.5 × 19.2 |
 | `door` | inside face (tongue) down; the countersink opens upward | 70 × 75.6 × 3 |
-| `pwr_lever` | on its side (pin hole vertical); 100 % infill | 4.9 × 11.8 × 6 |
+| `pwr_lever` | on its side (pin hole vertical); 100 % infill | 4.9 × 12.4 × 6 |
 | `keycap_dpad` | base down — **print 4** | 13.2 Ø × 9.7 |
 | `keycap_select` | base down | 14 Ø × 9.7 |
 | `keycap_back` | base down | 13.2 Ø × 9.7 |

@@ -62,7 +62,14 @@ LID_COLUMN_R = 4.0
 LID_SCREWS = [(sx * 46.0, z) for z in (Z_TRAY_IN0 + LID_COLUMN_R, Z_TRAY_IN1 - 3.0) for sx in (-1, 1)]  # (x, z)
 
 # --- display [WS], glass up under the lid window, image "up" = forward (-z)
-DISP_W, DISP_H, DISP_T = 92.5, 70.1, 13.5
+# Waveshare ship the V2 board from 10 Oct 2026 (QC label says which): a thicker acrylic spacer puts the
+# board, and everything on it and behind it, 0.6 mm further from the screen: 3.75 -> 4.35 mm from the
+# LCD to the board, 13.5 -> 14.1 mm overall [Waveshare docs, "Version Compatibility Notice"]. Their 3D
+# model is V1, so for V2 every depth measured from it below grows by DISP_DROP (the screen itself, against
+# the lid, doesn't move). False = a V1 board.
+DISP_V2 = True
+DISP_DROP = 0.6 if DISP_V2 else 0.0
+DISP_W, DISP_H, DISP_T = 92.5, 70.1, 13.5 + DISP_DROP
 GLASS_H = 69.1
 ACTIVE_W, ACTIVE_H = 84.8, 63.6
 ACTIVE_DX = 1.5 + ACTIVE_W / 2 - DISP_W / 2     # -2.35 (front view)
@@ -81,23 +88,23 @@ Y_DISP_BACK = Y_GLASS - DISP_T                  # back-plate face, the snap hook
 HOOK_X = (-27.0, 27.0)
 HOOK_W, HOOK_DEPTH, HOOK_LEN = 12.0, 1.5, 13.0
 HOOK_DROP, HOOK_RAMP = 2.0, 1.7                 # catch bottom below its top face; lead-in height
-# The catches' top face sits this far below the back plate (Waveshare's model says 13.5 mm below the
-# glass). 0 left the real display unable to clip in [user, first print], and so did 0.5 [user, second
-# print]. Raise it if the hooks still won't snap over; lower it if the display rattles up and down.
-HOOK_SLACK = 0.7
+# The catches' top face sits this far below the back plate, to make sure the hooks get over it. With
+# the V1 13.5 mm the user's (V2, 14.1 mm) display wouldn't clip in, nor at 14.0; at 14.2 it should. Raise
+# it if the hooks still won't snap over; lower it if the display rattles up and down.
+HOOK_SLACK = 0.1
 # Crush ribs on the long walls, either side of the hooks: they take up the 0.3 mm clearance so the
 # display sits centred and every hook keeps its full catch.
 RIB_X, RIB_W, RIB_H = (-40.0, 40.0), 1.0, 0.15
 WINDOW_CHAMFER = 1.2
 # right-edge openings: (yf of the centre, depth of the centre below the glass, length along the edge, height)
-USB_YF, USB_DEPTH, USB_ALONG, USB_TALL = 0.49, 4.92, 14.0, 9.0   # USB-C receptacle 9.6 x 4.2 [STEP]
-TF_YF, TF_DEPTH, TF_ALONG, TF_TALL = 19.65, 4.4, 13.0, 5.0       # TF card slot (socket 16.1 wide) [STEP]
-# Depths below the glass top of the display board's parts [STEP]
-DISP_PCB_BACK = 3.76            # the board's component face
-CELL_BOTTOM = 23.55             # the 18650's underside: it hangs in an open cradle, through the back case
-HOLDER_BOTTOM = 18.95           # the cradle's rails and end contacts
-HDR_FACE = 12.45                # the 2x8 female header's open face
-HDR_STACK = 24.0                # + the 2.5 mm spacer of the double-sided header + a ~9 mm IDC socket
+USB_YF, USB_DEPTH, USB_ALONG, USB_TALL = 0.49, 4.92 + DISP_DROP, 14.0, 9.0   # USB-C receptacle 9.6 x 4.2 [STEP]
+TF_YF, TF_DEPTH, TF_ALONG, TF_TALL = 19.65, 4.4 + DISP_DROP, 13.0, 5.0       # TF card slot (socket 16.1 wide) [STEP]
+# Depths below the glass top of the display board's parts [STEP, + DISP_DROP for V2]
+DISP_PCB_BACK = 3.76 + DISP_DROP     # the board's component face
+CELL_BOTTOM = 23.55 + DISP_DROP      # the 18650's underside: it hangs in an open cradle, through the back case
+HOLDER_BOTTOM = 18.95 + DISP_DROP    # the cradle's rails and end contacts
+HDR_FACE = 12.45 + DISP_DROP         # the 2x8 female header's open face
+HDR_STACK = 24.0 + DISP_DROP         # + the 2.5 mm spacer of the double-sided header + a ~9 mm IDC socket
 
 # --- control board [PCB]: 82 x 52, front (key) side up under the lid, behind the display
 BTN_W, BTN_H = 82.0, 52.0

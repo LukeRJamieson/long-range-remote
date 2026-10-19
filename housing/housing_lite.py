@@ -194,22 +194,24 @@ BTNS_SLOT_Z0, BTNS_SLOT_Z1 = -10.0, 1.0
 # and the lever's lower end swings rearwards, so a nub on it pushes the PWR button's plunger. Like a
 # momentary switch: the button's own spring is all it needs, and a stop in the lid slot limits the throw.
 # PWR's plunger [STEP, TS24CA]: 3.0 mm wide (xf -1.5..+1.5), 1.0 mm tall, 4.15-5.15 mm below the glass
-# top; its tip 0.19 mm in from the display's front edge, its switch body 1.35 mm in. The display board's
-# edge is 2.1-3.8 mm below the glass, so the nub sits below it (4.5-5.1) and only touches the plunger.
+# top on a V1 board, 0.6 mm deeper on V2 (H.DISP_DROP); its tip 0.19 mm in from the display's front edge,
+# its switch body 1.35 mm in. The board's edge is 2.1-3.8 mm below the glass (V1; V2 +0.6), so the nub
+# sits below it, 0.05-0.65 mm into the plunger's height, and only touches the plunger.
 # KEY and BOOT can't be reached with the lever fitted - they don't need to be: KEY is the same pin as UP
 # and BOOT the same as SELECT.
 # All z below are relative to the display's front edge (ze), y to the glass top (= lid underside).
 PWR_LEVER = True
 LEV_W = 6.0                               # lever width (x)
 LEV_REAR, LEV_FRONT = -0.9, -5.0          # lever faces at rest (z); 0.9 mm clear of the display's edge
-LEV_TOP, LEV_BOT = 6.0, -5.8              # tab top 3 mm above the lid's top face; lower end
+PLUNGER_Y = (-5.15 - H.DISP_DROP, -4.15 - H.DISP_DROP)  # plunger bottom / top, below the glass
+LEV_TOP, LEV_BOT = 6.0, PLUNGER_Y[0] - 0.65   # tab top 3 mm above the lid's top face; lower end
 LEV_PIVOT = (-2.9, -1.0)                  # (z, y) of the pin: the pin clears the sleeve's front wall, so it
                                           # slides in from the side through one cheek
 LEV_PIN_D = 1.75                          # a piece of 1.75 mm filament, LEV_PIN_LEN long
 # Pin holes, generous: 2.0 / 1.8 printed far too tight to get the filament through [user, first print].
 # Small printed holes come out undersize, the cheeks' (printed sideways) most of all.
 LEV_HOLE_D, CHEEK_HOLE_D = 2.4, 2.2       # pin free in both; a melted head on one end keeps it in
-NUB_Y = (-5.1, -4.5)                      # nub height: inside the plunger's 4.15-5.15, below the board edge
+NUB_Y = (PLUNGER_Y[0] + 0.05, PLUNGER_Y[0] + 0.65)     # nub height, inside the plunger's, below the board
 PLUNGER_TIP = 0.19                        # [STEP]
 NUB_GAP = 0.3                             # nub to plunger at rest. Lever doesn't click PWR? Make it smaller.
 SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin

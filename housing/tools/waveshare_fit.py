@@ -85,10 +85,13 @@ def main():
         sys.exit(__doc__)
     yg, zc = H.Y_GLASS + L.DY, H.Z_DISP_C
 
-    def place(s):   # model (x, y, z) -> housing (z - 1.6, y - 0.75 + glass, Z_DISP_C - x - 0.5)
-        return s.rotate((0, 0, 0), (0, 1, 0), 90).translate((-1.6, yg - 0.75, zc - 0.5))
+    def place(s, n):   # model (x, y, z) -> housing (z - 1.6, y - 0.75 + glass, Z_DISP_C - x - 0.5)
+        # V2 board (H.DISP_V2): everything but the screen (LCD + its acrylic frame) 0.6 mm deeper
+        drop = 0.0 if ("RLCD" in n.split("/")[-1].upper() and "042MN" in n) or n.endswith("PMMA") else H.DISP_DROP
+        return s.rotate((0, 0, 0), (0, 1, 0), 90).translate((-1.6, yg - 0.75 - drop, zc - 0.5))
 
-    ws = [(n, place(s)) for n, s in read_named_solids(sys.argv[1]) if "BRACKET" not in n]
+    ws = [(n, place(s, n)) for n, s in read_named_solids(sys.argv[1]) if "BRACKET" not in n]
+    print(f"display: {'V2 (board etc. 0.6 mm deeper than the V1 model)' if H.DISP_V2 else 'V1 (as the model)'}")
     print(f"{len(ws)} solids from the Waveshare model")
     parts = {"lid": L.make_lid(), "body": L.make_body(), "bezel": L.make_bezel(), "door": L.make_door()}
     if L.PWR_LEVER:
