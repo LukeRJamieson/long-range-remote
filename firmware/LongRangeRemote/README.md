@@ -136,7 +136,7 @@ in, or flat) gives a low double buzz. A three-note chime at start-up shows the s
 - **Volume / mute:** Menu → *Sound*. With that row selected, LEFT / RIGHT make it quieter / louder
   (10 steps of 3 dB, with a click at each new level) and SELECT mutes or unmutes. Both are saved.
 - **How it works:** ESP32 I2S (16 kHz) → the ES8311 codec → the NS4150B amplifier. The sounds are
-  generated in the firmware (no sound files). The amplifier is switched off 3 s after the last sound
+  generated in the firmware (no sound files). The amplifier is switched off a minute after the last sound
   and during sleep, so the speaker costs nothing while idle.
 - **The codec and the BACK key share a pin.** The ES8311 is set up once over the display board's I2C
   bus, whose clock is GPIO14 (BACK). The firmware borrows the pin for ~30 ms at start-up, then gives

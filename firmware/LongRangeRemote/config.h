@@ -124,7 +124,14 @@
 #define ES8311_ADDR       0x18     // CE pulled low
 #define SOUND_VOLUME_MAX     10    // volume steps; each is 3 dB, 10 = loudest
 #define SOUND_VOLUME_DEFAULT  5
-#define SOUND_AMP_HOLD_MS  3000    // amplifier stays on this long after a sound (the next one is instant)
+// The NS4150B takes ~30 ms to start after PA_CTRL goes high (NS4150 datasheet: start-up time 30 ms), so a
+// click played the moment it is switched on is lost - that was the silent first key press after power-up
+// (the amplifier had gone off 3 s after the start-up chime). It now stays on for a minute after a sound
+// (idle sleep switches it off anyway; it draws a few mA), and a sound never starts until it has been on
+// for SOUND_AMP_START_MS.
+#define SOUND_AMP_HOLD_MS  60000   // amplifier stays on this long after a sound (the next one is instant)
+#define SOUND_AMP_START_MS 45      // wait this long after switching it on before a sound
+#define SOUND_CODEC_SETTLE_MS 150  // after the codec set-up, for its analogue reference to settle
 #define SOUND_STARTUP_CHIME   1    // short chime when the speaker is ready at start-up
 
 // SD card layout (FAT32). ALL IR codes live on the card - nothing is compiled into the firmware:

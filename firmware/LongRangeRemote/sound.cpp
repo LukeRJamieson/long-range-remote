@@ -46,6 +46,8 @@ volatile bool g_muted = false;
 volatile bool g_codec = false;              // ES8311 found and set up
 bool g_running = false;                     // I2S channel enabled (false while light-sleeping)
 bool g_amp = false;                         // amplifier on
+uint32_t g_amp_on_at = 0;                   // millis() when it was switched on
+uint32_t g_codec_at = 0;                    // millis() when the codec was set up
 int g_tries = 0;
 uint32_t g_next_try = 0;
 char g_status[64] = "not started";
@@ -163,8 +165,22 @@ bool writeBlock(const int16_t *buf) {
 }
 
 void amp(bool on) {
+  if (on && !g_amp) g_amp_on_at = millis();
   digitalWrite(SOUND_AMP_PIN, on ? HIGH : LOW);
   g_amp = on;
+}
+
+// Wait (in the sound task) until both the codec and the amplifier are ready to make a sound. Silence
+// keeps going out of the I2S meanwhile (auto-clear), so nothing pops.
+void waitReady() {
+  for (;;) {
+    uint32_t now = millis();
+    int32_t a = (int32_t)(g_amp_on_at + SOUND_AMP_START_MS - now);
+    int32_t c = (int32_t)(g_codec_at + SOUND_CODEC_SETTLE_MS - now);
+    int32_t w = a > c ? a : c;
+    if (w <= 0) return;
+    vTaskDelay(pdMS_TO_TICKS(w) + 1);
+  }
 }
 
 // Plays one sound; returns early if a newer one is waiting (it replaces this one).
@@ -211,7 +227,6 @@ void render(Cue c) {
 }
 
 void soundTask(void *) {
-  static const int16_t silence[BLOCK * 2] = {};
   Cue c;
   for (;;) {
     TickType_t wait = g_amp ? pdMS_TO_TICKS(SOUND_AMP_HOLD_MS) : portMAX_DELAY;
@@ -224,10 +239,9 @@ void soundTask(void *) {
     if (!g_codec || g_muted || g_volume <= 0 || c >= sizeof(CUES) / sizeof(CUES[0])) continue;
     xSemaphoreTake(g_io, portMAX_DELAY);
     if (g_running) {
-      if (!g_amp) {                                        // the amplifier needs a moment to start
-        amp(true);
-        for (int i = 0; i < 3; i++) writeBlock(silence);
-      }
+      amp(true);                                           // (no-op if it is already on)
+      waitReady();                                         // ~30 ms amplifier start-up, codec settling
+      if (uxQueueMessagesWaiting(g_q)) xQueueReceive(g_q, &c, 0);   // a newer sound came in meanwhile
       render(c);
     }
     xSemaphoreGive(g_io);
@@ -243,6 +257,7 @@ void trySetup(bool at_start) {
   }
   g_tries++;
   g_codec = codecSetup();
+  g_codec_at = millis();
   logf("Sound: %s\n", g_status);
   if (g_codec) {
     if (at_start && SOUND_STARTUP_CHIME) play(HELLO);
@@ -302,6 +317,8 @@ void afterSleep() {
   if (!g_tx) return;
   xSemaphoreTake(g_io, portMAX_DELAY);
   if (!g_running) g_running = i2s_channel_enable(g_tx) == ESP_OK;
+  // the key that woke the remote clicks straight away: start the amplifier now, so it is (nearly) ready
+  if (g_running && g_codec && !g_muted && g_volume > 0) amp(true);
   xSemaphoreGive(g_io);
 }
 
