@@ -97,7 +97,7 @@ def main():
     print(f"{len(ws)} solids from the Waveshare model")
     parts = {"lid": L.make_lid(), "body": L.make_body(), "bezel": L.make_bezel(), "door": L.make_door()}
     if L.PWR_LEVER:
-        parts["pwr_lever"] = L.make_pwr_lever()
+        parts["pwr_lever"] = L.make_pwr_lever(extra=0.0)
     hits = []
     for pn, p in parts.items():
         pb = p.val().BoundingBox()
@@ -128,7 +128,8 @@ def main():
 
     if L.PWR_LEVER:
         ze, _ = L._ze_yg()
-        lev = L.make_pwr_lever(L.LEV_THETA).val()
+        # checked as modelled (NUB_EXTRA = 0): the extra was added after testing on a real board
+        lev = L.make_pwr_lever(L.LEV_THETA, extra=0.0).val()
         lb = lev.BoundingBox()
         print(f"PWR lever flicked to its stop ({L.LEV_THETA * 57.3:.1f} deg, nub {L.LEV_STROKE:.2f} mm):")
         for n, s in ws:

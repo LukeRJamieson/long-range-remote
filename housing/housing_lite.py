@@ -213,7 +213,13 @@ LEV_PIN_D = 1.75                          # a piece of 1.75 mm filament, LEV_PIN
 LEV_HOLE_D, CHEEK_HOLE_D = 2.4, 2.2       # pin free in both; a melted head on one end keeps it in
 NUB_Y = (PLUNGER_Y[0] + 0.05, PLUNGER_Y[0] + 0.65)     # nub height, inside the plunger's, below the board
 PLUNGER_TIP = 0.19                        # [STEP]
-NUB_GAP = 0.3                             # nub to plunger at rest. Lever doesn't click PWR? Make it smaller.
+NUB_GAP = 0.3                             # nub to plunger at rest in Waveshare's model
+# Real board [user, printed lever]: at its stop the nub didn't quite reach PWR, so it juts out NUB_EXTRA
+# further than the model says it needs (the loose pin holes take up some of the travel too). So that it
+# can never hold PWR down at rest, the lever's rear face is relieved by LEV_RELIEF where it passes
+# through the lid: it can now swing back ~1 mm at the nub, and PWR's own spring pushes it off.
+NUB_EXTRA = 1.0
+LEV_RELIEF = 1.0
 SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin
 LEV_SIDE_CLEAR, LEV_REAR_CLEAR = 0.35, 0.3
 CHEEK_T, CHEEK_DROP = 2.2, 3.3            # cheek thickness (x) and how far below the lid they reach
@@ -496,14 +502,17 @@ def _ze_yg():
     return H.Z_DISP_C - H.DISP_H / 2, H.Y_GLASS + DY
 
 
-def make_pwr_lever(theta=0.0):
-    """The PWR lever in place (theta = rad of flick, 0 = at rest; >0 = tab forwards, nub rearwards)."""
+def make_pwr_lever(theta=0.0, extra=None):
+    """The PWR lever in place (theta = rad of flick, 0 = at rest; >0 = tab forwards, nub rearwards).
+    extra: how much further the nub juts out than the model needs (default NUB_EXTRA; 0 = as modelled)."""
     ze, yg = _ze_yg()
     zr, zf, yt, yb = LEV_REAR, LEV_FRONT, LEV_TOP, LEV_BOT
-    zn = PLUNGER_TIP - NUB_GAP                                  # nub tip at rest
+    zn = PLUNGER_TIP - NUB_GAP + (NUB_EXTRA if extra is None else extra)   # nub tip at rest
     n0, n1 = NUB_Y
+    r = LEV_RELIEF
     prof = [(zf, yb), (zr, yb), (zr, n0 - 0.4), (zn, n0), (zn, n1),       # nub, with sloped faces above
-            (zr, n1 + 0.4), (zr, yt), (zf, yt)]                          # and below it
+            (zr, n1 + 0.4), (zr, 0.3), (zr - r, 0.3 + r),                # and below it; rear face relieved
+            (zr - r, yt), (zf, yt)]                                      # through the lid (45 deg ramp)
     # YZ workplane: local x = global y, local y = global z
     lev = (cq.Workplane("YZ").workplane(offset=-LEV_W / 2)
            .polyline([(yg + y, ze + z) for z, y in prof]).close().extrude(LEV_W))
@@ -718,8 +727,13 @@ def main():
 
     keep = {**ref, **acc, **env}
     key_paths = {k for k in acc if k.startswith("key_path_")}
-    # the door closes the bay, so it is left out of the "cells out" check (that's with the door off)
-    lines = interference({k: v for k, v in parts.items() if k != "door"},
+    # the door closes the bay, so it is left out of the "cells out" check (that's with the door off).
+    # The PWR lever is checked as modelled: its NUB_EXTRA reaches under the display board (by design,
+    # for the real board), which the display's keep-out box doesn't model.
+    chk = dict(parts)
+    if PWR_LEVER:
+        chk["pwr_lever"] = make_pwr_lever(extra=0.0)
+    lines = interference({k: v for k, v in chk.items() if k != "door"},
                          {k: v for k, v in keep.items() if k != "door_screw"})
     lines += interference({"door": parts["door"]},
                           {k: v for k, v in keep.items() if k not in ("door_screw", "aa_cells_out")})

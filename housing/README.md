@@ -92,8 +92,12 @@ front, so the whole remote reads as a single piece.
   - Checked against Waveshare's 3D model: at rest it touches nothing; at its stop the nub reaches
     0.45 mm past the plunger's tip (the switch travels ~0.25 mm), below the board edge and well short
     of the switch body.
-  - **If a flick doesn't click PWR,** lower `NUB_GAP` (0.3 mm) in `housing_lite.py` and reprint only
-    the lever (a 5-minute print). If PWR is pressed with the lever at rest, raise it.
+  - On a real (V2) board the nub needed to reach further than Waveshare's model says, so it juts out
+    an extra 1 mm (`NUB_EXTRA` in `housing_lite.py`). The lever's back face is relieved where it passes
+    through the lid, so it can swing back ~1 mm at the nub: PWR's own spring always pushes it off, and
+    the longer nub can't hold PWR down.
+  - **If a flick doesn't click PWR,** raise `NUB_EXTRA`; if the screen turns itself off, lower it.
+    Reprint only the lever (a 5-minute print).
   - KEY and BOOT, either side of PWR, can't be reached with the lever fitted. They don't need to be:
     KEY is the same GPIO as UP, and BOOT the same as SELECT (hold SELECT at power-up for the
     bootloader).
@@ -140,7 +144,7 @@ front, so the whole remote reads as a single piece.
 | `body` | floor down | 107.4 × 163.8 × 52 |
 | `lid` | top face down | 100.9 × 138.5 × 19.5 |
 | `door` | inside face (tongue) down; the countersink opens upward | 70 × 75.6 × 3 |
-| `pwr_lever` | on its side (pin hole vertical); 100 % infill | 4.9 × 12.4 × 6 |
+| `pwr_lever` | on its side (pin hole vertical); 100 % infill | 5.9 × 12.4 × 6 |
 | `keycap_dpad` | base down — **print 4** | 13.2 Ø × 9.7 |
 | `keycap_select` | base down | 14 Ø × 9.7 |
 | `keycap_back` | base down | 13.2 Ø × 9.7 |
