@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import housing_lite as L  # noqa: E402
 from render import actor, render  # noqa: E402
 
-PCOL = {"bezel": "dark", "body": "housing", "lid": "dark", "door": "dark"}
+PCOL = {"bezel": "dark", "body": "housing", "lid": "dark", "door": "dark", "pwr_lever": "cap"}
 REFCOL = {"led_head_pcb": "pcb", "control_pcb": "pcb", "aa_holder": "cells",
           "display": "display", "display_18650": "batt"}
 
@@ -50,7 +50,7 @@ def main():
     # pulled apart along each part's assembly direction: bezel + LED head forward (-z), lid + caps up, AA
     # holder + door down out of the bay
     off = {"bezel": (0, 0, -75), "body": (0, 0, 0), "lid": (0, 70, 0),
-           "door": (0, -85, 0), "led": (0, 0, -40), "cells": (0, -55, 0)}
+           "door": (0, -85, 0), "led": (0, 0, -40), "cells": (0, -55, 0), "pwr_lever": (0, 70, 0)}
     roff = {"led_head_pcb": "led", "control_pcb": "lid", "aa_holder": "cells",
             "display": "lid", "display_18650": "lid"}
     acts = [actor(p, PCOL[n], off[n]) for n, p in parts.items()]
@@ -78,7 +78,7 @@ def main():
         acts.append(actor(L.box(-90, 90, -90, 90, -2, 0), "bed", (dx, 0, 0)))
     render(acts, out / "lite_print_orientation.png", cam_pos=(400, -380, 280), focal=(400, 0, 20),
            view_up=(0, 0, 1), size=(2000, 700), zoom=2.3,
-           title="Lite, as printed: bezel | body (floor down) | lid (top down) | door (inside down)")
+           title="Lite, as printed: bezel | body (floor down) | lid (top down) | door (inside down) | PWR lever (on its side)")
     print("previews written to", out)
 
 
