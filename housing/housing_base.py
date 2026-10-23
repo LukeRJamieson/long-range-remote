@@ -122,7 +122,11 @@ HDR_STACK = 24.0 + DISP_DROP         # + the 2.5 mm spacer of the double-sided h
 BTN_W, BTN_H = 82.0, 52.0
 BTN_HOLES = [(su * 37.5, sv * 22.5) for su in (-1, 1) for sv in (-1, 1)]      # (u, v) [PCB]
 BTN_ZC = Z_DISP_C + SLEEVE_HALF + 1.0 + BTN_H / 2                              # control board centre
-BTN_GAP = 8.7                                   # board top face to lid underside
+# Board top face to lid underside, set by the four bosses. 8.7 left every key pressed on the user's
+# first build (the caps were designed for 8.7: base 0.2 mm above the plunger), so the bosses are 1 mm
+# longer; the caps stay as designed (CAP_DESIGN_GAP), so they now have ~1.2 mm of free play.
+CAP_DESIGN_GAP = 8.7
+BTN_GAP = CAP_DESIGN_GAP + 1.0
 Y_BTN = Y_LID - BTN_GAP                         # control board top face
 # (name, u, v, cap Ø, switch actuator height) - u, v = switch centres on the control board [PCB]
 # All six are Omron B3F-1000 6 mm switches (4.3 mm tall); SELECT gets a larger cap so it's easy to find,
@@ -212,13 +216,16 @@ def make_lid(lid_screws=None, key_holes=True):
             zr0, zr1 = sorted((z_in, z_in - sz * RIB_H))
             sleeve = sleeve.union(box(rx - RIB_W / 2, rx + RIB_W / 2, Y_DISP_BACK, Y_LID, zr0 - 0.01, zr1 + 0.01))
     # 45 deg chamfer along the outside of the long walls' joint with the lid, either side of the middle:
-    # x 6.5..39.5 each side, which covers the hooks (x 19.5..36.5), clears the lid-screw columns at the
-    # ends and, on the front wall, leaves the middle to the PWR lever and its cheeks
+    # x 6.5..39.5 each side on the rear wall, 19..39.5 on the front; both cover the hooks (x 19.5..36.5)
+    # and clear the lid-screw columns at the ends
     c = SLEEVE_CHAMFER
     for sz in (-1, 1):
         zo = zc + sz * (ih / 2 + SLEEVE_T)                # the wall's outer face
         tri = [(Y_LID + 0.01, zo - sz * 0.01), (Y_LID + 0.01, zo + sz * c), (Y_LID - c, zo - sz * 0.01)]
-        for xa, xb in ((-39.5, -6.5), (6.5, 39.5)):
+        # front wall (sz < 0): only behind the hooks, so the PWR lever's pin has a clear straight run of
+        # 13.5 mm sideways from either cheek (the chamfer at x 6.5 blocked it [user])
+        segs = ((-39.5, -19.0), (19.0, 39.5)) if sz < 0 else ((-39.5, -6.5), (6.5, 39.5))
+        for xa, xb in segs:
             sleeve = sleeve.union(cq.Workplane("YZ").workplane(offset=xa).polyline(tri).close()
                                   .extrude(xb - xa))
     l = l.union(sleeve)

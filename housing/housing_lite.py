@@ -171,7 +171,7 @@ BACK_BASE_R = DPAD_BASE_R                # can't be mistaken for SELECT or a D-p
 KEY_GAP = H.KEY_HOLE_CLEAR / 2           # 0.3 mm round each cap in its lid hole
 CAP_TOP_H = H.LID_T + H.CAP_PROTRUDE     # 5.5: through the 3 mm lid, 2.5 mm proud
 SWITCH_H, SWITCH_GAP = 4.3, 0.2          # B3F-1000 plunger top above the board; free play above it
-CAP_BASE_T = H.BTN_GAP - SWITCH_H - SWITCH_GAP   # 4.2: lid underside down to 0.2 mm above the plunger
+CAP_BASE_T = H.CAP_DESIGN_GAP - SWITCH_H - SWITCH_GAP   # 4.2: caps unchanged when the bosses grew 1 mm
 CAP_TOP_EDGE = 0.8                       # rounded top edge
 
 # --- access to the display board's buttons: KEY (GPIO18), PWR (the power latch), BOOT (GPIO0), at
@@ -221,7 +221,9 @@ LEV_STROKE = NUB_GAP + SWITCH_TRAVEL + OVERTRAVEL        # nub movement at the s
 _NUB_ARM = LEV_PIVOT[1] - sum(NUB_Y) / 2                 # pin to nub centre (3.8)
 LEV_THETA = LEV_STROKE / _NUB_ARM                         # throw at the stop, rad (~11 deg)
 LEV_SLOT_FRONT = LEV_THETA * (H.LID_T - LEV_PIVOT[1])     # front stop: tab hits the slot's front edge at the lid top
-LEV_PIN_LEN = LEV_W + 2 * (LEV_SIDE_CLEAR + CHEEK_T) - 0.4   # just short of the cheeks' outer faces
+# 9.5 mm: 1.4 mm into each 2.2 mm cheek, and ~4 mm shorter than the clear run beside a cheek, so it
+# can be lined up and pushed in with tweezers
+LEV_PIN_LEN = LEV_W + 2 * (LEV_SIDE_CLEAR + CHEEK_T) - 1.6
 
 
 # ============================================================================ parts

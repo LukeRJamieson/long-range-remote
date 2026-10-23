@@ -23,7 +23,7 @@ front, so the whole remote reads as a single piece.
   a 0.3 mm chamfer that shows as a fine line against the tray's rounded rim, and its key holes a
   0.4 mm chamfer. The side slots and the bezel window have rounded ends / corners.
 - **Parts:** five printed parts (bezel, body, lid, battery door, PWR lever) plus the key caps (**one
-  D-pad model printed four times**, a SELECT cap and a BACK cap), and an 11 mm piece of 1.75 mm
+  D-pad model printed four times**, a SELECT cap and a BACK cap), and a 9.5 mm piece of 1.75 mm
   filament as the lever's pin. There is no power switch: the display board's own PWR button turns the
   remote on and off (through the PWR lever), and the ESP32 switches the AA pack for the LEDs.
 - **Power:** the AA cells run the LEDs only. The display board and ESP32 run from the display
@@ -103,7 +103,8 @@ front, so the whole remote reads as a single piece.
   can't turn and the shape shows the direction: nothing is engraved. All four are the same model,
   turned. SELECT is a plain round cap and BACK a rounded square, so you can tell the three apart by
   feel. Each cap has a thick round base under the lid (Ø13.2 for the D-pad and BACK, Ø14 for SELECT) that keeps it in and presses the switch directly, so there's no stem and it
-  prints base-down without supports. At rest the base sits 0.2 mm above the switch plunger.
+  prints base-down without supports. The control board's bosses hold it 9.7 mm below the lid (8.7 left
+  every key pressed on the first build), so at rest a cap's base sits about 1.2 mm above its switch.
 - **Bezel window.** Shaped like the LED field: full width across the middle three rows, cut back at
   the four corners where the holes are, every corner R2. Each post has 3.6 mm of bezel round it.
   Each screw's countersink (Ø6.4 at the face) comes within 0.4 mm of the window there, so for the first
@@ -182,7 +183,7 @@ without support (use a brim only if your bed adhesion is marginal).
 3. **Lid.** Drop the caps into their holes from underneath: the four triangles each point outwards
    (UP towards the LED head), SELECT on the right, the square BACK at the D-pad's lower right.
    **PWR lever:** with the lid upside down, push the lever's tab up through its slot from underneath,
-   nub towards the display window, and line its hole up with the cheeks'. Cut an 11 mm piece of
+   nub towards the display window, and line its hole up with the cheeks'. Cut a 9.5 mm piece of
    1.75 mm filament, melt one end into a small head with a soldering iron (or a lighter), and push it
    in sideways through one cheek, the lever and the other cheek. The holes are a loose fit (2.2 mm in
    the cheeks, 2.4 mm in the lever), so it slides straight in; a dab of glue on the head, against the
