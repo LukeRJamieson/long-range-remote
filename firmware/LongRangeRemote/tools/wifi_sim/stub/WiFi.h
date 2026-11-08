@@ -81,6 +81,7 @@ struct SimWiFi {
   long channel() { return ap_channel; }
   void softAP(const char *, const char *, int ch = 1) { if (ch != ap_channel) ap_moves++; ap_channel = ch; }
   wl_status_t begin(const char *, const char *, int32_t ch = 0, const uint8_t *bssid = nullptr, bool tryConnect = true) { begins++;
+    sim_ms += 3;                                   // the real begin() takes a few ms: time moves during the call
     sae_pwe = 0;                                   // the core memsets the station config
     if (ch && bssid) begins_targeted++;
     if (refuse) return WL_CONNECT_FAILED;
@@ -91,6 +92,7 @@ struct SimWiFi {
     return WL_DISCONNECTED; }
   bool pending_connect = false, deaf_pending = false;
   int connect_now() {                              // esp_wifi_connect()
+    sim_ms += 2;
     if (deaf_pending) { deaf_pending = false; return 0; }
     if (!pending_connect) { if (busy) return 1; }
     pending_connect = false; start(); return 0; }

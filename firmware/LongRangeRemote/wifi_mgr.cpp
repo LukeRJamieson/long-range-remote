@@ -121,6 +121,13 @@ bool isSecurityMismatch(uint8_t r) {
 
 void connectTo(int32_t channel, const uint8_t *bssid);
 
+// Milliseconds from t to now, signed. loop() reads millis() once at the top, but the timestamps it
+// compares against can be set later in the same pass (connectTo() stamps the attempt after the
+// driver calls, which take a few ms) or by the Wi-Fi event task. A plain unsigned now - t then
+// wraps to ~49 days: the watchdog fired at once and killed every attempt (seen on the board,
+// 8 Nov: "no response from the driver for 45 s" in the same millisecond as the attempt).
+inline int32_t since(uint32_t now, uint32_t t) { return (int32_t)(now - t); }
+
 // Switch the station between its factory MAC address and a fixed second one (the same address with
 // the "locally administered" bit set). Why: the remote is switched off by a hardware latch, so it
 // never tells the router it is leaving. With protected management frames (WPA3 / WPA2-WPA3 mixed
@@ -375,7 +382,7 @@ void loop() {
   // Scan finished (or stuck): pick the strongest access point with our network name.
   if (g_scan_running) {
     int n = WiFi.scanComplete();
-    bool stuck = n == WIFI_SCAN_RUNNING && now - g_scan_started > 15000;
+    bool stuck = n == WIFI_SCAN_RUNNING && since(now, g_scan_started) > 15000;
     if (n >= 0 || n == WIFI_SCAN_FAILED || stuck) {
       int best = -1;
       if (g_ssid.length())
@@ -424,7 +431,7 @@ void loop() {
   // that is due goes first (its scan fills the list as well).
   bool attempt_due = !g_connected && g_ssid.length() && (int32_t)(now - g_next_try) >= 0;
   if (g_list_wanted && !g_scan_running && !g_attempt_active && !attempt_due &&
-      (int32_t)(now - g_list_retry_at) >= 0 && now - ev_last_ms >= QUIET_MS) {
+      (int32_t)(now - g_list_retry_at) >= 0 && since(now, ev_last_ms) >= (int32_t)QUIET_MS) {
     int16_t r = WiFi.scanNetworks(true /*async*/, false /*hidden*/, false /*active*/, 120 /*ms per channel*/);
     if (r == WIFI_SCAN_RUNNING) {
       g_scan_running = true;
@@ -438,7 +445,7 @@ void loop() {
   // Never give up: start the next attempt when the previous one has finished.
   // Wait for the driver to go quiet first, so a trailing event can't land on the new attempt.
   if (!g_connected && !g_attempt_active && !g_scan_running && g_ssid.length() &&
-      (int32_t)(now - g_next_try) >= 0 && now - ev_last_ms >= QUIET_MS) {
+      (int32_t)(now - g_next_try) >= 0 && since(now, ev_last_ms) >= (int32_t)QUIET_MS) {
     startAttempt();
   }
 
@@ -446,7 +453,7 @@ void loop() {
   // disconnect event then takes the normal retry path). An idle driver sends no event for that, so
   // after a few seconds start over regardless. If the driver keeps going silent, restart the
   // station interface (the access point stays up).
-  if (g_attempt_active && now - g_attempt_started > (g_watchdog_fired ? DISCONNECT_WAIT_MS : ATTEMPT_WATCHDOG_MS)) {
+  if (g_attempt_active && since(now, g_attempt_started) > (int32_t)(g_watchdog_fired ? DISCONNECT_WAIT_MS : ATTEMPT_WATCHDOG_MS)) {
     if (!g_watchdog_fired) {
       logf("Wi-Fi: no response from the driver for %u s - resetting the attempt\n",
            (unsigned)(ATTEMPT_WATCHDOG_MS / 1000));
