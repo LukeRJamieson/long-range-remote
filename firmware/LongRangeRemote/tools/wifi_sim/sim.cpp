@@ -109,6 +109,19 @@ int main() {
   printf("     connected %lu s later, after %d AUTH_EXPIRE(s)\n", (unsigned long)((WiFi.connected_at - t16) / 1000), WiFi.auth_expires - ae16);
   check(WiFi.connected_at - t16 < 90000, "within 1.5 minutes");
   WiFi.ignore_window_ms = 0;
+  puts("17. power-cycled while connected: the router keeps the old (PMF) session for 4 minutes");
+  connectedFirst(); memcpy(WiFi.stale_mac, WiFi.mac, 6); drop(); WiFi.stale_until = sim_ms + 240000;
+  uint32_t t17 = sim_ms; int ae17 = WiFi.auth_expires; run(120000);
+  check(wifimgr::state() == wifimgr::CONNECTED, "connects long before the router forgets the old session");
+  printf("     connected %lu s after power-up, after %d AUTH_EXPIRE(s), MAC changed %d time(s)\n",
+         (unsigned long)((WiFi.connected_at - t17) / 1000), WiFi.auth_expires - ae17, WiFi.mac_changes);
+  check(WiFi.connected_at - t17 < 60000, "within a minute");
+  check(memcmp(WiFi.mac, WiFi.stale_mac, 6) != 0 && !(WiFi.mac[0] & 1) && (WiFi.mac[0] & ~2) == 0x24 && !memcmp(WiFi.mac + 1, "\x58\x7C\x01\x02\x03", 5),
+        "on the other of its two addresses (factory / same with the local bit), never a multicast one");
+  puts("18. next power cycle: now that address is the stale one - switches back");
+  memcpy(WiFi.stale_mac, WiFi.mac, 6); drop(); WiFi.stale_until = sim_ms + 240000; uint32_t t18 = sim_ms; run(120000);
+  check(wifimgr::state() == wifimgr::CONNECTED && WiFi.connected_at - t18 < 60000, "connects within a minute again");
+  check(memcmp(WiFi.mac, WiFi.stale_mac, 6) != 0, "on the address the router isn't holding");
   printf("begin() calls: %d (%d aimed at a scanned router), scans: %d, access point moved: %d time(s)\n",
          WiFi.begins, WiFi.begins_targeted, WiFi.scans, WiFi.ap_moves);
   check(WiFi.begins_targeted * 2 > WiFi.begins, "most attempts go straight to the scanned router");

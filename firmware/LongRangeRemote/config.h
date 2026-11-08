@@ -182,6 +182,6 @@
 // After this many seconds with no key press, no IR being sent and no phone joined to the access
 // point, Wi-Fi goes off and the ESP32 light-sleeps; any key wakes it and is acted on at once.
 // The web remote over the HOME network can't wake it - join the "LR-Remote" access point (which
-// keeps it awake) or press a key first. 0 = never sleep.
+// keeps it awake) or press a key first. Plugged into a computer's USB it never sleeps. 0 = never sleep.
 #define IDLE_SLEEP_S          90
 #define WIFI_RESUME_DELAY_MS  1500   // after waking, Wi-Fi restarts this much later

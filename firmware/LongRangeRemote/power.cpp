@@ -48,6 +48,12 @@ void loop() {
 #if IDLE_SLEEP_S > 0
   if (hw::keys() || irtx::isSending()) { g_last = now; return; }
   if (!wifimgr::suspended() && WiFi.softAPgetStationNum() > 0) { g_last = now; return; }   // phone on the AP
+#if SOC_USB_SERIAL_JTAG_SUPPORTED
+  // Plugged into a computer (a USB host is talking to the ESP32's own USB port, not just a charger):
+  // stay awake. Light sleep stops that port, which made uploads fail ("device attached is not
+  // functioning", "No serial data received") and the Serial Monitor go silent.
+  if (HWCDC::isPlugged()) { g_last = now; return; }
+#endif
   if (now - g_last >= (uint32_t)IDLE_SLEEP_S * 1000u) sleepNow();
 #endif
 }

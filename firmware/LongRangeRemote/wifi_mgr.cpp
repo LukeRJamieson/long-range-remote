@@ -51,6 +51,8 @@ bool g_suspended = false;               // radio off while the remote sleeps
 bool g_print_scan = true;               // print the next scan result (first one, and after changes)
 uint32_t g_targeted_fails = 0;          // failed attempts aimed at a scanned router (channel + BSSID)
 uint8_t g_authexp_streak = 0;           // attempts in a row that ended in AUTH_EXPIRE (router never answered)
+uint8_t g_mac_base[6] = {0};            // the station's factory MAC address
+bool g_have_mac = false;
 // Network list for the Wi-Fi menu (requestNetworks / networks)
 const int MAX_NETS = 24;
 Network g_nets[MAX_NETS];
@@ -118,6 +120,27 @@ bool isSecurityMismatch(uint8_t r) {
 }
 
 void connectTo(int32_t channel, const uint8_t *bssid);
+
+// Switch the station between its factory MAC address and a fixed second one (the same address with
+// the "locally administered" bit set). Why: the remote is switched off by a hardware latch, so it
+// never tells the router it is leaving. With protected management frames (WPA3 / WPA2-WPA3 mixed
+// networks) the router then keeps the old session alive for minutes and ignores a new
+// authentication from the same address - AUTH_EXPIRE until its timer runs out. From the other
+// address the router answers straight away. Only called between attempts (station idle).
+void swapMac() {
+  if (!g_have_mac) return;
+  uint8_t cur[6], next[6];
+  if (esp_wifi_get_mac(WIFI_IF_STA, cur) != ESP_OK) return;
+  memcpy(next, g_mac_base, 6);
+  if (memcmp(cur, g_mac_base, 6) == 0) next[0] ^= 0x02;   // factory -> second address
+  esp_err_t err = esp_wifi_set_mac(WIFI_IF_STA, next);
+  if (err == ESP_OK)
+    logf("Wi-Fi: the router may still hold the remote's last session - trying as %02X:%02X:%02X:%02X:%02X:%02X%s\n",
+         next[0], next[1], next[2], next[3], next[4], next[5],
+         memcmp(next, g_mac_base, 6) == 0 ? " (factory address)" : "");
+  else
+    logf("Wi-Fi: couldn't change the MAC address (error %d)\n", (int)err);
+}
 
 // Step 1 of an attempt: scan, so we know which channel the router is on. Connecting blind makes
 // the radio hop over all 13 channels while it also has to keep the LR-Remote access point up -
@@ -246,6 +269,7 @@ void begin() {
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);          // also accept older WPA-only routers
   WiFi.softAP(WIFI_AP_SSID, WIFI_AP_PASSWORD);
   WiFi.setSleep(false);                // snappier web remote
+  g_have_mac = esp_wifi_get_mac(WIFI_IF_STA, g_mac_base) == ESP_OK;
   logf("Wi-Fi: access point \"%s\" up at http://%s\n", WIFI_AP_SSID, WiFi.softAPIP().toString().c_str());
   if (g_ssid.length() == 0)
     logln("Wi-Fi: no home network set (Menu > Wi-Fi network, or wifi.txt on the SD card) - access point only");
@@ -341,6 +365,7 @@ void loop() {
       wait = WIFI_STA_RETRY_MS * (g_authexp_streak < 4 ? g_authexp_streak : 4);
       logf("Wi-Fi: the router didn't answer (%u in a row) - waiting %lu s before trying again\n",
            (unsigned)g_authexp_streak, (unsigned long)(wait / 1000));
+      if (g_authexp_streak % 2 == 0) swapMac();   // 2nd, 4th, ...: try the other address
     } else if (!was_connected) {
       g_authexp_streak = 0;
     }

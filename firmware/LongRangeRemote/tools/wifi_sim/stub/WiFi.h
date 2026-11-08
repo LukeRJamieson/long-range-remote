@@ -9,6 +9,7 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
+#include <string.h>
 enum arduino_event_id_t { ARDUINO_EVENT_WIFI_STA_GOT_IP = 1, ARDUINO_EVENT_WIFI_STA_DISCONNECTED = 2, ARDUINO_EVENT_WIFI_STA_CONNECTED = 3 };
 struct arduino_event_info_t { struct { uint8_t reason; } wifi_sta_disconnected; };
 enum wifi_err_reason_t { WIFI_REASON_AUTH_FAIL = 202, WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT = 15, WIFI_REASON_HANDSHAKE_TIMEOUT = 204,
@@ -34,6 +35,8 @@ struct SimWiFi {
   uint32_t ignore_window_ms = 0;     // router ignores authentication within this long of the previous one (-> AUTH_EXPIRE)
   int sae_pwe = 0;                   // what the station config asks for (0 = unspecified, as the core leaves it)
   uint32_t last_auth_at = 0; bool any_auth = false; int auth_expires = 0;
+  uint8_t mac[6] = {0x24, 0x58, 0x7C, 0x01, 0x02, 0x03}; int mac_changes = 0;
+  uint8_t stale_mac[6] = {0}; uint32_t stale_until = 0;   // router ignores this address until then (old PMF session)
   // ---- driver state ----
   bool busy = false, connected = false, first_connect = true; uint32_t done_at = 0; int pending_reason = 0;
   std::function<void(arduino_event_id_t, arduino_event_info_t)> cb;
@@ -52,7 +55,8 @@ struct SimWiFi {
       bool too_soon = ap_present && ignore_window_ms && any_auth && sim_ms - attempt_ms - last_auth_at < ignore_window_ms;
       if (ap_present) { last_auth_at = sim_ms - attempt_ms; any_auth = true; }
       if (!ap_present) fire_disc(WIFI_REASON_NO_AP_FOUND);
-      else if ((needs_h2e && sae_pwe < 2) || too_soon) { auth_expires++; fire_disc(WIFI_REASON_AUTH_EXPIRE); }
+      else if ((needs_h2e && sae_pwe < 2) || too_soon ||
+               ((int32_t)(stale_until - sim_ms) > 0 && !memcmp(mac, stale_mac, 6))) { auth_expires++; fire_disc(WIFI_REASON_AUTH_EXPIRE); }
       else if (needs_any_security && min_sec != WIFI_AUTH_OPEN) fire_disc(WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY);
       else if (!pass_ok) fire_disc(WIFI_REASON_AUTH_FAIL);
       else { connected = true; connected_at = sim_ms; arduino_event_info_t i{}; cb(ARDUINO_EVENT_WIFI_STA_CONNECTED, i); cb(ARDUINO_EVENT_WIFI_STA_GOT_IP, i); }
