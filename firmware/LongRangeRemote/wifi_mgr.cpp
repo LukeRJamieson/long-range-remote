@@ -50,6 +50,7 @@ uint32_t g_scan_started = 0;
 bool g_suspended = false;               // radio off while the remote sleeps
 bool g_print_scan = true;               // print the next scan result (first one, and after changes)
 uint32_t g_targeted_fails = 0;          // failed attempts aimed at a scanned router (channel + BSSID)
+uint8_t g_authexp_streak = 0;           // attempts in a row that ended in AUTH_EXPIRE (router never answered)
 // Network list for the Wi-Fi menu (requestNetworks / networks)
 const int MAX_NETS = 24;
 Network g_nets[MAX_NETS];
@@ -155,7 +156,21 @@ void connectTo(int32_t channel, const uint8_t *bssid) {
   // The minimum security is applied by begin(). WPA (not WPA2) keeps old routers working; after a
   // "security not compatible" failure we drop the minimum so whatever the router offers is tried.
   WiFi.setMinSecurity(g_any_security ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA_PSK);
-  wl_status_t st = WiFi.begin(g_ssid.c_str(), pw.c_str(), channel, bssid);
+  // begin() without connecting, so the station config can be completed before the attempt starts.
+  wl_status_t st = WiFi.begin(g_ssid.c_str(), pw.c_str(), channel, bssid, false /*tryConnect*/);
+  if (st != WL_CONNECT_FAILED) {
+    // The core zeroes the whole station config, which leaves sae_pwe_h2e "unspecified" - in practice
+    // WPA3's old hunt-and-peck SAE only. Routers in WPA2/WPA3 mixed mode (most current Wi-Fi 6 ones)
+    // often answer only hash-to-element SAE: the ESP32's authentication frame then gets no reply
+    // and the attempt ends in reason 2, AUTH_EXPIRE. Offer both methods; WPA2-only routers are
+    // unaffected.
+    wifi_config_t c;
+    if (esp_wifi_get_config(WIFI_IF_STA, &c) == ESP_OK) {
+      c.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
+      esp_wifi_set_config(WIFI_IF_STA, &c);
+    }
+    if (esp_wifi_connect() != ESP_OK) st = WL_CONNECT_FAILED;
+  }
   if (st == WL_CONNECT_FAILED) {
     // The driver refused to start (no event will follow): don't wait for the watchdog.
     logf("Wi-Fi: the Wi-Fi driver refused to start the attempt - retrying in %u s\n",
@@ -246,6 +261,7 @@ void loop() {
     g_silent_streak = 0;
     if (e.type == EV_GOT_IP) {
       g_targeted_fails = 0;
+      g_authexp_streak = 0;
       g_connected = true;
       g_attempt_active = false;
       g_disc_requested = false;
@@ -315,7 +331,20 @@ void loop() {
       g_print_scan = true;                    // the scan shows the router's security type
     }
     logf("Wi-Fi: %s - reason %u (%s)\n", was_connected ? "connection lost" : "attempt failed", r, reasonName(r));
-    g_next_try = now + (was_connected ? 500 : WIFI_STA_RETRY_MS);   // reconnect quickly after a drop
+    uint32_t wait = was_connected ? 500 : WIFI_STA_RETRY_MS;           // reconnect quickly after a drop
+    if (r == WIFI_REASON_AUTH_EXPIRE && !was_connected) {
+      // The router didn't answer our authentication request. Hammering it makes it worse: many
+      // routers ignore a station for a while after a burst of failed (WPA3) authentications. Back
+      // off 5 / 10 / 15 / 20 s, and from the second one on let the driver choose the access point
+      // itself (another node of a mesh, or the same one on a fresh channel lookup).
+      if (g_authexp_streak < 255) g_authexp_streak++;
+      wait = WIFI_STA_RETRY_MS * (g_authexp_streak < 4 ? g_authexp_streak : 4);
+      logf("Wi-Fi: the router didn't answer (%u in a row) - waiting %lu s before trying again\n",
+           (unsigned)g_authexp_streak, (unsigned long)(wait / 1000));
+    } else if (!was_connected) {
+      g_authexp_streak = 0;
+    }
+    g_next_try = now + wait;
   }
 
   // Scan finished (or stuck): pick the strongest access point with our network name.
@@ -342,7 +371,7 @@ void loop() {
       g_scan_running = false;
       if (g_scan_for_attempt) {
         g_scan_for_attempt = false;
-        if (best >= 0 && g_targeted_fails % 3 != 2) {
+        if (best >= 0 && g_targeted_fails % 3 != 2 && g_authexp_streak < 2) {
           connectTo(ch, bssid);             // the normal case: straight to the router we saw
         } else if (n < 0 || best >= 0) {
           connectTo(0, nullptr);            // scan failed, or every 3rd retry: let the driver search
@@ -453,6 +482,7 @@ bool suspended() { return g_suspended; }
 void reconnect() {
   g_ssid = settings::wifiSsid();
   g_attempts = 0;
+  g_authexp_streak = 0;
   g_notfound_streak = 0;
   g_last_reason = 0;
   g_scanned = false;

@@ -96,6 +96,19 @@ int main() {
   check(wifimgr::state() == wifimgr::CONNECTED, "connects without seeing it in a scan");
   printf("     connected %lu s after the drop\n", (unsigned long)((WiFi.connected_at - t14) / 1000));
   WiFi.hidden = false;
+  puts("15. WPA2/WPA3 router that only answers hash-to-element SAE (the AUTH_EXPIRE report)");
+  WiFi.needs_h2e = true; int ae15 = WiFi.auth_expires; drop(); uint32_t t15 = sim_ms; run(30000);
+  check(wifimgr::state() == wifimgr::CONNECTED, "connects");
+  check(WiFi.auth_expires == ae15, "no AUTH_EXPIRE at all: the station offers H2E");
+  printf("     connected %lu s after the drop\n", (unsigned long)((WiFi.connected_at - t15) / 1000));
+  WiFi.needs_h2e = false;
+  puts("16. router ignores a station that tries again within 12 s of its last attempt");
+  WiFi.ignore_window_ms = 12000; WiFi.any_auth = false; WiFi.pass_ok = false; drop(); run(9000);   // one failed try sets it off
+  WiFi.pass_ok = true; int ae16 = WiFi.auth_expires; uint32_t t16 = sim_ms; run(120000);
+  check(wifimgr::state() == wifimgr::CONNECTED, "backs off far enough to get through");
+  printf("     connected %lu s later, after %d AUTH_EXPIRE(s)\n", (unsigned long)((WiFi.connected_at - t16) / 1000), WiFi.auth_expires - ae16);
+  check(WiFi.connected_at - t16 < 90000, "within 1.5 minutes");
+  WiFi.ignore_window_ms = 0;
   printf("begin() calls: %d (%d aimed at a scanned router), scans: %d, access point moved: %d time(s)\n",
          WiFi.begins, WiFi.begins_targeted, WiFi.scans, WiFi.ap_moves);
   check(WiFi.begins_targeted * 2 > WiFi.begins, "most attempts go straight to the scanned router");

@@ -14,7 +14,7 @@ struct arduino_event_info_t { struct { uint8_t reason; } wifi_sta_disconnected; 
 enum wifi_err_reason_t { WIFI_REASON_AUTH_FAIL = 202, WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT = 15, WIFI_REASON_HANDSHAKE_TIMEOUT = 204,
   WIFI_REASON_802_1X_AUTH_FAILED = 23, WIFI_REASON_MIC_FAILURE = 14, WIFI_REASON_NO_AP_FOUND = 201,
   WIFI_REASON_NO_AP_FOUND_IN_RSSI_THRESHOLD = 212, WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY = 210,
-  WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD = 211, WIFI_REASON_ASSOC_LEAVE = 8, WIFI_REASON_BEACON_TIMEOUT = 200, WIFI_REASON_STA_LEAVING = 36 };
+  WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD = 211, WIFI_REASON_ASSOC_LEAVE = 8, WIFI_REASON_AUTH_EXPIRE = 2, WIFI_REASON_BEACON_TIMEOUT = 200, WIFI_REASON_STA_LEAVING = 36 };
 enum { WIFI_OFF = 0, WIFI_AP_STA = 3, WIFI_SCAN_RUNNING = -1, WIFI_SCAN_FAILED = -2 };
 enum wifi_auth_mode_t { WIFI_AUTH_OPEN = 0, WIFI_AUTH_WEP, WIFI_AUTH_WPA_PSK, WIFI_AUTH_WPA2_PSK, WIFI_AUTH_WPA_WPA2_PSK,
   WIFI_AUTH_ENTERPRISE, WIFI_AUTH_WPA2_ENTERPRISE = WIFI_AUTH_ENTERPRISE, WIFI_AUTH_WPA3_PSK, WIFI_AUTH_WPA2_WPA3_PSK,
@@ -30,6 +30,10 @@ struct SimWiFi {
   bool refuse = false;               // begin() fails outright (WL_CONNECT_FAILED), no event
   int min_sec = WIFI_AUTH_WPA_PSK; int sta_restarts = 0;
   int attempt_ms = 3000;
+  bool needs_h2e = false;            // WPA3 router that ignores hunt-and-peck SAE (-> AUTH_EXPIRE)
+  uint32_t ignore_window_ms = 0;     // router ignores authentication within this long of the previous one (-> AUTH_EXPIRE)
+  int sae_pwe = 0;                   // what the station config asks for (0 = unspecified, as the core leaves it)
+  uint32_t last_auth_at = 0; bool any_auth = false; int auth_expires = 0;
   // ---- driver state ----
   bool busy = false, connected = false, first_connect = true; uint32_t done_at = 0; int pending_reason = 0;
   std::function<void(arduino_event_id_t, arduino_event_info_t)> cb;
@@ -45,7 +49,10 @@ struct SimWiFi {
     if (busy && !hang && (int32_t)(sim_ms - done_at) >= 0) {
       busy = false;
       if (pending_reason) { int r = pending_reason; pending_reason = 0; fire_disc(r); return; }
+      bool too_soon = ap_present && ignore_window_ms && any_auth && sim_ms - attempt_ms - last_auth_at < ignore_window_ms;
+      if (ap_present) { last_auth_at = sim_ms - attempt_ms; any_auth = true; }
       if (!ap_present) fire_disc(WIFI_REASON_NO_AP_FOUND);
+      else if ((needs_h2e && sae_pwe < 2) || too_soon) { auth_expires++; fire_disc(WIFI_REASON_AUTH_EXPIRE); }
       else if (needs_any_security && min_sec != WIFI_AUTH_OPEN) fire_disc(WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY);
       else if (!pass_ok) fire_disc(WIFI_REASON_AUTH_FAIL);
       else { connected = true; connected_at = sim_ms; arduino_event_info_t i{}; cb(ARDUINO_EVENT_WIFI_STA_CONNECTED, i); cb(ARDUINO_EVENT_WIFI_STA_GOT_IP, i); }
@@ -69,13 +76,20 @@ struct SimWiFi {
   uint8_t *BSSID(int) { return bssid_; }
   long channel() { return ap_channel; }
   void softAP(const char *, const char *, int ch = 1) { if (ch != ap_channel) ap_moves++; ap_channel = ch; }
-  wl_status_t begin(const char *, const char *, int32_t ch = 0, const uint8_t *bssid = nullptr) { begins++;
+  wl_status_t begin(const char *, const char *, int32_t ch = 0, const uint8_t *bssid = nullptr, bool tryConnect = true) { begins++;
+    sae_pwe = 0;                                   // the core memsets the station config
     if (ch && bssid) begins_targeted++;
     if (refuse) return WL_CONNECT_FAILED;
     if (busy) { begin_rejected++; return WL_CONNECT_FAILED; }
     if (connected) connected = false;
-    if (deaf) return WL_DISCONNECTED;              // accepted, then nothing ever happens
-    start(); return WL_DISCONNECTED; }
+    if (deaf) { deaf_pending = true; return WL_DISCONNECTED; }   // accepted, then nothing ever happens
+    if (tryConnect) start(); else pending_connect = true;
+    return WL_DISCONNECTED; }
+  bool pending_connect = false, deaf_pending = false;
+  int connect_now() {                              // esp_wifi_connect()
+    if (deaf_pending) { deaf_pending = false; return 0; }
+    if (!pending_connect) { if (busy) return 1; }
+    pending_connect = false; start(); return 0; }
   bool enableSTA(bool on) { if (!on) { busy = false; connected = false; } else { deaf = false; sta_restarts++; } return true; }
   void setMinSecurity(int m) { min_sec = m; }
   wifi_auth_mode_t encryptionType(int) { return WIFI_AUTH_WPA2_PSK; }
