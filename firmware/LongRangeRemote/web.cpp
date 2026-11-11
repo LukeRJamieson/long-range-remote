@@ -13,6 +13,7 @@
 //                                      [[code, profile, brand, profileName, codeName, remotesSharingIt], ...]
 //   /api/fav?op=add|del|active&p=ID    manage "My devices"   (/api/fav?op=clear removes all)
 //   POST /api/upload?kind=db           upload a new code database (irdb.bin) to the SD card
+//   GET  /api/disc?a=...               Discover: a device that is not in the database (see hDisc)
 //   POST /api/upload?kind=ir&path=P    upload one of your own .ir files to /ir/P on the SD card
 //   /api/power?l=N                     LED power level (0 = full); the level is also in /api/state (lp, lpn)
 //   /api/restart                       restart (loads the new codes)
@@ -21,6 +22,7 @@
 #include "web.h"
 #include "web_page.h"
 #include "config.h"
+#include "discover.h"
 #include "hw.h"
 #include "ir_db.h"
 #include "ir_keys.h"
@@ -221,6 +223,76 @@ void hManual() {
   server.send(200, "text/plain", "ok");
 }
 
+// Discover (discover.h): one endpoint, every call answers with the engine's state.
+//   a = meta | state | sweep&fam=N (-1 = all) | reacted | step&d=-1/0/1 | resume | skip | pick |
+//       open&fam=N&addr=A | fstep&d=-1/0/1 | fgoto&f=F | name&key=K or name&text=T | forget&f=F |
+//       save | stop
+void hDisc() {
+  String a = server.arg("a");
+  char err[80] = "";
+  if (a == "meta") {
+    Json j;
+    j.raw("{\"families\":[");
+    for (int f = 0; f < discover::numFamilies(); f++) {
+      if (f) j.raw(",");
+      j.raw("[").str(discover::family(f).name).raw(",").str(discover::family(f).brands).raw(",").num(discover::numFuncs(f)).raw("]");
+    }
+    j.raw("]}");
+    return;
+  }
+  int fam = argInt("fam", 0);
+  if (fam >= discover::numFamilies()) return badRequest("bad protocol");
+  if (a == "sweep") discover::sweepStart(fam);
+  else if (a == "reacted") discover::reacted();
+  else if (a == "step") discover::narrowStep(constrain((int)argInt("d", 0), -1, 1));
+  else if (a == "resume") discover::resumeSweep();
+  else if (a == "skip") discover::skipFamily();
+  else if (a == "pick") { discover::learnPick(); discover::learnStep(0); }
+  else if (a == "open") {
+    if (fam < 0) return badRequest("bad protocol");
+    discover::learnStart(fam, (int)(argInt("addr", 0) & 0xFFFF));
+    discover::learnStep(0);
+  }
+  else if (a == "fstep") discover::learnStep(constrain((int)argInt("d", 0), -1, 1));
+  else if (a == "fgoto") discover::learnGoto((int)(argInt("f", 0) & 0xFF));
+  else if (a == "name") {
+    int key = argInt("key", 0);
+    if (key < 0 || key >= KEY__COUNT || !discover::learnName((uint8_t)key, server.arg("text").c_str()))
+      snprintf(err, sizeof(err), "not named (the list is full, or nothing is being learned)");
+  }
+  else if (a == "forget") discover::learnForget((int)argInt("f", -1));
+  else if (a == "save") { if (discover::saveAndRestart(err, sizeof(err))) err[0] = 0; }
+  else if (a == "stop") discover::stop();
+  else if (a != "state" && a.length()) return badRequest("unknown action");
+
+  discover::State st = discover::state();
+  static const char *const modes[] = {"idle", "sweep", "narrow", "learn"};
+  char at[40] = "", brand[24] = "", remote[40] = "";
+  Json j;
+  j.raw("{\"mode\":").str(modes[st.mode]).raw(",\"all\":").num(st.all).raw(",\"done\":").num(st.done)
+   .raw(",\"sending\":").num(st.sending).raw(",\"restart\":").num(discover::restartPending()).raw(",\"err\":").str(err);
+  if (st.mode != discover::IDLE) {
+    discover::addrText(st.fam, st.addr, at, sizeof(at));
+    j.raw(",\"fam\":").num(st.fam).raw(",\"famName\":").str(discover::family(st.fam).name)
+     .raw(",\"addr\":").num(st.addr).raw(",\"addrText\":").str(at)
+     .raw(",\"pos\":").num(st.pos).raw(",\"total\":").num(st.total)
+     .raw(",\"famPos\":").num(st.fam_pos).raw(",\"famTotal\":").num(st.fam_total).raw(",\"eta\":").num((long)st.eta_s);
+  }
+  if (st.mode == discover::LEARN) {
+    discover::fileNames(brand, sizeof(brand), remote, sizeof(remote));
+    j.raw(",\"func\":").num(st.func).raw(",\"funcPos\":").num(st.func_pos).raw(",\"nFuncs\":").num(discover::numFuncs(st.fam))
+     .raw(",\"guess\":").num(discover::guessKey(st.fam, st.func)).raw(",\"file\":[").str(brand).raw(",").str(remote).raw("]")
+     .raw(",\"learned\":[");
+    for (int i = 0; i < st.n_learned; i++) {
+      const discover::Learned &l = discover::learned(i);
+      if (i) j.raw(",");
+      j.raw("[").num(l.func).raw(",").num(l.key).raw(",").str(l.name).raw("]");
+    }
+    j.raw("]");
+  }
+  j.raw("}");
+}
+
 void hScan() {
   int b = argInt("b", -1);
   int k = argInt("k", KEY_POWER);
@@ -353,6 +425,7 @@ void begin() {
   on("/api/send", hSend);
   on("/api/manual", hManual);
   on("/api/scan", hScan);
+  on("/api/disc", hDisc);
   on("/api/groups", hGroups);
   on("/api/fav", hFav);
   on("/api/power", hPower);

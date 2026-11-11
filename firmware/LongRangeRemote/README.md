@@ -118,6 +118,29 @@ page shows the same message, with the upload button.
   - Remotes that share a code are tried only once.
   - The most widely shared codes come first, so a TV usually responds within the first few
     tries.
+- **Menu → Add a device: not in the list (Discover):** for a device no remote in the database
+  matches. It works for any device that uses one of the 18 protocol families the remote can sweep
+  (NEC, NEC extended, Samsung, Sony, RC5, RC6, Panasonic, Pioneer, JVC, Denon, Sharp, ...).
+  1. **Sweep.** Pick a protocol (or all of them, about 35 minutes; NEC alone is about 4). The
+     remote tries every device address, each with the function numbers that the database's remotes
+     most often use for Power, Vol + and Mute. Addresses that occur in the database go first.
+     Aim at the device and press SELECT the moment it does anything.
+  2. **Which address.** A reaction shows up late, so the remote steps a few addresses back.
+     RIGHT tries the next one; when the device reacts again, hold SELECT.
+  3. **Learn keys.** RIGHT / LEFT step through that address's functions, the likely ones first,
+     and the screen says what each usually is on other remotes. When the device does something,
+     hold SELECT and pick the key's name from the list.
+  4. **Save.** BACK, then *Save as a device*. The keys are written to
+     `/ir/Discovered/<protocol> <address>.ir` on the SD card (a Flipper `.ir` file), the remote
+     restarts and the new device is the one in use. Discovering the same address again later
+     starts with the keys already saved, so you can add more.
+  - The same thing is on the web page's **Discover** tab, where naming keys is quicker, any
+    function number can be sent directly, and a known protocol + address can be opened without a
+    sweep. The old one-code-at-a-time manual entry is at the bottom of that tab.
+  - A sweep sends unknown codes to everything in front of the remote. Point it only at the
+    device you mean, and expect other IR gear in the beam to react too.
+  - Extended NEC has 65,536 possible addresses; the sweep covers the ones the database knows
+    (about 670). Sony 20-bit, Aiwa and the raw-only protocols are not swept.
 
 Chosen devices are saved under Menu (your devices, `*` = active). They are stored by name, so
 they survive power-off and database updates.
@@ -280,6 +303,10 @@ This takes about 6 minutes. Then copy or upload `irdb.bin`.
 g++ -O2 -std=c++17 -I. tools/test_all_codes.cpp ir_protocols.cpp ir_db.cpp flipper_ir.cpp -o /tmp/test_all_codes
 /tmp/test_all_codes ../sd_card/irdb.bin
 ```
+
+`tools/discover_test/test.cpp` tests Discover the same way (its build line is at the top of the
+file): the sweep, narrowing, naming, and that a saved file loads back as exactly the codes that
+were sent, for every protocol family. `tools/ui_sim` draws the real screens on a PC.
 
 The test checks:
 - every code encodes within the transmitter's limits;

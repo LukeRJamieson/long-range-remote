@@ -13,6 +13,7 @@
 #include "power.h"
 #include "log.h"
 #include "sim.h"
+#include "discover.h"
 uint32_t sim_ms = 1000;
 Sim sim;
 void logf(const char *, ...) {} void logln(const char *) {} void logBegin() {}
@@ -34,14 +35,20 @@ static std::vector<uint8_t> keysOf(int p) {
 namespace irdb {
 const char *sourceName() { return "SD card (irdb.bin)"; }
 int numUserProfiles() { return 2; }
-int numBrands() { return sim.empty_db ? 0 : NB; } int numProfiles() { return sim.empty_db ? 0 : NB * 2; } int numCodes() { return 233188; }
+int numBrands() { return sim.empty_db ? 0 : NB; } int numProfiles() { return sim.empty_db ? 0 : NB * 2; } int numCodes() { return NB * 200; }
+int findProfile(const char *, const char *) { return -1; } uint8_t canonKey(const char *) { return 0; }
 const char *brandName(int b) { return BR[b]; }
 int brandFirstProfile(int b) { return b * 2; } int brandProfileCount(int) { return 2; }
 const char *profileName(int p) { static char b[40]; snprintf(b, sizeof(b), p % 2 ? "RX-V%d receiver" : "TV model %d series", 400 + p * 7); return b; }
 int profileBrand(int p) { return p / 2; } int profileCategory(int p) { return p % 2 ? 1 : 0; }
 int profileFirstCode(int p) { return p * 100; } int profileCodeCount(int p) { return keysOf(p).size(); }
 int profileFindKey(int p, uint8_t key) { auto v = keysOf(p); for (size_t i = 0; i < v.size(); i++) if (v[i] == key) return p * 100 + i; return -1; }
-const IrCode &code(int c) { static IrCode x; x = IrCode{0, 4, 0, (uint16_t)(c % 100), (uint8_t)(c / 100 % 5), 0}; return x; }
+const IrCode &code(int c) {      // NEC, device = profile % 7, function = key number; RC5 for every 5th profile
+  static IrCode x; int p = c / 100, i = c % 100; auto v = keysOf(p);
+  uint8_t key = i < (int)v.size() ? v[i] : 0; uint16_t d = p % 7, f = key;
+  if (p % 5 == 4) x = IrCode{0, d, 0, (uint16_t)(f & 0x7F), IRP_RC5, key};
+  else x = IrCode{0, (uint16_t)(d | ((~d & 0xFF) << 8)), 0, (uint16_t)(f | ((~f & 0xFF) << 8)), IRP_NEC, key};
+  return x; }
 const char *codeName(int c) { return IR_KEY_LABELS[keysOf(c / 100)[c % 100]]; }
 int buildScan(const ScanFilter &, uint8_t key, ScanCand *out, int max_out) { int n = 0; for (int p = 0; p < NB * 2 && n < max_out; p++) { int c = profileFindKey(p, key); if (c >= 0) out[n++] = ScanCand{c, p, (uint16_t)(p % 4 == 0 ? 12 : 1)}; } return n; }
 int countProfiles(const ScanFilter &f) { return f.category < 0 ? NB * 2 : f.category < 2 ? NB : 0; }
@@ -52,8 +59,9 @@ int groupBrandCount(int g) { return 8 + g * 3; }
 namespace irtx {
 static LastSent L;
 void fire(int c) { if (c < 0) return; snprintf(L.label, sizeof(L.label), "%s - %s", BR[c / 200], irdb::codeName(c)); L.proto = c / 100 % 5; L.d = 4; L.s = 0; L.f = c % 100; L.frames = 1; L.seq++; L.at_ms = sim_ms; sim.sends++; }
+void tapParams(const IrCodeParams &p, const char *label) { snprintf(L.label, sizeof(L.label), "%s", label); L.proto = p.proto; L.d = p.d; L.s = p.s; L.f = p.f; L.frames = 1; L.seq++; L.at_ms = sim_ms; sim.sends++; sim.busy_until = sim_ms + 70; }
 void tap(int c) { fire(c); } void holdStart(int c) { fire(c); sim.holding = true; } void holdKeepAlive() { if (sim.holding) L.frames++; } void holdStop() { sim.holding = false; }
-LastSent last() { return L; } bool isSending() { return sim.holding; }
+LastSent last() { return L; } bool isSending() { return sim.holding || (int32_t)(sim.busy_until - sim_ms) > 0; }
 }
 namespace sdstore { const char *status() { return "card ok, 14.8 GB free, irdb.bin 5.6 MB, 2 .ir files"; } }
 namespace settings {
@@ -74,5 +82,12 @@ State state() { return sim.wifi_connected ? CONNECTED : settings::ss.empty() ? N
 const char *statusText() { return sim.wifi_connected ? "connected" : "connecting... (last failure: AUTH_EXPIRE)"; }
 void reconnect() {} void requestNetworks() {}
 int networks(Network *out, int max) { static const Network N[] = {{"Chateau Le Chat", -48, false}, {"NETGEAR-2G", -66, false}, {"Telstra1F3A", -74, false}, {"FreeWifi", -83, true}}; int n = std::min(max, 4); for (int i = 0; i < n; i++) out[i] = N[i]; return sim.scanning ? -1 : n; }
+}
+namespace discover {
+static uint32_t nowMs() { return sim_ms; } static bool txBusy() { return irtx::isSending(); }
+static void sendTap(const IrCodeParams &p, const char *l) { irtx::tapParams(p, l); }
+void begin() { setHooks({sendTap, txBusy, nowMs}); }
+bool saveAndRestart(char *err, size_t n) { if (!state().n_learned) { snprintf(err, n, "no keys named yet"); return false; } sim.saved_text = fileText(); sim.restart = true; return true; }
+bool restartPending() { return sim.restart; } void glueLoop() {}
 }
 namespace power { bool inStandby() { return sim.standby; } void activity() {} }

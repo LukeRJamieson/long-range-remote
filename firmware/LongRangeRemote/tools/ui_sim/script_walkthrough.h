@@ -20,14 +20,14 @@ int main() {
   // all keys: last tile
   press('L'); press('L'); press('L'); press('L'); 
   press('B'); shot("menu");
-  seq("DDD"); shot("menu_remove"); seq("D"); shot("menu_led"); press('S'); seq("D"); press('R'); shot("menu_sound");
+  seq("DDDD"); shot("menu_remove"); seq("D"); shot("menu_led"); press('S'); seq("D"); press('R'); shot("menu_sound");
   seq("D"); press('S'); shot("wifi_unset"); press('S'); shot("wifinets"); press('S'); seq("SRSRSRSRSRSRSRS"); shot("keyboard");
   seq("DDDR"); shot("keyboard_done"); press('S'); shot("wifi_set"); CHECK(settings::wifiSsid() == "Chateau Le Chat");
   sim.wifi_connected = true; ui::setNetworkInfo("192.168.4.1", "192.168.1.57", "Chateau Le Chat");
   seq("DD"); shot("wifi_forget"); press('B');
   seq("D"); press('S'); shot("status"); press('B'); shot("menu_after_status");
   // code search
-  seq("UUUUU"); press('S'); shot("scansrc"); press('S'); shot("scancat"); seq("D"); press('S'); shot("scankey"); press('S'); shot("scan");
+  seq("UUUUUU"); press('S'); shot("scansrc"); press('S'); shot("scancat"); seq("D"); press('S'); shot("scankey"); press('S'); shot("scan");
   seq("RRR"); shot("scan4"); press('B'); shot("scankey_back"); press('B'); press('B'); press('B');
   // second device via browse, then menu shows two devices
   seq("UU"); // somewhere in menu

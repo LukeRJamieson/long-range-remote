@@ -100,6 +100,11 @@ bool convertParsed(const char *proto, const char *address, const char *command, 
   } else if (!strcmp(proto, "RCA")) {
     o.proto = IRP_RCA; o.d = (uint16_t)(addr & 0xF); o.f = (uint16_t)c;
   } else {
+    // Not Flipper protocols: the ones this remote can also send, as written by its own Discover
+    // (discover.cpp). address = device (Panasonic: device, subdevice), command = function.
+    static const char *const OWN[] = {"JVC", "Denon", "Sharp", "Mitsubishi", "Akai", "Emerson", "RECS80", "Bose"};
+    if (!strcmp(proto, "Panasonic")) return irParseManual("Panasonic", (int)a, (int)((addr >> 8) & 0xFF), (int)c, o);
+    for (const char *n : OWN) if (!strcmp(proto, n)) return irParseManual(n, (int)a, -1, (int)c, o);
     return false;
   }
   return true;

@@ -11,7 +11,7 @@ if [ ! -f libu8g2.a ]; then
 fi
 mkdir -p "$OUT"
 cp "$FW/ui.cpp" ui_build.cpp      # so its #include "ST7305_U8g2.h" finds the stub, not the real driver
-g++ -std=gnu++17 -O0 -w -DSCRIPT="\"$SCRIPT\"" -DOUTDIR="\"$OUT\"" -Istub -I. -Iu8g2/csrc -I"$FW" main.cpp stubs.cpp disp.cpp ui_build.cpp libu8g2.a -o uisim_bin
+g++ -std=gnu++17 -O0 -w -DSCRIPT="\"$SCRIPT\"" -DOUTDIR="\"$OUT\"" -Istub -I. -Iu8g2/csrc -I"$FW" main.cpp stubs.cpp disp.cpp ui_build.cpp "$FW/discover.cpp" libu8g2.a -o uisim_bin
 ./uisim_bin
 python3 -c "
 from PIL import Image; import glob

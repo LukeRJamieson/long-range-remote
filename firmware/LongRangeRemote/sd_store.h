@@ -44,4 +44,7 @@ bool format(bool keep_codes, char *msg, size_t msg_len);
 bool readFile(const char *path, std::string &out, size_t max_len);
 bool fileExists(const char *path);         // the file (or a finished <path>.new) is on the card
 bool replaceFile(const char *path, const std::string &content, char *err, size_t err_len);
+// Write one of the user's own remotes: relpath below /ir, e.g. "Discovered/NEC 4.ir" (folders are
+// created). It is read at the next start-up like any other .ir file there.
+bool saveUserRemote(const char *relpath, const std::string &content, char *err, size_t err_len);
 }

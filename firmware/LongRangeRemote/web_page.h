@@ -62,7 +62,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
 </header>
 <nav id="tabs">
   <button data-t="remote" class="on">Remote</button><button data-t="browse">Browse</button>
-  <button data-t="scan">Code search</button><button data-t="manual">Manual</button><button data-t="settings">Settings</button>
+  <button data-t="scan">Code search</button><button data-t="manual">Discover</button><button data-t="settings">Settings</button>
 </nav>
 <main>
 <section id="t-remote" class="on"><div id="nodb" class="warn" hidden></div><div id="remote"></div></section>
@@ -94,11 +94,56 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
 </section>
 
 <section id="t-manual">
-  <p class="mut">Send any code by protocol + parameters, using IRP/IRDB conventions (D = device, S = sub-device, F = function; decimal or 0x hex). Leave S empty for the protocol default.</p>
-  <label>Protocol</label><select id="mproto"></select>
-  <div class="grid g3" style="margin-top:6px"><div><label>D</label><input id="md" inputmode="numeric" value="0"></div><div><label>S</label><input id="ms" inputmode="numeric" placeholder="default"></div><div><label>F</label><input id="mf" inputmode="numeric" value="0"></div></div>
-  <div class="acts"><button class="k big" id="msend" style="flex:1">Send (hold = repeat)</button></div>
-  <p class="mut">Codes for most gear are on <b>irdb.tk</b> / github.com/probonopd/irdb and in the Flipper-IRDB; both are already built in.</p>
+  <div id="d-idle">
+    <p class="mut">For a device that isn't in the database. The remote tries every address of a protocol with the function numbers that usually mean Power, Volume + and Mute. Aim it at the device and say when it reacts. Then you step through its functions and name the ones that do something.</p>
+    <label>Protocol</label><select id="dfam"></select>
+    <div class="acts"><button class="b pri" id="dstart">Start the sweep</button></div>
+    <details style="margin-top:14px"><summary class="mut">I already know the protocol and address</summary>
+      <div class="grid g3" style="margin-top:6px"><div style="grid-column:span 2"><label>Protocol</label><select id="dkfam"></select></div><div><label>Address</label><input id="dkaddr" inputmode="numeric" value="0"></div></div>
+      <div class="acts"><button class="b" id="dopen">Step through its functions</button></div>
+    </details>
+    <details style="margin-top:10px"><summary class="mut">Send one code by hand</summary>
+      <p class="mut">Protocol + parameters in IRP/IRDB terms (D = device, S = sub-device, F = function; decimal or 0x hex). Leave S empty for the protocol default.</p>
+      <label>Protocol</label><select id="mproto"></select>
+      <div class="grid g3" style="margin-top:6px"><div><label>D</label><input id="md" inputmode="numeric" value="0"></div><div><label>S</label><input id="ms" inputmode="numeric" placeholder="default"></div><div><label>F</label><input id="mf" inputmode="numeric" value="0"></div></div>
+      <div class="acts"><button class="k big" id="msend" style="flex:1">Send (hold = repeat)</button></div>
+    </details>
+  </div>
+  <div class="scanbox" id="d-sweep" style="display:none">
+    <div class="mut" id="dsw-sub"></div>
+    <div class="n" id="dsw-fam"></div><div id="dsw-addr" style="font-weight:600"></div>
+    <progress id="dsw-bar" max="1" value="0" style="width:100%;margin:10px 0 4px"></progress>
+    <div class="mut" id="dsw-eta"></div>
+    <p>Aim the remote at the device and watch it. The moment it does <b>anything</b> (on, off, volume, mute):</p>
+    <div class="acts" style="justify-content:center"><button class="b ok" id="dreact" style="font-size:18px;padding:16px 22px">It reacted!</button></div>
+    <div class="acts" style="justify-content:center"><button class="b" id="dskip">Skip this protocol</button><button class="b del" id="dstop1">Stop</button></div>
+  </div>
+  <div class="scanbox" id="d-narrow" style="display:none">
+    <div class="mut">Which address was it?</div>
+    <div class="n" id="dn-fam"></div><div id="dn-addr" style="font-weight:600"></div>
+    <div class="mut" id="dn-st" style="margin:6px 0"></div>
+    <p class="mut" id="dn-help"></p>
+    <div class="acts" style="justify-content:center"><button class="b" id="dnprev">&larr; Previous</button><button class="b pri" id="dnagain">Try again</button><button class="b" id="dnnext">Next &rarr;</button></div>
+    <div class="acts" style="justify-content:center"><button class="b ok" id="dnpick">It reacted to this one</button></div>
+    <div class="acts" style="justify-content:center"><button class="b" id="dnresume">Carry on sweeping</button><button class="b del" id="dstop2">Stop</button></div>
+  </div>
+  <div id="d-learn" style="display:none">
+    <div class="scanbox">
+      <div class="mut" id="dl-title"></div>
+      <div class="mut">function</div><div class="n" id="dl-func"></div>
+      <div class="mut" id="dl-pos"></div>
+      <div id="dl-guess" style="margin:8px 0;font-weight:600"></div>
+      <div class="acts" style="justify-content:center"><button class="b" id="dlprev">&larr; Previous</button><button class="b pri" id="dlagain">Send again</button><button class="b" id="dlnext">Next &rarr;</button></div>
+      <div class="acts" style="justify-content:center;align-items:center"><span class="mut">or function number</span><input id="dlgoto" inputmode="numeric" style="width:80px"><button class="b" id="dlgo">Send</button></div>
+    </div>
+    <label>The device did something? Name this function</label>
+    <div class="grid g3"><div style="grid-column:span 2"><select id="dlkey"></select></div><div><button class="b ok" id="dlname" style="width:100%">Name it</button></div></div>
+    <input id="dltext" placeholder="your own name (when 'Something else' is chosen)" maxlength="19" style="margin-top:6px;display:none">
+    <label style="margin-top:12px">Named so far (tap to send, &times; to remove)</label>
+    <div class="codes" id="dllist"></div>
+    <div class="acts"><button class="b pri" id="dlsave">Save as a device</button><button class="b del" id="dstop3">Throw away</button></div>
+    <div class="mut" id="dlmsg"></div>
+  </div>
 </section>
 
 <section id="t-settings">
@@ -161,6 +206,7 @@ document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x==b));
   document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id=='t-'+b.dataset.t));
   if(b.dataset.t=='settings')renderInfo();
+  if(b.dataset.t=='manual')disc('state');
 });
 
 // ---------- SD card uploads ----------
@@ -349,8 +395,66 @@ $('#sprev').onclick=()=>{stopAuto();scanStep(-1)};$('#snext').onclick=()=>{stopA
 $('#sauto').onclick=()=>{if(AUTO)return stopAuto();$('#sauto').textContent='Stop';AUTO=setInterval(()=>scanStep(1),3000)};
 $('#suse').onclick=async()=>{stopAuto();if(!SCAN.length)return;await setActive(SCAN[SPOS][1]);document.querySelector('#tabs button[data-t=remote]').click()};
 
-// ---------- manual ----------
+// ---------- manual + discover ----------
 hold($('#msend'),a=>{const s=$('#ms').value.trim();return '/api/manual?proto='+encodeURIComponent($('#mproto').value)+'&d='+encodeURIComponent($('#md').value)+'&s='+encodeURIComponent(s===''?'-1':s)+'&f='+encodeURIComponent($('#mf').value)+'&a='+a});
+let DISC=null,DFAMS=[],DTIMER=null,DGUESS=-1;
+const dShow=m=>['idle','sweep','narrow','learn'].forEach(x=>$('#d-'+x).style.display=x==m?'':'none');
+async function disc(q){
+  try{DISC=await get('/api/disc?a='+q)}catch(e){return}
+  renderDisc();
+}
+function renderDisc(){
+  const d=DISC;if(!d)return;
+  dShow(d.mode);
+  if(d.restart){$('#dlmsg').textContent='Saved. The remote is restarting - the page reloads in about 10 seconds...';setTimeout(()=>location.reload(),10000);clearInterval(DTIMER);DTIMER=null;return}
+  if(d.mode=='sweep'){
+    $('#dsw-fam').textContent=d.famName;$('#dsw-addr').textContent=d.addrText;
+    $('#dsw-bar').max=d.total;$('#dsw-bar').value=d.pos+1;
+    $('#dsw-sub').textContent=d.all?'Protocol '+(d.famPos+1)+' of '+d.famTotal:'Sweeping';
+    $('#dsw-eta').textContent='address '+(d.pos+1)+' of '+d.total+', about '+(d.eta>=90?Math.ceil(d.eta/60)+' min':d.eta+' s')+' left';
+    $('#dskip').style.display=d.all?'':'none';
+  }else if(d.mode=='narrow'){
+    $('#dn-fam').textContent=d.famName;$('#dn-addr').textContent=d.addrText+'  ('+(d.pos+1)+' of '+d.total+')';
+    $('#dn-st').textContent=d.sending?'trying this address now...':'tried - did the device react?';
+    $('#dn-help').textContent=d.done?'That was the last address and nothing reacted so far. Step back with Previous, or stop.':'A reaction shows up late, so this is a few addresses back. Step forward one address at a time until the device reacts again.';
+    $('#dnresume').style.display=d.done?'none':'';
+  }else if(d.mode=='learn'){
+    $('#dl-title').textContent=d.famName+', '+d.addrText;
+    $('#dl-func').textContent=d.func;$('#dl-pos').textContent=(d.funcPos+1)+' of '+d.nFuncs+', the likely ones first';
+    const mine=d.learned.find(l=>l[0]==d.func);
+    $('#dl-guess').textContent=mine?'You named it: '+mine[2]:d.guess?'On other remotes this is usually: '+META.keys[d.guess][1]:'Not used by any remote in the database';
+    if(DGUESS!=d.func){DGUESS=d.func;$('#dlkey').value=mine?mine[1]:d.guess;$('#dltext').value=mine&&!mine[1]?mine[2]:'';$('#dltext').style.display=$('#dlkey').value=='0'?'':'none'}
+    const L=$('#dllist');L.innerHTML='';
+    d.learned.forEach(l=>{const w=el('span','');w.style.cssText='display:flex;gap:4px';const b=el('button','k',l[2]+' ('+l[0]+')');b.style.flex='1';b.onclick=()=>disc('fgoto&f='+l[0]);
+      const x=el('button','b del','×');x.onclick=()=>disc('forget&f='+l[0]);w.append(b,x);L.append(w)});
+    $('#dlsave').textContent='Save as a device ('+d.learned.length+' key'+(d.learned.length==1?'':'s')+')';$('#dlsave').disabled=!d.learned.length;
+    $('#dlmsg').textContent=d.err||('It becomes "'+d.file[1]+'" under '+d.file[0]+'. Saving restarts the remote.');
+  }
+  // keep following while something is going on (the remote's own screen may be driving it too)
+  const live=d.mode!='idle'&&$('#t-manual').classList.contains('on');
+  if(live&&!DTIMER)DTIMER=setInterval(()=>{if(!document.hidden)disc('state')},d.mode=='learn'?2500:700);
+  if(!live&&DTIMER){clearInterval(DTIMER);DTIMER=null}
+}
+async function initDisc(){
+  try{DFAMS=(await get('/api/disc?a=meta')).families}catch(e){return}
+  $('#dfam').append(new Option('All of them (about 35 minutes)','-1'));
+  DFAMS.forEach((f,i)=>{$('#dfam').append(new Option(f[0]+'  -  '+f[1],i));$('#dkfam').append(new Option(f[0],i))});
+  $('#dfam').value='0';
+  const K=$('#dlkey');K.append(new Option('Something else (type a name)','0'));
+  META.keys.forEach((k,i)=>{if(i)K.append(new Option(k[1],i))});
+  K.onchange=()=>$('#dltext').style.display=K.value=='0'?'':'none';
+  disc('state');
+}
+$('#dstart').onclick=()=>disc('sweep&fam='+$('#dfam').value);
+$('#dopen').onclick=()=>disc('open&fam='+$('#dkfam').value+'&addr='+encodeURIComponent($('#dkaddr').value));
+$('#dreact').onclick=()=>disc('reacted');$('#dskip').onclick=()=>disc('skip');
+$('#dnprev').onclick=()=>disc('step&d=-1');$('#dnagain').onclick=()=>disc('step&d=0');$('#dnnext').onclick=()=>disc('step&d=1');
+$('#dnpick').onclick=()=>disc('pick');$('#dnresume').onclick=()=>disc('resume');
+$('#dlprev').onclick=()=>disc('fstep&d=-1');$('#dlagain').onclick=()=>disc('fstep&d=0');$('#dlnext').onclick=()=>disc('fstep&d=1');
+$('#dlgo').onclick=()=>disc('fgoto&f='+encodeURIComponent($('#dlgoto').value));
+$('#dlname').onclick=()=>{DGUESS=-1;disc('name&key='+$('#dlkey').value+'&text='+encodeURIComponent($('#dltext').value))};
+$('#dlsave').onclick=()=>disc('save');
+['#dstop1','#dstop2','#dstop3'].forEach(i=>$(i).onclick=()=>{if(i!='#dstop3'||!DISC.learned.length||confirm('Throw away the keys you named?'))disc('stop')});
 
 // ---------- settings ----------
 function renderInfo(){
@@ -384,6 +488,7 @@ function renderInfo(){
   const sk=$('#skey');SCANKEYS.forEach(k=>sk.appendChild(new Option(META.keys[KEYIDX[k]][1],k)));
   updateCount();
   const mp=$('#mproto');META.protos.forEach(p=>mp.appendChild(new Option(p,p)));
+  initDisc();
   await refreshState();
   setInterval(()=>{if(!document.hidden){refreshState().then(()=>{if($('#t-settings').classList.contains('on'))renderInfo()})}},4000);
 })();

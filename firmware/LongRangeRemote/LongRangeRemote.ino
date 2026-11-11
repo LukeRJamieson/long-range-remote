@@ -25,6 +25,7 @@
 // Libraries: U8g2 (Library Manager). Core: esp32 by Espressif >= 3.0.
 #include <Arduino.h>
 #include "config.h"
+#include "discover.h"
 #include "hw.h"
 #include "ir_db.h"
 #include "ir_tx.h"
@@ -54,6 +55,7 @@ void setup() {
     logln("IR transmitter init FAILED");
   else
     logf("IR output: GPIO%d -> AOD424, LED supply switched by GPIO%d\n", IR_TX_PIN, LED_ARM_PIN);
+  discover::begin();                            // devices that aren't in the database (discover.h)
   ui::begin();
   web::begin();
   power::begin();
@@ -63,6 +65,8 @@ void setup() {
 void loop() {
   web::loop();
   ui::loop();
+  discover::loop();
+  discover::glueLoop();
   power::loop();
   sound::loop();
   delay(2);

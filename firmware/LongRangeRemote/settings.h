@@ -19,6 +19,9 @@ void clearFavs();                  // remove every saved device (no active devic
 
 int  active();                     // active profile index, -1 if none
 void setActive(int profile);       // also adds it to favourites
+// For a remote that is on the card but not loaded yet (just saved): make it the active device and
+// a favourite as of the next start-up.
+void setActiveByName(const char *brand, const char *remote);
 
 int  ledPower();                   // LED power level, 0 = full (saved; applied to irtx at start-up)
 void setLedPower(int level);       // clamps, saves and applies it

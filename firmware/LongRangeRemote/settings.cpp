@@ -163,6 +163,20 @@ void removeFav(int p) {
   save();
 }
 
+void setActiveByName(const char *brand, const char *remote) {
+  String key = String(brand) + "|" + remote;
+  String s = prefs.getString("favs", "");
+  bool have = false;
+  for (int start = 0; start <= (int)s.length() && !have; ) {
+    int nl = s.indexOf('\n', start);
+    if (nl < 0) nl = s.length();
+    have = s.substring(start, nl) == key;
+    start = nl + 1;
+  }
+  if (!have) { if (s.length()) s += '\n'; s += key; prefs.putString("favs", s); }
+  prefs.putString("active", key);
+}
+
 void clearFavs() {
   g_nfav = 0;
   g_active = -1;

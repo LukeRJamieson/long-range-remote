@@ -40,6 +40,7 @@
 //   STATUS  - battery, SD card, database, Wi-Fi
 #include "ui.h"
 #include "config.h"
+#include "discover.h"
 #include "log.h"
 #include "power.h"
 
@@ -103,7 +104,8 @@ Key keys[K__N];
 // Screen state
 // ---------------------------------------------------------------------------
 enum Screen { S_REMOTE, S_PAD, S_NUMBER, S_ALLKEYS, S_MENU, S_LETTERS, S_BRANDS, S_PROFILES,
-              S_SCANSRC, S_SCANCAT, S_SCANKEY, S_SCAN, S_STATUS, S_WIFI, S_WIFINETS, S_TEXT };
+              S_SCANSRC, S_SCANCAT, S_SCANKEY, S_SCAN, S_STATUS, S_WIFI, S_WIFINETS, S_TEXT,
+              S_DFAM, S_DSWEEP, S_DNARROW, S_DLEARN, S_DNAME, S_DDONE };      // Discover (discover.h)
 Screen screen = S_REMOTE;
 int sel = 0, scroll = 0;              // selection + first visible item/row of the current screen
 int last_active = -2;
@@ -173,7 +175,7 @@ irdb::ScanCand *scan_cands = nullptr; int scan_cap = 0;   // sized numProfiles()
 int n_scan = 0; int scan_pos = 0;
 
 // Menu entries
-enum MenuItem { M_BROWSE = -100, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_WIFI, M_STATUS };
+enum MenuItem { M_BROWSE = -100, M_DISCOVER, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_WIFI, M_STATUS };
 int menu_items[MAX_FAVOURITES + 10]; int n_menu = 0;
 
 // Currently sending (a key held on a remote / pad screen)
@@ -521,6 +523,7 @@ void buildMenu() {
   for (int i = 0; i < settings::favCount(); i++) menu_items[n_menu++] = settings::fav(i);
   menu_items[n_menu++] = M_BROWSE;
   menu_items[n_menu++] = M_SCAN;
+  menu_items[n_menu++] = M_DISCOVER;
   if (settings::active() >= 0) menu_items[n_menu++] = M_REMOVE;
   menu_items[n_menu++] = M_POWER;
   menu_items[n_menu++] = M_SOUND;
@@ -581,6 +584,8 @@ void stopSend() {
   if (send_held) { irtx::holdStop(); send_held = false; }
 }
 
+void buildDNames();                   // Discover: the list of key names (further down)
+
 void go(Screen s, int new_sel = 0) {
   if (screen == S_REMOTE) { remote_sel = sel; remote_scroll = scroll; }
   screen = s; sel = new_sel; scroll = 0; dirty = true;
@@ -588,6 +593,7 @@ void go(Screen s, int new_sel = 0) {
   for (Key &k : keys) if (k.down) k.swallow = true;
   stopSend();
   switch (s) {
+    case S_DNAME:   buildDNames(); break;
     case S_REMOTE:
       buildGrid();
       // back on the tile it was left on (same device), so a pad or the menu doesn't lose the place
@@ -752,6 +758,7 @@ void drawMenu() {
     switch (m) {
       case M_BROWSE: snprintf(r.text, sizeof(r.text), "Add a device: pick the brand"); r.more = true; break;
       case M_SCAN:   snprintf(r.text, sizeof(r.text), "Add a device: code search"); r.more = true; break;
+      case M_DISCOVER: snprintf(r.text, sizeof(r.text), "Add a device: not in the list"); r.more = true; break;
       case M_REMOVE: snprintf(r.text, sizeof(r.text), "Remove the current device"); break;
       case M_POWER: {
         static const char *const names[LED_POWER_LEVELS] = LED_POWER_NAMES;
@@ -784,6 +791,7 @@ void drawMenu() {
     case M_BROWSE: { char b[64]; snprintf(b, sizeof(b), "%d brands in the code database.", irdb::numBrands());
                      drawFooter(b, "{OK} Open    {BACK} Remote"); break; }
     case M_SCAN:   drawFooter("Tries codes one by one until your device reacts.", "{OK} Open    {BACK} Remote"); break;
+    case M_DISCOVER: drawFooter("Discover: tries every protocol, then you name the keys.", "{OK} Open    {BACK} Remote"); break;
     case M_REMOVE: drawFooter("Takes it off this list. The codes stay in the database.", "{OK} Remove    {BACK} Remote"); break;
     case M_POWER:  drawFooter("Full for long range; Half and Low save the AA cells.", "{OK} Change    {BACK} Remote"); break;
     case M_SOUND:  drawFooter("A click on each key press.", "{LEFT}{RIGHT} Volume    {OK} Mute    {BACK} Remote"); break;
@@ -973,6 +981,200 @@ void drawStatus() {
     else value("not set  (Menu > Wi-Fi)");
   }
   drawFooter(nullptr, "{any key} Back");
+}
+
+// ---- Discover: a device that isn't in the database (discover.h) ----
+int d_names[KEY__COUNT + 2];          // S_DNAME rows: key numbers, -1 = keep it as "F nn"
+int n_d_names = 0;
+char d_msg[80] = "";                  // S_DDONE: result of saving
+struct { int mode, pos, func, fam, nl; bool sending; } d_seen = {-1, -1, -1, -1, -1, false};
+
+void buildDNames() {
+  discover::State st = discover::state();
+  n_d_names = 0;
+  int guess = discover::guessKey(st.fam, st.func);
+  if (guess) d_names[n_d_names++] = guess;
+  for (uint8_t k : KEY_ORDER) if (k != guess && n_d_names < KEY__COUNT) d_names[n_d_names++] = k;
+  d_names[n_d_names++] = -1;
+}
+
+void dTitle(char *out, size_t n, const discover::State &st) {
+  char at[40];
+  discover::addrText(st.fam, st.addr, at, sizeof(at));
+  snprintf(out, n, "%s, %s", discover::family(st.fam).name, at);
+}
+
+void drawDFam() {
+  drawHeader("Discover", "which protocol?");
+  drawList(discover::numFamilies() + 1, [&](int i, Row &r) {
+    r.more = true;
+    if (i == 0) { snprintf(r.text, sizeof(r.text), "All of them"); snprintf(r.value, sizeof(r.value), "about 35 minutes"); }
+    else {
+      snprintf(r.text, sizeof(r.text), "%s", discover::family(i - 1).name);
+      snprintf(r.value, sizeof(r.value), "%s", discover::family(i - 1).brands);
+      r.rule = i == 1;
+    }
+  });
+  drawFooter("Tries every address until your device does something.", "{OK} Start    {BACK} Back");
+}
+
+void dProgress(const discover::State &st, int y) {
+  char b[64];
+  snprintf(b, sizeof(b), "address %d of %d", st.pos + 1, st.total);
+  g->setFont(u8g2_font_helvR12_tr);
+  drawCentered(W / 2, y, b);
+  g->drawFrame(40, y + 8, W - 80, 7);
+  if (st.total > 0) g->drawBox(40, y + 8, max(3, (W - 80) * (st.pos + 1) / st.total), 7);
+}
+
+void drawDSweep() {
+  discover::State st = discover::state();
+  drawHeader("Discover", "sweeping");
+  char b[96], at[40];
+  discover::addrText(st.fam, st.addr, at, sizeof(at));
+  g->setFont(u8g2_font_helvB18_tr);
+  drawCenteredFit(68, discover::family(st.fam).name);
+  g->setFont(u8g2_font_helvB14_tr);
+  drawCenteredFit(92, at);
+  dProgress(st, 116);
+  g->setFont(u8g2_font_helvR10_tr);
+  if (st.all) snprintf(b, sizeof(b), "protocol %d of %d, about %lu min left", st.fam_pos + 1, st.fam_total, (unsigned long)((st.eta_s + 59) / 60));
+  else if (st.eta_s >= 90) snprintf(b, sizeof(b), "about %lu min left", (unsigned long)((st.eta_s + 59) / 60));
+  else snprintf(b, sizeof(b), "about %lu s left", (unsigned long)st.eta_s);
+  drawCentered(W / 2, 150, b);
+  g->drawRFrame(10, 166, W - 20, 86, 6);
+  g->setFont(u8g2_font_helvB14_tr);
+  drawCentered(W / 2, 190, "Aim at the device and watch it.");
+  g->setFont(u8g2_font_helvR12_tr);
+  drawCentered(W / 2, 212, "The moment it does anything");
+  int hw1 = drawHints(0, 0, "(on, off, volume, mute):  press {OK}", false);
+  drawHints(W / 2 - hw1 / 2, 236, "(on, off, volume, mute):  press {OK}", true);
+  drawFooterHints(st.all ? "{OK} It reacted    {RIGHT} Skip this protocol    {BACK} Stop" : "{OK} It reacted    {BACK} Stop");
+}
+
+void drawDNarrow() {
+  discover::State st = discover::state();
+  drawHeader("Discover", "which address was it?");
+  char at[40];
+  discover::addrText(st.fam, st.addr, at, sizeof(at));
+  g->setFont(u8g2_font_helvB18_tr);
+  drawCenteredFit(68, discover::family(st.fam).name);
+  g->setFont(u8g2_font_helvB14_tr);
+  drawCenteredFit(92, at);
+  dProgress(st, 116);
+  g->setFont(u8g2_font_helvB12_tr);
+  drawCentered(W / 2, 152, st.sending ? "trying this address now..." : "tried - did the device react?");
+  g->setFont(u8g2_font_helvR10_tr);
+  if (st.done) {
+    drawCentered(W / 2, 178, "That was the last address and nothing reacted so far.");
+    drawCentered(W / 2, 196, "LEFT steps back through them; BACK leaves.");
+  } else {
+    drawCentered(W / 2, 178, "A reaction shows up late, so this is a few addresses back.");
+    drawCentered(W / 2, 196, "Step forward one address at a time until it reacts again.");
+  }
+  int w1 = drawHints(0, 0, "It reacted to this one:  {OK hold}", false);
+  drawHints(W / 2 - w1 / 2, 236, "It reacted to this one:  {OK hold}", true);
+  drawFooterHints(st.done ? "{LEFT} Previous   {RIGHT} Next   {OK} Again   {BACK} Leave"
+                          : "{RIGHT} Next   {LEFT} Previous   {OK} Again   {BACK} Resume");
+}
+
+void drawDLearn() {
+  discover::State st = discover::state();
+  char t[80], b[96];
+  dTitle(t, sizeof(t), st);
+  drawHeader("Learn keys", t);
+  g->setFont(u8g2_font_helvR12_tr);
+  drawCentered(W / 2, 56, "function");
+  g->setFont(u8g2_font_logisoso32_tn);
+  snprintf(b, sizeof(b), "%d", st.func);
+  drawCentered(W / 2, 98, b);
+  g->setFont(u8g2_font_helvR10_tr);
+  snprintf(b, sizeof(b), "%d of %d, the likely ones first", st.func_pos + 1, discover::numFuncs(st.fam));
+  drawCentered(W / 2, 118, b);
+  // what it is: named by the user, or what other remotes use it for
+  const char *named = nullptr;
+  for (int i = 0; i < st.n_learned; i++) if (discover::learned(i).func == st.func) named = discover::learned(i).name;
+  uint8_t guess = discover::guessKey(st.fam, st.func);
+  g->drawRFrame(10, 130, W - 20, 54, 6);
+  if (named) {
+    g->setFont(u8g2_font_helvR10_tr);
+    drawCentered(W / 2, 150, "you named it");
+    g->setFont(u8g2_font_helvB14_tr);
+    drawCenteredFit(172, named);
+  } else {
+    g->setFont(u8g2_font_helvR10_tr);
+    drawCentered(W / 2, 150, guess ? "on other remotes this is usually" : "not used by any remote in the database");
+    g->setFont(u8g2_font_helvB14_tr);
+    drawCenteredFit(172, guess ? IR_KEY_LABELS[guess] : "?");
+  }
+  g->setFont(u8g2_font_helvR10_tr);
+  int w1 = drawHints(0, 0, "Did the device do something?  {OK hold} Name this key", false);
+  drawHints(W / 2 - w1 / 2, 208, "Did the device do something?  {OK hold} Name this key", true);
+  g->setFont(u8g2_font_helvB10_tr);
+  snprintf(b, sizeof(b), "%d key%s named%s", st.n_learned, st.n_learned == 1 ? "" : "s",
+           st.n_learned ? "  -  BACK when you have enough" : "");
+  drawCentered(W / 2, 236, b);
+  drawFooterHints("{RIGHT} Next    {LEFT} Previous    {OK} Again    {BACK} Finish");
+}
+
+void drawDName() {
+  discover::State st = discover::state();
+  char t[40]; snprintf(t, sizeof(t), "function %d does...", st.func);
+  drawHeader("Name it", t);
+  uint8_t guess = discover::guessKey(st.fam, st.func);
+  drawList(n_d_names, [&](int i, Row &r) {
+    int k = d_names[i];
+    if (k < 0) { snprintf(r.text, sizeof(r.text), "Something else: keep it as \"F %d\"", st.func); r.rule = true; }
+    else {
+      snprintf(r.text, sizeof(r.text), "%s", IR_KEY_LABELS[k]);
+      if (i == 0 && k == guess) snprintf(r.value, sizeof(r.value), "usual for this function");
+      r.rule = i == 1 && guess;
+    }
+  });
+  drawFooter("Named keys get their tile on the remote screen.", "{OK} Choose    {BACK} Back        hold {UP}{DOWN} = fast");
+}
+
+void drawDDone() {
+  discover::State st = discover::state();
+  char t[80];
+  dTitle(t, sizeof(t), st);
+  drawHeader("Discover", t);
+  drawList(3, [&](int i, Row &r) {
+    if (i == 0) { snprintf(r.text, sizeof(r.text), "Save as a device"); snprintf(r.value, sizeof(r.value), "%d key%s", st.n_learned, st.n_learned == 1 ? "" : "s"); }
+    else if (i == 1) snprintf(r.text, sizeof(r.text), "Go on naming keys");
+    else { snprintf(r.text, sizeof(r.text), "Throw it away"); r.rule = true; }
+  });
+  // the keys named so far
+  char b[160] = "";
+  for (int i = 0; i < st.n_learned && strlen(b) < sizeof(b) - 24; i++) {
+    if (i) strcat(b, ", ");
+    strcat(b, discover::learned(i).name);
+  }
+  g->setFont(u8g2_font_helvB10_tr);
+  g->drawStr(10, LIST_TOP + 3 * ROW_H + 26, "Keys:");
+  g->setFont(u8g2_font_helvR10_tr);
+  drawClipped(56, LIST_TOP + 3 * ROW_H + 26, W - 64, b);
+  char brand[24], remote[40], line[100];
+  discover::fileNames(brand, sizeof(brand), remote, sizeof(remote));
+  snprintf(line, sizeof(line), "It becomes \"%s\" under %s (/ir on the SD card).", remote, brand);
+  drawClipped(10, LIST_TOP + 3 * ROW_H + 46, W - 20, line);
+  drawFooter(d_msg[0] ? d_msg : "Saving restarts the remote (a few seconds).", "{OK} Choose    {BACK} Back");
+}
+
+// The engine is shared with the web page: follow it when it moves on (or was stopped) from there.
+void dFollow() {
+  if (screen < S_DSWEEP || screen > S_DDONE) return;
+  discover::State st = discover::state();
+  if (discover::restartPending()) return;
+  if (st.mode == discover::IDLE) { go(S_MENU); return; }
+  if (st.mode == discover::SWEEP && screen != S_DSWEEP) go(S_DSWEEP);
+  else if (st.mode == discover::NARROW && screen != S_DNARROW) go(S_DNARROW);
+  else if (st.mode == discover::LEARN && (screen == S_DSWEEP || screen == S_DNARROW)) go(S_DLEARN);
+  int shown = screen == S_DLEARN ? st.func : st.pos;
+  if (st.mode != d_seen.mode || shown != d_seen.pos || st.fam != d_seen.fam || st.n_learned != d_seen.nl || st.sending != d_seen.sending) {
+    d_seen.mode = st.mode; d_seen.pos = shown; d_seen.fam = st.fam; d_seen.nl = st.n_learned; d_seen.sending = st.sending;
+    dirty = true;
+  }
 }
 
 // ---- Wi-Fi ----
@@ -1210,6 +1412,12 @@ void render() {
     case S_WIFI:     drawWifi(); break;
     case S_WIFINETS: drawWifiNets(); break;
     case S_TEXT:     drawText(); break;
+    case S_DFAM:     drawDFam(); break;
+    case S_DSWEEP:   drawDSweep(); break;
+    case S_DNARROW:  drawDNarrow(); break;
+    case S_DLEARN:   drawDLearn(); break;
+    case S_DNAME:    drawDName(); break;
+    case S_DDONE:    drawDDone(); break;
   }
   g->sendBuffer();
   dirty = false;
@@ -1229,6 +1437,9 @@ int listSize() {
     case S_SCANKEY:  return N_SCAN_KEYS;
     case S_WIFI:     return wifiRows();
     case S_WIFINETS: return netRows();
+    case S_DFAM:     return discover::numFamilies() + 1;
+    case S_DNAME:    return n_d_names;
+    case S_DDONE:    return 3;
     default:         return 1;
   }
 }
@@ -1286,6 +1497,23 @@ void back() {
       break;
     }
     case S_STATUS:  go(S_MENU); sel = menuIndex(M_STATUS); break;
+    case S_DFAM:    go(S_MENU); sel = menuIndex(M_DISCOVER); break;
+    case S_DSWEEP: {
+      discover::State st = discover::state();
+      discover::stop();
+      go(S_DFAM, st.all ? 0 : st.fam + 1);
+      break;
+    }
+    case S_DNARROW:
+      if (discover::state().done) { discover::stop(); go(S_DFAM); }
+      else { discover::resumeSweep(); go(S_DSWEEP); }
+      break;
+    case S_DLEARN:
+      if (discover::state().n_learned) { d_msg[0] = 0; go(S_DDONE); }
+      else { discover::stop(); go(S_DFAM); }
+      break;
+    case S_DNAME:   go(S_DLEARN); break;
+    case S_DDONE:   go(S_DLEARN); break;
     case S_WIFI:    go(S_MENU); sel = menuIndex(M_WIFI); break;
     case S_WIFINETS: go(S_WIFI, W_NETWORK); break;
     case S_TEXT:    textCancel(); break;
@@ -1309,6 +1537,7 @@ void choose() {
       int m = menu_items[sel];
       if (m == M_BROWSE) { browse_for_scan = false; go(S_LETTERS); }
       else if (m == M_SCAN) { browse_for_scan = true; go(S_SCANSRC); }
+      else if (m == M_DISCOVER) go(S_DFAM);
       else if (m == M_REMOVE) { settings::removeFav(settings::active()); go(S_MENU); }
       else if (m == M_POWER) { settings::setLedPower((settings::ledPower() + 1) % LED_POWER_LEVELS); dirty = true; }
       else if (m == M_SOUND) {
@@ -1348,6 +1577,27 @@ void choose() {
       break;
     case S_STATUS:
       back();
+      break;
+    case S_DFAM:
+      discover::sweepStart(sel == 0 ? -1 : sel - 1);
+      go(S_DSWEEP);
+      break;
+    case S_DNAME:
+      if (sel < n_d_names) {
+        if (d_names[sel] < 0) discover::learnName(0, nullptr);
+        else discover::learnName((uint8_t)d_names[sel], nullptr);
+        go(S_DLEARN);
+      }
+      break;
+    case S_DDONE:
+      if (discover::restartPending()) break;
+      if (sel == 0) {
+        char err[64];
+        if (discover::saveAndRestart(err, sizeof(err))) snprintf(d_msg, sizeof(d_msg), "Saved. Restarting...");
+        else snprintf(d_msg, sizeof(d_msg), "Not saved: %s", err);
+        dirty = true;
+      } else if (sel == 1) go(S_DLEARN);
+      else { discover::stop(); go(S_MENU); }
       break;
     case S_WIFI:
       if (sel == W_NETWORK) { n_net_list = -1; wifimgr::requestNetworks(); go(S_WIFINETS); }
@@ -1504,6 +1754,23 @@ void onKey(int k, Act a) {
     case S_STATUS:
       if (a == A_PRESS) back();
       break;
+    // ---- Discover ----
+    case S_DSWEEP:
+      if (k == K_SELECT && a == A_PRESS) { discover::reacted(); go(S_DNARROW); }
+      else if (k == K_RIGHT && a == A_PRESS) discover::skipFamily();
+      break;
+    case S_DNARROW:
+      if (k == K_RIGHT && a == A_PRESS) discover::narrowStep(1);
+      else if (k == K_LEFT && a == A_PRESS) discover::narrowStep(-1);
+      else if (k == K_SELECT && a == A_RELEASE) discover::narrowStep(0);
+      else if (k == K_SELECT && a == A_LONG) { discover::learnPick(); go(S_DLEARN); discover::learnStep(0); }
+      break;
+    case S_DLEARN:
+      if (k == K_RIGHT && a == A_PRESS) discover::learnStep(1);
+      else if (k == K_LEFT && a == A_PRESS) discover::learnStep(-1);
+      else if (k == K_SELECT && a == A_RELEASE) discover::learnStep(0);
+      else if (k == K_SELECT && a == A_LONG) go(S_DNAME);
+      break;
     // ---- keyboard: arrows move, SELECT types, BACK deletes (held = leave) ----
     case S_TEXT: {
       if (k == K_BACK) {
@@ -1623,6 +1890,7 @@ void loop() {
   }
   uint32_t status_every = screen == S_WIFI ? 2000 : 10000;     // Wi-Fi screen: connection status
   if (millis() - last_status_draw > status_every) { last_status_draw = millis(); dirty = true; }   // battery
+  dFollow();
   if (ir_shown && !irActive()) dirty = true;                    // the send is over: clear the header's IR mark
   if (dirty) render();
 }

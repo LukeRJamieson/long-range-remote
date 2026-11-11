@@ -393,4 +393,11 @@ bool replaceFile(const char *path, const std::string &content, char *err, size_t
   }
   return true;
 }
+
+bool saveUserRemote(const char *relpath, const std::string &content, char *err, size_t en) {
+  if (!g_mounted) { snprintf(err, en, "no SD card"); return false; }
+  std::string path = std::string(SD_USER_DIR) + "/" + relpath;
+  mkdirs(path.c_str());
+  return replaceFile(path.c_str(), content, err, en);
+}
 }  // namespace sdstore
