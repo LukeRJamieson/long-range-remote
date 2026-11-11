@@ -125,6 +125,12 @@ they survive power-off and database updates.
 - **A key held at power-up** is ignored until you let go. If one still reads pressed after 2 s,
   the Status screen names it (a stuck key or a short on the ribbon).
 - **Sleep:** set the idle time with `IDLE_SLEEP_S` in `config.h` (0 = never sleep).
+- **Standby on the home network:** when the remote is joined to your home Wi-Fi it doesn't sleep
+  straight away, because asleep the web page can't reach it. It goes into standby instead: the web
+  page keeps working, the `LR-Remote` access point is off (a key press brings it back) and Wi-Fi
+  power saving is on. After
+  `HOME_STANDBY_MIN` minutes (default 120) with no key press and no page request it sleeps fully;
+  press any key to wake it. `0` = no standby, `-1` = never sleep while on the home network.
 
 ### Sound
 

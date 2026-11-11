@@ -48,6 +48,7 @@ bool g_any_security = false;
 bool g_scan_for_attempt = false;        // the running scan is the first step of a connection attempt
 uint32_t g_scan_started = 0;
 bool g_suspended = false;               // radio off while the remote sleeps
+bool g_standby = false;                 // access point off + modem power saving (see standby())
 bool g_print_scan = true;               // print the next scan result (first one, and after changes)
 uint32_t g_targeted_fails = 0;          // failed attempts aimed at a scanned router (channel + BSSID)
 uint8_t g_authexp_streak = 0;           // attempts in a row that ended in AUTH_EXPIRE (router never answered)
@@ -170,7 +171,7 @@ void startAttempt() {
 // Step 2: connect. channel/bssid from the scan (0/nullptr = let the driver search).
 void connectTo(int32_t channel, const uint8_t *bssid) {
   const String pw = settings::wifiPass();
-  if (channel > 0 && WiFi.channel() != channel) {
+  if (channel > 0 && WiFi.channel() != channel && !g_standby) {
     // Put our access point on the router's channel now, rather than having the driver switch it
     // mid-connection. A phone on LR-Remote drops off for a moment and rejoins.
     logf("Wi-Fi: moving the LR-Remote access point to channel %ld (the router's channel)\n", (long)channel);
@@ -482,6 +483,7 @@ void loop() {
 void suspend() {
   if (g_suspended) return;
   g_suspended = true;
+  g_standby = false;                   // resume() brings the access point back
   WiFi.mode(WIFI_OFF);
   g_connected = false;
   g_attempt_active = false;
@@ -510,6 +512,28 @@ void resume() {
 }
 
 bool suspended() { return g_suspended; }
+
+void standby(bool on) {
+  if (g_suspended || on == g_standby) return;
+  g_standby = on;
+  if (on) {
+    WiFi.enableAP(false);              // station only: lets the radio sleep between the router's beacons
+    WiFi.setSleep(true);
+    logln("Wi-Fi: standby - still on the home network, access point off");
+  } else {
+    WiFi.setSleep(false);
+    int32_t ch = g_connected ? WiFi.channel() : 0;
+    if (ch > 0) WiFi.softAP(WIFI_AP_SSID, WIFI_AP_PASSWORD, ch);   // on the router's channel
+    else WiFi.softAP(WIFI_AP_SSID, WIFI_AP_PASSWORD);
+    logf("Wi-Fi: out of standby, access point \"%s\" back on\n", WIFI_AP_SSID);
+  }
+  g_changes++;
+}
+
+void standbyPowerSave(bool on) {
+  if (g_suspended || !g_standby) return;
+  WiFi.setSleep(on);
+}
 
 void reconnect() {
   g_ssid = settings::wifiSsid();

@@ -16,6 +16,7 @@
 //    uploads for new codes. The home network is kept in /wifi.txt on the card and can be changed
 //    on the remote (Menu > Wi-Fi network).
 //  * Idle sleep: Wi-Fi off + light sleep after IDLE_SLEEP_S; any key wakes it and is sent at once.
+//    On the home network it first stays in standby (web page reachable) for HOME_STANDBY_MIN.
 //  * Key sounds on the display board's speaker, with a volume / mute setting (Menu > Sound).
 //
 // Arduino IDE settings:
