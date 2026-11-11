@@ -71,6 +71,8 @@ U8G2 *g = nullptr;
 bool dirty = true;
 
 char ap_ip[20] = "192.168.4.1", sta_ip[20] = "", sta_ssid[33] = "";
+char web_ip[20] = "";                 // last web client (Status screen)
+uint32_t web_at = 0, web_count = 0;
 
 // ---------------------------------------------------------------------------
 // Keys
@@ -967,8 +969,7 @@ void drawStatus() {
   }
   g->drawHLine(LX, y - 11, W - 2 * LX); y += 6;
   label("Phone link");
-  snprintf(b, sizeof(b), "Wi-Fi \"%s\", password %s", WIFI_AP_SSID, WIFI_AP_PASSWORD); value(b);
-  snprintf(b, sizeof(b), "http://%s", ap_ip); value(b);
+  snprintf(b, sizeof(b), "\"%s\" (%s)  http://%s", WIFI_AP_SSID, WIFI_AP_PASSWORD, ap_ip); value(b);
   label("Home Wi-Fi");
   if (sta_ip[0]) {
     snprintf(b, sizeof(b), "\"%s\"", sta_ssid); value(b);
@@ -977,6 +978,15 @@ void drawStatus() {
     String s = settings::wifiSsid();
     if (s.length()) { snprintf(b, sizeof(b), "\"%s\"", s.c_str()); value(b); value(wifimgr::statusText()); }
     else value("not set  (Menu > Wi-Fi)");
+  }
+  label("Web page");
+  if (!web_count) value("no requests yet - open the page and watch here");
+  else {
+    uint32_t s = (millis() - web_at) / 1000;
+    const char *pl = web_count == 1 ? "" : "s";
+    if (s < 2) snprintf(b, sizeof(b), "just now from %s  (%lu request%s)", web_ip, (unsigned long)web_count, pl);
+    else snprintf(b, sizeof(b), "%lu s ago from %s  (%lu request%s)", (unsigned long)s, web_ip, (unsigned long)web_count, pl);
+    value(b);
   }
   drawFooter(nullptr, "{any key} Back");
 }
@@ -1886,7 +1896,7 @@ void loop() {
     int n = wifimgr::networks(net_list, MAX_NET_LIST);
     if (n >= 0) { n_net_list = n; dirty = true; }
   }
-  uint32_t status_every = screen == S_WIFI ? 2000 : 10000;     // Wi-Fi screen: connection status
+  uint32_t status_every = screen == S_WIFI || screen == S_STATUS ? 2000 : 10000;   // Wi-Fi / Status: connection, web requests
   if (millis() - last_status_draw > status_every) { last_status_draw = millis(); dirty = true; }   // battery
   dFollow();
   if (ir_shown && !irActive()) dirty = true;                    // the send is over: clear the header's IR mark
@@ -1894,6 +1904,13 @@ void loop() {
 }
 
 void requestRedraw() { dirty = true; }
+
+void noteWebRequest(const char *ip) {
+  strncpy(web_ip, ip ? ip : "", sizeof(web_ip) - 1);
+  web_at = millis();
+  web_count++;
+  if (screen == S_STATUS) dirty = true;
+}
 
 void setNetworkInfo(const char *ap, const char *sta, const char *ssid) {
   strncpy(ap_ip, ap ? ap : "", sizeof(ap_ip) - 1);

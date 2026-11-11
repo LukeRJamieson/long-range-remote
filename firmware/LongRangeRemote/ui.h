@@ -6,4 +6,5 @@ void begin();
 void loop();                 // call frequently from Arduino loop()
 void requestRedraw();
 void setNetworkInfo(const char *ap_ip, const char *sta_ip, const char *sta_ssid);
+void noteWebRequest(const char *client_ip);   // web.cpp: a request arrived (Status screen shows it)
 }

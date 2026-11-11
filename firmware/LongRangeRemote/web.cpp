@@ -401,6 +401,18 @@ void hRestart() {
   if (!restart_at) restart_at = 1;
 }
 
+// Every request: the Status screen shows when the web page was last asked for, and by whom - so a
+// phone that can't load the page can be told apart from one whose requests never reach the remote.
+// The serial log names each new client address and every page load.
+uint32_t last_client = 0;             // IPv4 address of the last client (as uint32_t)
+void noteClient(bool page) {
+  IPAddress ip = server.client().remoteIP();
+  uint32_t a = (uint32_t)ip;
+  ui::noteWebRequest(ip.toString().c_str());
+  if (page || a != last_client) logf("Web: %s from %s\n", page ? "page requested" : "requests", ip.toString().c_str());
+  last_client = a;
+}
+
 void updateUiNet() {
   String sta = wifimgr::ip();
   ui::setNetworkInfo(wifimgr::apIp().c_str(), sta.c_str(), sta.length() ? wifimgr::ssid().c_str() : "");
@@ -411,8 +423,8 @@ void updateUiNet() {
 void begin() {
   wifimgr::begin();
 
-  auto on = [](const char *uri, void (*h)()) { server.on(uri, h); };
-  on("/", hRoot);
+  auto on = [](const char *uri, void (*h)()) { server.on(uri, [h] { noteClient(false); h(); }); };
+  server.on("/", [] { noteClient(true); hRoot(); });
   on("/api/state", hState);
   on("/api/meta", hMeta);
   on("/api/brands", hBrands);
@@ -428,7 +440,7 @@ void begin() {
   on("/api/restart", hRestart);
   on("/api/format", hFormat);
   server.on("/api/upload", HTTP_POST, hUploadDone, hUploadData);
-  server.onNotFound([] { server.send(404, "text/plain", "not found"); });
+  server.onNotFound([] { noteClient(false); server.send(404, "text/plain", "not found"); });
   server.begin();
 
   if (MDNS.begin(MDNS_HOSTNAME)) MDNS.addService("http", "tcp", 80);

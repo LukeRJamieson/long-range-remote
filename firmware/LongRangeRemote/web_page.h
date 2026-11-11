@@ -85,11 +85,12 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
   <label>Device type</label><select id="stype"></select>
   <label>Test key</label><select id="skey"></select>
   <div class="mut" id="scount" style="margin-top:8px"></div>
+  <label>Auto speed</label><select id="sspeed" title="Time between codes when Auto runs"><option value="0.5">one code every 0.5 s</option><option value="0.75">one code every 0.75 s</option><option value="1">one code every 1 s</option><option value="1.5">one code every 1.5 s</option><option value="2">one code every 2 s</option><option value="3">one code every 3 s</option></select>
   <div class="acts"><button class="b pri" id="sload">Start</button></div>
   <div class="scanbox" id="sbox" style="display:none">
     <div class="n" id="spos">0/0</div><div id="sname" style="margin:6px 0 2px;font-weight:600"></div><div class="mut" id="scode"></div>
     <div class="acts" style="justify-content:center"><button class="b" id="sprev">&larr; Prev</button><button class="b pri" id="ssend">Send again</button><button class="b" id="snext">Next &rarr;</button></div>
-    <div class="acts" style="justify-content:center;align-items:center"><button class="b" id="sauto">Auto &#9654;</button><select id="sspeed" style="width:auto;padding:9px" title="Time between codes on Auto"><option value="0.5">every 0.5 s</option><option value="0.75">every 0.75 s</option><option value="1">every 1 s</option><option value="1.5">every 1.5 s</option><option value="2">every 2 s</option><option value="3">every 3 s</option></select><button class="b ok" id="suse">It worked &ndash; use this</button></div>
+    <div class="acts" style="justify-content:center;align-items:center"><button class="b" id="sauto">Auto &#9654;</button><button class="b ok" id="suse">It worked &ndash; use this</button></div>
     <div class="mut" style="text-align:center">Device reacted on Auto? Press Stop, then &larr; Prev &ndash; it may have been one of the last few codes.</div>
   </div>
 </section>
@@ -188,8 +189,11 @@ const $=s=>document.querySelector(s), el=(t,c,x)=>{const e=document.createElemen
 let META=null, BRANDS=[], STATE=null, KEYIDX={}, CUR=null, DETAIL=null, SCAN=[], SPOS=0, AUTO=null;
 // All requests go through one promise chain so "down" always reaches the remote before "up".
 let chain=Promise.resolve();
-const q=u=>{chain=chain.then(()=>fetch(u).catch(()=>{}));return chain};
-const get=u=>fetch(u).then(r=>{if(!r.ok)throw r;return r.json()});
+// Every request gives up after a while: one lost on a flaky phone connection must not hold up the
+// ones queued behind it (key presses) or leave a list loading forever.
+const tfetch=(u,ms,o)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);return fetch(u,Object.assign({signal:c.signal},o||{})).finally(()=>clearTimeout(t))};
+const q=u=>{chain=chain.then(()=>tfetch(u,4000).catch(()=>{}));return chain};
+const get=u=>tfetch(u,20000).then(r=>{if(!r.ok)throw r;return r.json()});
 
 // Press-and-hold binding: down -> start, keep-alive every 250 ms, up -> stop.
 function hold(btn,url){

@@ -25,7 +25,7 @@ int main() {
   seq("DDDR"); shot("keyboard_done"); press('S'); shot("wifi_set"); CHECK(settings::wifiSsid() == "Chateau Le Chat");
   sim.wifi_connected = true; ui::setNetworkInfo("192.168.4.1", "192.168.1.57", "Chateau Le Chat");
   seq("DD"); shot("wifi_forget"); press('B');
-  seq("D"); press('S'); shot("status"); press('B'); shot("menu_after_status");
+  seq("D"); press('S'); shot("status"); ui::noteWebRequest("192.168.1.42"); ui::loop(); shot("status_web"); press('B'); shot("menu_after_status");
   // code search
   seq("UUUUUU"); press('S'); shot("scansrc"); press('S'); shot("scancat"); seq("D"); press('S'); shot("scankey"); press('S'); shot("scan");
   seq("RRR"); shot("scan4"); press('B'); shot("scankey_back"); press('B'); press('B'); press('B');
