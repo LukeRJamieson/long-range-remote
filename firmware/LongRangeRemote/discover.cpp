@@ -503,7 +503,6 @@ void loop() {
 #include <Arduino.h>
 #include "ir_tx.h"
 #include "log.h"
-#include "power.h"
 #include "sd_store.h"
 #include "settings.h"
 
@@ -511,7 +510,7 @@ namespace discover {
 namespace {
 uint32_t g_restart_at = 0;
 uint32_t nowMs() { return millis(); }
-void sendTap(const IrCodeParams &p, const char *label) { irtx::tapParams(p, label); power::activity(); }
+void sendTap(const IrCodeParams &p, const char *label) { irtx::tapParams(p, label); }
 bool txBusy() { return irtx::isSending(); }
 }  // namespace
 

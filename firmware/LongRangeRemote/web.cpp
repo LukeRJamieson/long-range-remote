@@ -28,7 +28,6 @@
 #include "ir_keys.h"
 #include "ir_tx.h"
 #include "log.h"
-#include "power.h"
 #include "sd_store.h"
 #include "settings.h"
 #include "ui.h"
@@ -46,7 +45,6 @@ namespace {
 
 WebServer server(80);
 uint32_t net_changes_seen = 0xFFFFFFFF;           // last wifimgr::changeCounter() pushed to the UI
-bool wifi_was_suspended = false;
 uint32_t restart_at = 0;                          // /api/restart: when to restart (0 = no)
 
 // ---------------------------------------------------------------------------
@@ -353,7 +351,6 @@ bool up_ok = false;
 
 void hUploadData() {
   HTTPUpload &u = server.upload();
-  power::activity();
   if (u.status == UPLOAD_FILE_START) {
     bool db = server.arg("kind") == "db";
     up_err[0] = 0;
@@ -414,8 +411,7 @@ void updateUiNet() {
 void begin() {
   wifimgr::begin();
 
-  // every request counts as activity: the remote stays awake while the web remote is in use
-  auto on = [](const char *uri, void (*h)()) { server.on(uri, [h] { power::activity(); h(); }); };
+  auto on = [](const char *uri, void (*h)()) { server.on(uri, h); };
   on("/", hRoot);
   on("/api/state", hState);
   on("/api/meta", hMeta);
@@ -441,13 +437,6 @@ void begin() {
 
 void loop() {
   if (restart_at && (int32_t)(millis() - restart_at) >= 0) ESP.restart();
-  // Wi-Fi was off while the remote slept: announce the name again once it is back
-  if (wifimgr::suspended()) { wifi_was_suspended = true; return; }
-  if (wifi_was_suspended) {
-    wifi_was_suspended = false;
-    MDNS.end();
-    if (MDNS.begin(MDNS_HOSTNAME)) MDNS.addService("http", "tcp", 80);
-  }
   server.handleClient();
   wifimgr::loop();
   if (wifimgr::changeCounter() != net_changes_seen) {

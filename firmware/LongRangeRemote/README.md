@@ -35,9 +35,7 @@ It is based on the HifiRemote firmware, which is left unchanged in its own folde
   open http://192.168.4.1. It can also join your home Wi-Fi and is then at
   http://lrremote.local (see **Home Wi-Fi** below). The Settings tab uploads a new `irdb.bin` or
   your `.ir` files to the card.
-- **Idle sleep:** after 90 s without use, Wi-Fi goes off and the ESP32 light-sleeps.
-  - Any key wakes it in milliseconds (GPIO wake on all six key pins), and that key is sent
-    straight away.
+- **Always on:** it never sleeps, so the web page always answers. Switch it off with the PWR button.
   - The reflective screen keeps showing its picture.
   - It stays awake while a phone is joined to its access point.
 - **Batteries:** the header shows the AA pack (`AA nn%`, from a NiMH voltage curve) and the
@@ -71,7 +69,7 @@ It is based on the HifiRemote firmware, which is left unchanged in its own folde
    | PSRAM | **OPI PSRAM** (the code database is loaded into it) |
 
    The firmware is about 1.2 MB.
-3. Check `config.h` (sleep time; optionally default home Wi-Fi). The keys are wired straight to GPIOs (UP 18, DOWN 3,
+3. Check `config.h` (optionally default home Wi-Fi). The keys are wired straight to GPIOs (UP 18, DOWN 3,
    LEFT 44, RIGHT 43, SELECT 0, BACK 14; `KEY_*_PIN`). The Waveshare board's own buttons share two of them:
    KEY (GPIO18) acts as UP and BOOT (GPIO0) as SELECT.
 4. Open `LongRangeRemote.ino` and upload.
@@ -104,7 +102,7 @@ page shows the same message, with the upload button.
 - The remote screen remembers where you were when you come back from a pad or the menu.
 - **Header:** the two batteries (AA = the LED pack, Scr = the screen's own cell), `IR` while a code
   goes out, and the network state: `AP` (only the remote's own network), `WiFi` (on the home
-  network), `Standby` or `Asleep`.
+  network).
 - Channel numbers go out 350 ms apart, because TVs ignore digits sent faster than a person types.
 
 ### Finding your device
@@ -148,17 +146,10 @@ they survive power-off and database updates.
 ### Power
 
 - **On / off:** the display board's own PWR button (short press on, long press off). The AA pack
-  needs no switch: it is disconnected from the LEDs except while a code is sent. Day to day, just
-  leave it on: it sleeps by itself.
+  needs no switch: it is disconnected from the LEDs except while a code is sent. The remote never
+  sleeps: switch it off when you're done, or leave it on USB.
 - **A key held at power-up** is ignored until you let go. If one still reads pressed after 2 s,
   the Status screen names it (a stuck key or a short on the ribbon).
-- **Sleep:** set the idle time with `IDLE_SLEEP_S` in `config.h` (0 = never sleep).
-- **Standby on the home network:** when the remote is joined to your home Wi-Fi it doesn't sleep
-  straight away, because asleep the web page can't reach it. It goes into standby instead: the web
-  page keeps working, the `LR-Remote` access point is off (a key press brings it back) and Wi-Fi
-  power saving is on. After
-  `HOME_STANDBY_MIN` minutes (default 120) with no key press and no page request it sleeps fully;
-  press any key to wake it. `0` = no standby, `-1` = never sleep while on the home network.
 
 ### Sound
 
@@ -171,7 +162,7 @@ in, or flat) gives a low double buzz. A three-note chime at start-up shows the s
   (10 steps of 3 dB, with a click at each new level) and SELECT mutes or unmutes. Both are saved.
 - **How it works:** ESP32 I2S (16 kHz) → the ES8311 codec → the NS4150B amplifier. The sounds are
   generated in the firmware (no sound files). The amplifier is switched off a minute after the last sound
-  and during sleep (it draws a few mA while on, nothing while the remote sleeps).
+  (it draws a few mA while on).
 - **The codec and the BACK key share a pin.** The ES8311 is set up once over the display board's I2C
   bus, whose clock is GPIO14 (BACK). The firmware borrows the pin for ~30 ms at start-up, then gives
   it back to the key; volume changes need no I2C. If BACK is held at start-up the set-up waits until
@@ -216,8 +207,6 @@ How it's stored:
 - The rules match Wi-Fi's: the name is up to 32 characters and case-sensitive; the password is
   8 to 63 characters (or 64 hex digits), or empty for an open network. Leaving the password empty
   takes a second press of Done, so it can't be wiped by accident.
-- **The web remote can't wake it.** While it sleeps, Wi-Fi is off. Press a key, or keep a phone
-  joined to "LR-Remote", which keeps it awake.
 
 ## SD card
 
@@ -338,14 +327,13 @@ g++ -std=gnu++17 -Itools/wifi_sim/stub -I. tools/wifi_sim/sim.cpp wifi_mgr.cpp -
 | File | What it does |
 |---|---|
 | `LongRangeRemote.ino` | Start-up order: LED supply off → keys/batteries → SD (codes) → settings → sound → IR → UI → web → power |
-| `config.h` | Pins, battery thresholds, sleep, Wi-Fi (defaults for a new `wifi.txt`), SD layout |
+| `config.h` | Pins, battery thresholds, Wi-Fi (defaults for a new `wifi.txt`), SD layout |
 | `hw.*` | Keys on GPIO18/3/44/43/0/14 (UP/DOWN/LEFT/RIGHT/SELECT/BACK) (internal pull-ups, debounced), the AA pack voltage (GPIO1), the screen's 18650 (GPIO4), wake-on-key |
 | `sd_store.*` | SD card: `irdb.bin` into PSRAM (falls back to `irdb.old`), `/ir` files, web uploads, safe rewrite of small files |
 | `ir_db.*`, `ir_keys.h` | Database reader (SD image + your remotes) and the generated key numbering |
 | `flipper_ir.*` | Flipper `.ir` parser and protocol conversion |
 | `ir_protocols.*`, `ir_tx.*` | Encoders and the RMT transmit task (ARM handling, hold/repeat) |
 | `ui.*`, `ST7305_U8g2.*` | On-device UI and display driver |
-| `power.*` | Idle sleep: Wi-Fi off + light sleep, wake on any key |
 | `sound.*` | Key sounds: I2S to the ES8311 codec, its one-off set-up over I2C (borrowing BACK's pin), amplifier on/off, volume / mute |
 | `web.*`, `web_page.h`, `wifi_mgr.*` | Phone web remote and SD uploads; home Wi-Fi connection and the network list for the menu |
 | `settings.*` | Saved devices, LED power level and sound volume / mute (NVS); the home Wi-Fi network (`wifi.txt`) |

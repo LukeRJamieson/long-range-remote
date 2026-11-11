@@ -23,18 +23,6 @@ enum State : uint8_t {
 void begin();
 void loop();
 void reconnect();               // credentials changed: drop the current attempt and start again
-// Radio off while the remote sleeps (power.cpp) / back on afterwards: access point and home-network
-// attempts start again from scratch.
-void suspend();
-void resume();
-bool suspended();
-
-// Standby (power.cpp): stay on the home network but save power - the LR-Remote access point goes
-// off (it would keep the radio on all the time) and Wi-Fi modem power saving comes on. Leaving
-// standby brings the access point back. No effect while suspended.
-void standby(bool on);
-// In standby: modem power saving off while the web page is in use (quicker answers), on again after.
-void standbyPowerSave(bool on);
 
 State state();
 const char *statusText();       // human readable, e.g. "network not found - retrying"

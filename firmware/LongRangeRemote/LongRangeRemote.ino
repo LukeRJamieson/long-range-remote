@@ -15,8 +15,7 @@
 //  * Phone web remote over Wi-Fi (own access point "LR-Remote", optional home Wi-Fi), with SD-card
 //    uploads for new codes. The home network is kept in /wifi.txt on the card and can be changed
 //    on the remote (Menu > Wi-Fi network).
-//  * Idle sleep: Wi-Fi off + light sleep after IDLE_SLEEP_S; any key wakes it and is sent at once.
-//    On the home network it first stays in standby (web page reachable) for HOME_STANDBY_MIN.
+//  * Never sleeps: the screen, keys, Wi-Fi and web page are always on.
 //  * Key sounds on the display board's speaker, with a volume / mute setting (Menu > Sound).
 //
 // Arduino IDE settings:
@@ -29,7 +28,6 @@
 #include "hw.h"
 #include "ir_db.h"
 #include "ir_tx.h"
-#include "power.h"
 #include "sd_store.h"
 #include "settings.h"
 #include "sound.h"
@@ -58,7 +56,6 @@ void setup() {
   discover::begin();                            // devices that aren't in the database (discover.h)
   ui::begin();
   web::begin();
-  power::begin();
   logln("Ready. Phone: join Wi-Fi \"" WIFI_AP_SSID "\" (password \"" WIFI_AP_PASSWORD "\") and open http://192.168.4.1");
 }
 
@@ -67,7 +64,6 @@ void loop() {
   ui::loop();
   discover::loop();
   discover::glueLoop();
-  power::loop();
   sound::loop();
   delay(2);
 }

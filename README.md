@@ -52,11 +52,11 @@ KiCad 7 format; it opens in KiCad 7, 8 or 9.
 - **Runtime:** with ~2000 mAh cells, about 2.3 hours of *continuous* transmitting, which is tens of
   thousands of key presses. Idle, the pack feeds only the 5 µA pack-sense divider (the LEDs are
   disconnected), far less than the cells' own self-discharge. How long the screen
-  side lasts depends on the display board's 18650 (it light-sleeps after 90 s idle).
+  side lasts depends on the display board's 18650 (the remote never sleeps, so charge it or leave it on USB).
 - **No power switch.** The ESP32 connects the pack to the LEDs only while it sends: ARM (GPIO2) →
   R16 10k → Q6 2N3904 pulls Q5's gate to GND through R15 10k. Q5 is an IPD80P03P4L-07 P-MOSFET (DPAK,
-  12 mΩ) between J1 and VBAT; R14 100k holds it off whenever ARM is low or the ESP32 is in reset or
-  asleep, so the pack and the LEDs are disconnected and nothing can light.
+  12 mΩ) between J1 and VBAT; R14 100k holds it off whenever ARM is low or the ESP32 is in reset,
+  so the pack and the LEDs are disconnected and nothing can light.
   - C7 100 nF from gate to drain is a soft start: the drain rises ~2 V/ms, so C1/C2 charge at ~2 A.
   - C8 1 µF from gate to source keeps Q5 off when cells go in. Without it, C7 would pull the gate low
     as the pack connects and jump-charge C1/C2 at 10–20 A.
@@ -86,8 +86,8 @@ KiCad 7 format; it opens in KiCad 7, 8 or 9.
   head up close.
 - **The ±5° beam needs a little aiming,** but less than you'd think. At 3 m the spot is about 50 cm
   across, and indoors, walls and ceiling reflect enough to reach a TV's sensor off-axis.
-- **Standby:** the firmware sleeps after 90 s idle (Wi-Fi off, ESP32 light sleep) and wakes on any
-  key. That key is sent at once. The reflective screen keeps its picture while asleep.
+- **No sleep:** the firmware stays fully on (screen, keys, Wi-Fi and web page) until you switch it
+  off with the display board's PWR button.
 
 ## Files
 
@@ -100,7 +100,7 @@ KiCad 7 format; it opens in KiCad 7, 8 or 9.
 | `bom/lite_digikey_bom.csv` | BOM with refs, prices and stock |
 | `bom/lite_digikey_upload.csv` | Digi-Key BOM-manager upload |
 | `bom/lite_core_electronics.csv` | Display ribbon and header (Core Electronics) |
-| `firmware/LongRangeRemote/` | **Universal remote firmware**: TVs, AV receivers, set-top boxes, soundbars, projectors, hi-fi, air-cons..., phone web remote, idle sleep. See its README |
+| `firmware/LongRangeRemote/` | **Universal remote firmware**: TVs, AV receivers, set-top boxes, soundbars, projectors, hi-fi, air-cons..., phone web remote. See its README |
 | `firmware/sd_card/irdb.bin` | **The IR code database (~6,800 remotes). Copy it to the SD card**: all codes live on the card, not in the firmware |
 | `firmware/sd_card/wifi.example.txt` | Example of `wifi.txt`, the home Wi-Fi file on the card. The remote creates and updates `wifi.txt` itself (Menu → Wi-Fi network); this is for setting it on a PC |
 | `firmware/bringup/bringup.ino` | Bring-up firmware: keys, NEC transmit, LED arming, battery voltage |
@@ -164,7 +164,7 @@ also a DPAK, with Q6, R14, R15, R16, C7 and C8) behind SELECT's right-hand side.
     The display board's own pull-up holds it high. The firmware only uses that I2C bus for ~30 ms at
     start-up (to set up the speaker's codec), and SCL pulled low while SDA stays high is never an I2C
     start, so the display board's chips ignore the key.
-  - The firmware debounces in software and wakes from light sleep on any of the six pins.
+  - The firmware debounces in software.
 - Power tracks (BATT, VBAT, LED_RTN) are 1.5 mm, with GND poured on both layers. No track turns at a
   right angle: corners the autorouter leaves are cut to 45° when the board is generated.
 
@@ -244,8 +244,7 @@ The keys use pins the Waveshare board brings out but doesn't need:
 - your own Flipper `.ir` files from the SD card;
 - a phone web remote;
 - LED power levels (Full / Half / Low);
-- key sounds on the display board's speaker, with volume and mute (Menu → Sound);
-- idle sleep with wake on any key.
+- key sounds on the display board's speaker, with volume and mute (Menu → Sound).
 
 Build it with Partition Scheme "16M Flash (3MB APP/9.9MB FATFS)" and **OPI PSRAM**, which holds
 the codes. Then put `irdb.bin` on a FAT32 microSD card. See `firmware/LongRangeRemote/README.md`.

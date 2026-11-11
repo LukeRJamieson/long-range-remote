@@ -176,19 +176,3 @@
 
 #define MAX_FAVOURITES    24
 
-// ---------------------------------------------------------------------------
-// Power: idle sleep (see power.h)
-// ---------------------------------------------------------------------------
-// After this many seconds with no key press, no IR being sent and no phone joined to the access
-// point, Wi-Fi goes off and the ESP32 light-sleeps; any key wakes it and is acted on at once.
-// Plugged into a computer's USB it never sleeps. 0 = never sleep.
-#define IDLE_SLEEP_S          90
-// While it is joined to the HOME network, the remote doesn't go straight to sleep (asleep, the web
-// page is unreachable until a key is pressed). It goes into STANDBY instead: still on the home
-// network and answering the web page, with the "LR-Remote" access point off, Wi-Fi power saving on
-// and the processor slowed down. A key press or a page request brings everything back. After this
-// many minutes of standby with nothing happening it sleeps fully. 0 = no standby (sleep straight
-// away, as before); -1 = never sleep while on the home network (costs screen-battery life: roughly
-// a few days per charge instead of weeks - not measured).
-#define HOME_STANDBY_MIN      120
-#define WIFI_RESUME_DELAY_MS  1500   // after waking, Wi-Fi restarts this much later

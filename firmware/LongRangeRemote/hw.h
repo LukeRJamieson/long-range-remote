@@ -10,10 +10,6 @@ uint8_t keys();
 // A key reading pressed since power-up for over 2 s is reported as stuck (a short on the ribbon or
 // the board); the UI's status screen shows it. 0 = none.
 uint8_t stuckKeys();
-// Light sleep: wake when any key pin goes low. prepareSleep() arms GPIO wake-up on all six pins;
-// afterSleep() disarms it and takes the key that woke us without waiting for the debounce.
-void prepareSleep();
-void afterSleep();
 // Make a key pin a key input again after something else borrowed it (the speaker's codec set-up
 // uses BACK's pin, GPIO14, as the display board's I2C clock for a moment at start-up).
 void reclaimKeyPin(int pin);

@@ -6,7 +6,6 @@
 #include <Arduino.h>
 #include <math.h>
 #include <driver/gpio.h>
-#include <esp_sleep.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
@@ -59,9 +58,6 @@ void reclaimKeyPin(int pin) {
   // GPIO43/44 are UART0 after reset: pinMode() hands them to the GPIO matrix (the USB-C port is the
   // ESP32's own USB, so the serial log is unaffected).
   pinMode(pin, INPUT_PULLUP);
-  // the same pull-up while light-sleeping, in case the IDF switches pins to their sleep settings
-  gpio_sleep_set_direction((gpio_num_t)pin, GPIO_MODE_INPUT);
-  gpio_sleep_set_pull_mode((gpio_num_t)pin, GPIO_PULLUP_ONLY);
 }
 
 void begin() {
@@ -75,19 +71,6 @@ void begin() {
 }
 
 uint8_t stuckKeys() { return g_stuck_checked ? g_stuck : 0; }
-
-void prepareSleep() {
-  for (const Key &k : KEYS) gpio_wakeup_enable((gpio_num_t)k.pin, GPIO_INTR_LOW_LEVEL);
-  esp_sleep_enable_gpio_wakeup();
-}
-
-void afterSleep() {
-  for (const Key &k : KEYS) gpio_wakeup_disable((gpio_num_t)k.pin);
-  // the wake-up itself was the key press: take it now rather than after the debounce time
-  g_raw = g_keys = readRaw();
-  g_raw_at = millis();
-  g_volts_at = 0;                                     // fresh battery reading
-}
 
 uint8_t keys() {
   uint32_t now = millis();

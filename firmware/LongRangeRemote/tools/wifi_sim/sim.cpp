@@ -122,13 +122,6 @@ int main() {
   memcpy(WiFi.stale_mac, WiFi.mac, 6); drop(); WiFi.stale_until = sim_ms + 240000; uint32_t t18 = sim_ms; run(120000);
   check(wifimgr::state() == wifimgr::CONNECTED && WiFi.connected_at - t18 < 60000, "connects within a minute again");
   check(memcmp(WiFi.mac, WiFi.stale_mac, 6) != 0, "on the address the router isn't holding");
-  puts("19. standby: access point off, stays connected; router reboots meanwhile; access point back afterwards");
-  connectedFirst(); int moves19 = WiFi.ap_moves; wifimgr::standby(true);
-  check(!WiFi.ap_on && wifimgr::state() == wifimgr::CONNECTED, "access point off, still connected");
-  WiFi.ap_present = false; run(20000); WiFi.ap_present = true; run(30000);
-  check(wifimgr::state() == wifimgr::CONNECTED && !WiFi.ap_on, "reconnects in standby without switching the access point on");
-  wifimgr::standby(false);
-  check(WiFi.ap_on && WiFi.ap_channel == 6 && WiFi.ap_moves == moves19, "access point back on the router's channel");
   printf("begin() calls: %d (%d aimed at a scanned router), scans: %d, access point moved: %d time(s)\n",
          WiFi.begins, WiFi.begins_targeted, WiFi.scans, WiFi.ap_moves);
   check(WiFi.begins_targeted * 2 > WiFi.begins, "most attempts go straight to the scanned router");

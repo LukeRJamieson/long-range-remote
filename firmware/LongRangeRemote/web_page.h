@@ -89,7 +89,8 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
   <div class="scanbox" id="sbox" style="display:none">
     <div class="n" id="spos">0/0</div><div id="sname" style="margin:6px 0 2px;font-weight:600"></div><div class="mut" id="scode"></div>
     <div class="acts" style="justify-content:center"><button class="b" id="sprev">&larr; Prev</button><button class="b pri" id="ssend">Send again</button><button class="b" id="snext">Next &rarr;</button></div>
-    <div class="acts" style="justify-content:center"><button class="b" id="sauto">Auto &#9654;</button><button class="b ok" id="suse">It worked &ndash; use this</button></div>
+    <div class="acts" style="justify-content:center;align-items:center"><button class="b" id="sauto">Auto &#9654;</button><select id="sspeed" style="width:auto;padding:9px" title="Time between codes on Auto"><option value="0.5">every 0.5 s</option><option value="0.75">every 0.75 s</option><option value="1">every 1 s</option><option value="1.5">every 1.5 s</option><option value="2">every 2 s</option><option value="3">every 3 s</option></select><button class="b ok" id="suse">It worked &ndash; use this</button></div>
+    <div class="mut" style="text-align:center">Device reacted on Auto? Press Stop, then &larr; Prev &ndash; it may have been one of the last few codes.</div>
   </div>
 </section>
 
@@ -380,19 +381,27 @@ function showScan(){
   const [c,p,b,n,k,sh]=SCAN[SPOS];$('#spos').textContent=(SPOS+1)+' / '+SCAN.length;$('#sname').textContent=b+' · '+n;
   $('#scode').textContent='key: '+k+(sh>1?' · same code on '+sh+' remotes':'');
 }
-const scanSend=()=>{if(SCAN.length){q('/api/send?c='+SCAN[SPOS][0]+'&a=tap');setTimeout(refreshState,500)}};
-const scanStep=d=>{if(!SCAN.length)return;SPOS=(SPOS+d+SCAN.length)%SCAN.length;showScan();scanSend()};
-const stopAuto=()=>{if(AUTO){clearInterval(AUTO);AUTO=null;$('#sauto').innerHTML='Auto &#9654;'}};
+const scanSend=()=>{if(!SCAN.length)return Promise.resolve();const p=q('/api/send?c='+SCAN[SPOS][0]+'&a=tap');setTimeout(refreshState,500);return p};
+const scanStep=d=>{if(!SCAN.length)return Promise.resolve();SPOS=(SPOS+d+SCAN.length)%SCAN.length;showScan();return scanSend()};
+// Auto: the next code goes out the chosen time after the previous one was sent (never piles up)
+let AUTOGEN=0,AUTOLAST=0;
+const autoSec=()=>+$('#sspeed').value||1;
+const stopAuto=()=>{if(AUTO){clearTimeout(AUTO);AUTO=null;AUTOGEN++;$('#sauto').innerHTML='Auto &#9654;'}};
+const autoNext=gen=>{AUTO=setTimeout(()=>autoTick(gen),Math.max(0,AUTOLAST+autoSec()*1000-Date.now()))};
+function autoTick(gen){scanStep(1).then(()=>{if(AUTO&&gen==AUTOGEN){AUTOLAST=Date.now();autoNext(gen)}})}
+try{const v=localStorage.getItem('lrr_auto_s');if(v&&[...$('#sspeed').options].some(o=>o.value==v))$('#sspeed').value=v;else $('#sspeed').value='1'}catch(e){$('#sspeed').value='1'}
+$('#sspeed').addEventListener('change',()=>{try{localStorage.setItem('lrr_auto_s',$('#sspeed').value)}catch(e){}updateCount();
+  if(AUTO){clearTimeout(AUTO);autoNext(AUTOGEN)}});   // running: the new speed counts from the last code
 // "Search in" values: "all", "g<group>", "b<brand>"
 const scanUrl=()=>{const v=$('#sbrand').value,t=$('#stype').value;let u='/api/scan?k='+KEYIDX[$('#skey').value]+'&t='+t;
   if(v[0]=='g')u+='&g='+v.slice(1);else if(v[0]=='b')u+='&b='+v.slice(1);return u};
 let countReq=0;
 async function updateCount(){const id=++countReq;$('#scount').textContent='counting...';
-  try{const r=await get(scanUrl());if(id==countReq)$('#scount').textContent=r.length+' different codes to try (~'+Math.max(1,Math.round(r.length*3/60))+' min on Auto)'}catch(e){}}
+  try{const r=await get(scanUrl());if(id==countReq)$('#scount').textContent=r.length+' different codes to try (~'+Math.max(1,Math.round(r.length*autoSec()/60))+' min on Auto, one every '+autoSec()+' s)'}catch(e){}}
 ['#sbrand','#stype','#skey'].forEach(s=>$(s).addEventListener('change',()=>{stopAuto();updateCount()}));
 $('#sload').onclick=async()=>{stopAuto();SCAN=await get(scanUrl());SPOS=0;showScan();scanSend()};
 $('#sprev').onclick=()=>{stopAuto();scanStep(-1)};$('#snext').onclick=()=>{stopAuto();scanStep(1)};$('#ssend').onclick=scanSend;
-$('#sauto').onclick=()=>{if(AUTO)return stopAuto();$('#sauto').textContent='Stop';AUTO=setInterval(()=>scanStep(1),3000)};
+$('#sauto').onclick=()=>{if(AUTO)return stopAuto();if(!SCAN.length)return;$('#sauto').textContent='Stop';AUTOLAST=Date.now();autoNext(++AUTOGEN)};
 $('#suse').onclick=async()=>{stopAuto();if(!SCAN.length)return;await setActive(SCAN[SPOS][1]);document.querySelector('#tabs button[data-t=remote]').click()};
 
 // ---------- manual + discover ----------

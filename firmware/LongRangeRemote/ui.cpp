@@ -42,7 +42,6 @@
 #include "config.h"
 #include "discover.h"
 #include "log.h"
-#include "power.h"
 
 #include "hw.h"
 #include "ir_db.h"
@@ -124,7 +123,6 @@ int cat_list[IR_NUM_CATS + 1]; int cat_count[IR_NUM_CATS + 1]; int n_cat_list = 
 
 // Remote grid items: >= 0 canonical key id (code resolved per profile), special tiles < 0
 const int TILE_ALL = -2, TILE_NAVPAD = -3, TILE_VOLPAD = -4, TILE_NUMBER = -5;
-bool asleep = false;
 bool ir_shown = false;                // the header's "IR" mark was drawn in the last frame
 int remote_sel = 0, remote_scroll = 0, remote_for = -2;   // where the remote screen was left (and for which device)
 
@@ -272,7 +270,7 @@ bool irActive() {
   return l.seq && millis() - l.at_ms < 500;
 }
 
-const char *netLabel() { return asleep ? "Asleep" : power::inStandby() ? "Standby" : sta_ip[0] ? "WiFi" : "AP"; }
+const char *netLabel() { return sta_ip[0] ? "WiFi" : "AP"; }
 
 // Header bar: title (+ subtitle if there is room) on the left; on the right the two batteries
 // (AA = the LED pack, Scr = the display board's own cell), and the network state in a box.
@@ -1896,11 +1894,6 @@ void loop() {
 }
 
 void requestRedraw() { dirty = true; }
-
-void setAsleep(bool a) {
-  asleep = a;
-  if (g) render();                // now: the processor stops right after this
-}
 
 void setNetworkInfo(const char *ap, const char *sta, const char *ssid) {
   strncpy(ap_ip, ap ? ap : "", sizeof(ap_ip) - 1);

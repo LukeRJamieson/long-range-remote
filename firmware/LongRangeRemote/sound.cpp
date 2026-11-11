@@ -304,22 +304,4 @@ bool muted() { return g_muted; }
 bool ready() { return g_codec; }
 const char *status() { return g_status; }
 
-void prepareSleep() {
-  if (!g_tx) return;
-  xSemaphoreTake(g_io, portMAX_DELAY);          // waits for a sound that is playing to finish
-  amp(false);
-  if (g_running) i2s_channel_disable(g_tx);
-  g_running = false;
-  xSemaphoreGive(g_io);
-}
-
-void afterSleep() {
-  if (!g_tx) return;
-  xSemaphoreTake(g_io, portMAX_DELAY);
-  if (!g_running) g_running = i2s_channel_enable(g_tx) == ESP_OK;
-  // the key that woke the remote clicks straight away: start the amplifier now, so it is (nearly) ready
-  if (g_running && g_codec && !g_muted && g_volume > 0) amp(true);
-  xSemaphoreGive(g_io);
-}
-
 }  // namespace sound

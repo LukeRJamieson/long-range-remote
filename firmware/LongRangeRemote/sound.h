@@ -10,7 +10,7 @@
 //
 // The sounds are synthesised (no files). All calls are non-blocking and safe from any task: a sound
 // task plays them, and a newer sound cuts off the one playing. The amplifier is switched off when the
-// remote has been quiet for SOUND_AMP_HOLD_MS (a minute), and before light sleep. It takes ~30 ms to start,
+// remote has been quiet for SOUND_AMP_HOLD_MS (a minute). It takes ~30 ms to start,
 // so a sound waits SOUND_AMP_START_MS after switching it on.
 #pragma once
 #include <stdint.h>
@@ -35,9 +35,5 @@ bool muted();
 
 bool ready();                // codec found and set up
 const char *status();        // one line for the screens, e.g. "no codec found"
-
-// Light sleep: stop the I2S clocks and switch the amplifier off; resume after.
-void prepareSleep();
-void afterSleep();
 
 }  // namespace sound

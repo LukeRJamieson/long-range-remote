@@ -36,9 +36,9 @@ int main() {
   // all keys
   seq("UL"); shot("remote_last_tile");
   // states
-  sim.pack_v = 4.5f; sim.pack_pct = 9; sim.standby = true; ui::requestRedraw(); shot("low_standby");
+  sim.pack_v = 4.5f; sim.pack_pct = 9; ui::requestRedraw(); shot("low_battery");
   sim.pack_v = 0.2f; ui::requestRedraw(); shot("no_cells");
-  sim.pack_v = 5.0f; sim.pack_pct = 78; sim.standby = false; ui::setAsleep(true); shot("asleep"); ui::setAsleep(false);
+  sim.pack_v = 5.0f; sim.pack_pct = 78; ui::requestRedraw();
   printf(fails ? "SOME CHECKS FAILED\n" : "checks ok\n");
   return 0;
 }

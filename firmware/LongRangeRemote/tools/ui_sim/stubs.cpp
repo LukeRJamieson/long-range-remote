@@ -10,7 +10,6 @@
 #include "sound.h"
 #include "wifi_file.h"
 #include "wifi_mgr.h"
-#include "power.h"
 #include "log.h"
 #include "sim.h"
 #include "discover.h"
@@ -90,4 +89,3 @@ void begin() { setHooks({sendTap, txBusy, nowMs}); }
 bool saveAndRestart(char *err, size_t n) { if (!state().n_learned) { snprintf(err, n, "no keys named yet"); return false; } sim.saved_text = fileText(); sim.restart = true; return true; }
 bool restartPending() { return sim.restart; } void glueLoop() {}
 }
-namespace power { bool inStandby() { return sim.standby; } void activity() {} }
