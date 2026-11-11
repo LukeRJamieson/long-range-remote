@@ -3,11 +3,11 @@
 // Controls: the six keys on the control board under the screen (direct GPIOs, see hw.h): the D-pad,
 // SELECT, and BACK at the D-pad's lower right.
 //
-//   BACK                               one screen back, everywhere (the older ways below still work).
-//                                      Remote screen: nothing. Nav pad: sends the device's own
+//   BACK                               one screen back, everywhere. On the remote screen (the top
+//                                      level) it opens the menu. Nav pad: sends the device's own
 //                                      Back / Return, held = leave. Vol pad: leave.
 //   Lists (menus, brands, models...)   UP/DOWN move (hold = fast), RIGHT or SELECT = choose,
-//                                      LEFT or SELECT held = back
+//                                      BACK, LEFT or SELECT held = back (no "< Back" rows)
 //   Remote screen (grid of keys)       arrows move, SELECT press = send (held = repeat, e.g. volume)
 //   Letter grid                        arrows move, SELECT = choose, SELECT held = back
 //   Nav pad / Vol pad                  the arrows and SELECT become the device's own keys:
@@ -41,6 +41,7 @@
 #include "ui.h"
 #include "config.h"
 #include "log.h"
+#include "power.h"
 
 #include "hw.h"
 #include "ir_db.h"
@@ -63,7 +64,7 @@ namespace ui {
 namespace {
 
 const int W = 400, H = 300;
-const int HEADER_H = 30, FOOTER_H = 34;
+const int HEADER_H = 30, FOOTER_H = 38;
 
 ST7305_U8g2 lcd(LCD_SCK_PIN, LCD_MOSI_PIN, LCD_DC_PIN, LCD_CS_PIN, LCD_RST_PIN);
 U8G2 *g = nullptr;
@@ -120,8 +121,10 @@ char letters[40]; int n_letters = 0;
 int cat_list[IR_NUM_CATS + 1]; int cat_count[IR_NUM_CATS + 1]; int n_cat_list = 0;
 
 // Remote grid items: >= 0 canonical key id (code resolved per profile), special tiles < 0
-const int TILE_MENU = -1, TILE_ALL = -2, TILE_NAVPAD = -3, TILE_VOLPAD = -4, TILE_NUMBER = -5;
+const int TILE_ALL = -2, TILE_NAVPAD = -3, TILE_VOLPAD = -4, TILE_NUMBER = -5;
 bool asleep = false;
+bool ir_shown = false;                // the header's "IR" mark was drawn in the last frame
+int remote_sel = 0, remote_scroll = 0, remote_for = -2;   // where the remote screen was left (and for which device)
 
 // Channel number entry: digits typed so far + the one being chosen, and the send queue
 char num_digits[6] = ""; int num_len = 0; int num_cur = 0;
@@ -129,6 +132,7 @@ char num_send[6] = ""; int num_send_pos = 0; uint32_t num_next_at = 0;
 const uint32_t DIGIT_GAP_MS = 350;      // between digit keys (TVs ignore digits sent too quickly)
 int grid[KEY__COUNT + 8]; int n_grid = 0;
 const int GRID_COLS = 4, GRID_ROWS = 5;
+const int LETTER_COLS = 7;
 
 // Order of the standard keys on the remote screen: the everyday TV / receiver keys first.
 const uint8_t KEY_ORDER[] = {
@@ -169,14 +173,14 @@ irdb::ScanCand *scan_cands = nullptr; int scan_cap = 0;   // sized numProfiles()
 int n_scan = 0; int scan_pos = 0;
 
 // Menu entries
-enum MenuItem { M_BACK = -100, M_BROWSE, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_WIFI, M_STATUS };
+enum MenuItem { M_BROWSE = -100, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_WIFI, M_STATUS };
 int menu_items[MAX_FAVOURITES + 10]; int n_menu = 0;
 
 // Currently sending (a key held on a remote / pad screen)
 bool send_held = false;
 
 // Wi-Fi menu. Rows of the Wi-Fi screen (PASSWORD and FORGET only when a network is set):
-enum WifiRow { W_BACK, W_NETWORK, W_PASSWORD, W_FORGET };
+enum WifiRow { W_NETWORK, W_PASSWORD, W_FORGET };
 const int MAX_NET_LIST = 20;
 wifimgr::Network net_list[MAX_NET_LIST];
 int n_net_list = -1;                  // -1 = scan still running
@@ -200,7 +204,7 @@ const char *const KB_ROWS[3][4] = {
 };
 const char *const KB_PAGE_LABEL[3] = {"ABC", "#+=", "abc"};    // the page the page key switches to
 enum KbAction { KA_PAGE, KA_SPACE, KA_DEL, KA_DONE, KA__N };
-const int KB_X0 = 5, KB_PITCH = 39, KB_KEY_W = 38, KB_Y0 = 94, KB_ROW_H = 31, KB_KEY_H = 28;
+const int KB_X0 = 5, KB_PITCH = 39, KB_KEY_W = 38, KB_Y0 = 92, KB_ROW_H = 33, KB_KEY_H = 30;
 const int KB_ACT_X[KA__N] = {5, 89, 233, 317}, KB_ACT_W[KA__N] = {80, 140, 80, 78};
 
 // Long names for device types (IR_CAT_NAMES are short ids)
@@ -249,56 +253,152 @@ bool batteryLow() {
   return !isnan(v) && v > 1.0f && v < PACK_LOW_V;
 }
 
+// Battery outline, 22 x 10, filled to pct (< 0 = no battery: a cross). Drawn in the current colour.
+void drawBattery(int x, int y, int pct) {
+  g->drawFrame(x, y, 20, 10);
+  g->drawBox(x + 20, y + 3, 2, 4);
+  if (pct < 0) { g->drawLine(x + 6, y + 2, x + 13, y + 7); g->drawLine(x + 6, y + 7, x + 13, y + 2); return; }
+  int w = (16 * pct + 50) / 100;
+  if (pct > 0 && w < 1) w = 1;
+  if (w > 0) g->drawBox(x + 2, y + 2, w, 6);
+}
+
+// A code is going out right now (or did in the last half second): the header shows "IR".
+bool irActive() {
+  if (irtx::isSending()) return true;
+  irtx::LastSent l = irtx::last();
+  return l.seq && millis() - l.at_ms < 500;
+}
+
+const char *netLabel() { return asleep ? "Asleep" : power::inStandby() ? "Standby" : sta_ip[0] ? "WiFi" : "AP"; }
+
+// Header bar: title (+ subtitle if there is room) on the left; on the right the two batteries
+// (AA = the LED pack, Scr = the display board's own cell), and the network state in a box.
 void drawHeader(const char *title, const char *subtitle) {
   g->setDrawColor(1);
   g->drawBox(0, 0, W, HEADER_H);
   g->setDrawColor(0);
-  g->setFont(u8g2_font_helvB14_tr);
-  int x = 6;
-  drawClipped(x, 21, 170, title);
-  x += min(170, (int)g->getStrWidth(title)) + 10;
-  if (subtitle && *subtitle) {
-    g->setFont(u8g2_font_helvR10_tr);
-    drawClipped(x, 20, 300 - x, subtitle);
+  // network state
+  g->setFont(u8g2_font_helvB08_tr);
+  const char *net = netLabel();
+  int cw = g->getStrWidth(net) + 10, cx = W - 4 - cw;
+  g->drawRBox(cx, 7, cw, 16, 3);
+  g->setDrawColor(1);
+  g->drawStr(cx + 5, 19, net);
+  g->setDrawColor(0);
+  // batteries: label | outline | percent
+  const int BW = 76;
+  int bx = cx - 8 - BW;
+  int pct = hw::packPercent(), sc = hw::screenPercent();
+  auto battRow = [&](int y, const char *label, int p, bool low) {
+    g->setFont(u8g2_font_helvR08_tr);
+    g->drawStr(bx, y + 9, label);
+    drawBattery(bx + 22, y, p);
+    char t[8];
+    if (p < 0) snprintf(t, sizeof(t), "out");
+    else snprintf(t, sizeof(t), "%d%%", p);
+    if (low) g->setFont(u8g2_font_helvB08_tr);
+    g->drawStr(bx + 49, y + 9, low ? "LOW" : t);
+  };
+  const char *pack = *PACK_NAME ? PACK_NAME : "LED";
+  if (sc >= 0) { battRow(4, pack, pct, batteryLow()); battRow(16, "Scr", sc, false); }
+  else battRow(10, pack, pct, batteryLow());
+  // sending mark
+  int left_end = bx - 8;
+  ir_shown = irActive();
+  if (ir_shown) {
+    g->setFont(u8g2_font_helvB08_tr);
+    g->drawRFrame(left_end - 22, 7, 22, 16, 3);
+    g->drawStr(left_end - 16, 19, "IR");
   }
-  // right side: battery + network
-  g->setFont(u8g2_font_helvR08_tr);
-  char r[40];
-  int pct = hw::packPercent();
-  const char *sp = *PACK_NAME ? " " : "";
-  if (pct < 0) snprintf(r, sizeof(r), "AA out");
-  else if (batteryLow()) snprintf(r, sizeof(r), "%s%sLOW %d%%", PACK_NAME, sp, pct);
-  else snprintf(r, sizeof(r), "%s%s%d%%", PACK_NAME, sp, pct);
-  int sc = hw::screenPercent();                 // the display's own 18650 runs the ESP32
-  if (sc >= 0) snprintf(r + strlen(r), sizeof(r) - strlen(r), "  scr %d%%", sc);
-  g->drawStr(W - 6 - g->getStrWidth(r), 13, r);
-  const char *net = asleep ? "asleep" : sta_ip[0] ? "WiFi" : "AP";
-  g->drawStr(W - 6 - g->getStrWidth(net), 26, net);
+  left_end -= 28;                                // kept free either way, so the title doesn't jump
+  // title + subtitle
+  g->setFont(u8g2_font_helvB14_tr);
+  int x = 6, tw = min(left_end - x, (int)g->getStrWidth(title));
+  drawClipped(x, 21, left_end - x, title);
+  x += tw + 10;
+  if (subtitle && *subtitle && left_end - x >= 50) {
+    g->setFont(u8g2_font_helvR10_tr);
+    drawClipped(x, 20, left_end - x, subtitle);
+  }
   g->setDrawColor(1);
 }
 
-void drawFooter(const char *line1, const char *hint) {
-  g->drawHLine(0, H - FOOTER_H, W);
-  g->setFont(u8g2_font_helvR10_tr);
-  if (line1) drawClipped(6, H - FOOTER_H + 14, W - 12, line1);
-  g->setFont(u8g2_font_helvR08_tr);
-  if (hint) drawClipped(6, H - 5, W - 12, hint);
+// Key hints, e.g. "{OK} Send  {BACK} Menu": the parts in braces are drawn as key caps, the rest as
+// text. Returns the width; draw = false only measures.
+int drawHints(int x, int y, const char *s, bool draw) {
+  int x0 = x;
+  char seg[64];
+  while (*s) {
+    bool cap = *s == '{';
+    if (cap) s++;
+    size_t n = 0;
+    while (*s && *s != (cap ? '}' : '{') && n < sizeof(seg) - 1) seg[n++] = *s++;
+    seg[n] = 0;
+    if (cap && *s == '}') s++;
+    if (cap) {
+      g->setFont(u8g2_font_helvB08_tr);
+      int w = g->getStrWidth(seg) + 8;
+      if (draw) {
+        g->drawRBox(x, y - 11, w, 14, 3);
+        g->setDrawColor(0);
+        g->drawStr(x + 4, y, seg);
+        g->setDrawColor(1);
+      }
+      x += w + 4;
+    } else {
+      g->setFont(u8g2_font_helvR10_tr);
+      if (draw) g->drawStr(x, y, seg);
+      x += g->getStrWidth(seg);
+    }
+  }
+  return x - x0;
 }
 
-void lastSentLine(char *out, size_t n) {
+// Footer: one line of information, and the keys that do something on this screen.
+void drawFooterHints(const char *hints) {
+  g->drawHLine(0, H - FOOTER_H, W);
+  if (hints) drawHints(6, H - 6, hints, true);
+}
+
+void drawFooter(const char *line1, const char *hints) {
+  drawFooterHints(hints);
+  g->setFont(u8g2_font_helvR10_tr);
+  if (line1) drawClipped(6, H - FOOTER_H + 15, W - 12, line1);
+}
+
+// Footer whose information line is the last code sent (or why nothing can be sent).
+void drawFooterSent(const char *hints) {
+  drawFooterHints(hints);
+  const int y = H - FOOTER_H + 15;
   float pv = hw::packVolts();
-  if (!isnan(pv) && pv < 1.0f) { snprintf(out, n, "LEDs off - no AA cells in"); return; }
-  if (!isnan(pv) && pv < PACK_CUTOFF_V) { snprintf(out, n, PACK_FLAT_MSG); return; }
-  if (batteryLow()) { snprintf(out, n, PACK_LOW_MSG); return; }
+  const char *warn = nullptr;
+  if (!isnan(pv) && pv < 1.0f) warn = "LEDs off - no AA cells in";
+  else if (!isnan(pv) && pv < PACK_CUTOFF_V) warn = PACK_FLAT_MSG;
+  else if (batteryLow()) warn = PACK_LOW_MSG;
+  if (warn) { g->setFont(u8g2_font_helvB10_tr); drawClipped(6, y, W - 12, warn); return; }
   irtx::LastSent l = irtx::last();
-  if (!l.seq) { snprintf(out, n, "Nothing sent yet"); return; }
-  if (l.proto == IRP_RAW)
-    snprintf(out, n, "> %s  [raw %lukHz] x%lu", l.label, (unsigned long)(l.carrier_hz / 1000), (unsigned long)l.frames);
-  else
-    snprintf(out, n, "> %s  [%s %X.%X.%X] x%lu", l.label, irProtoName(l.proto), l.d, l.s, l.f, (unsigned long)l.frames);
+  g->setFont(u8g2_font_helvR10_tr);
+  if (!l.seq) { g->drawStr(6, y, "Nothing sent yet"); return; }
+  // right: protocol details, small; left: what was sent
+  char pr[48];
+  if (l.proto == IRP_RAW) snprintf(pr, sizeof(pr), "raw %lu kHz", (unsigned long)(l.carrier_hz / 1000));
+  else snprintf(pr, sizeof(pr), "%s %X.%X.%X", irProtoName(l.proto), l.d, l.s, l.f);
+  g->setFont(u8g2_font_helvR08_tr);
+  int pw = g->getStrWidth(pr);
+  g->drawStr(W - 6 - pw, y, pr);
+  g->setFont(u8g2_font_helvR10_tr);
+  g->drawStr(6, y, "Sent:");
+  int x = 6 + g->getStrWidth("Sent: ");
+  char b[96];
+  if (l.frames > 1) snprintf(b, sizeof(b), "%s  x%lu", l.label, (unsigned long)l.frames);
+  else snprintf(b, sizeof(b), "%s", l.label);
+  g->setFont(u8g2_font_helvB10_tr);
+  drawClipped(x, y, W - 6 - pw - 10 - x, b);
 }
 
 // Generic list: items drawn by callback.
+// Lists have no "< Back" row: BACK (or LEFT) goes back everywhere.
 const int ROW_H = 26;
 const int LIST_TOP = HEADER_H + 4;
 const int LIST_ROWS = (H - FOOTER_H - LIST_TOP) / ROW_H;
@@ -311,31 +411,55 @@ void keepVisible(int n_items, int rows) {
   if (scroll < 0) scroll = 0;
 }
 
+void drawScrollbar(int top, int track, int total, int visible, int first) {
+  if (total <= visible) return;
+  int bar = max(12, track * visible / total);
+  int y = top + (track - bar) * first / max(1, total - visible);
+  g->drawFrame(W - 8, top, 6, track);
+  g->drawBox(W - 8, y, 6, bar);
+}
+
+// One row of a list: text on the left; optionally a value on the right, an arrow (opens another
+// screen), a mark in front (1 = ring, 2 = dot: the active one) and a rule above (new group).
+struct Row {
+  char text[96];
+  char value[48];
+  uint8_t mark;
+  bool more;
+  bool rule;
+};
+
 template <typename F>
-void drawList(int n_items, F label) {
+void drawList(int n_items, F fill) {
   keepVisible(n_items, LIST_ROWS);
-  g->setFont(u8g2_font_helvB12_tr);
   for (int r = 0; r < LIST_ROWS && scroll + r < n_items; r++) {
     int i = scroll + r;
     int y = LIST_TOP + r * ROW_H;
-    char buf[96];
-    label(i, buf, sizeof(buf));
+    Row row;
+    memset(&row, 0, sizeof(row));
+    fill(i, row);
+    if (row.rule && r > 0) g->drawHLine(8, y - 1, W - 26);
     if (i == sel) {
       g->drawRBox(2, y, W - 14, ROW_H - 2, 4);
       g->setDrawColor(0);
-      drawClipped(10, y + 18, W - 30, buf);
-      g->setDrawColor(1);
-    } else {
-      drawClipped(10, y + 18, W - 30, buf);
     }
+    int tx = 10, rx = W - 20;
+    if (row.mark) {
+      if (row.mark == 2) g->drawDisc(16, y + 12, 4); else g->drawCircle(16, y + 12, 4);
+      tx = 28;
+    }
+    if (row.more) { g->drawTriangle(rx - 6, y + 7, rx - 6, y + 18, rx, y + 12); rx -= 14; }
+    if (row.value[0]) {
+      g->setFont(u8g2_font_helvR10_tr);
+      int vw = min((int)g->getStrWidth(row.value), 190);
+      drawClipped(rx - vw, y + 17, vw, row.value);
+      rx -= vw + 10;
+    }
+    g->setFont(u8g2_font_helvB12_tr);
+    drawClipped(tx, y + 18, rx - tx, row.text);
+    g->setDrawColor(1);
   }
-  if (n_items > LIST_ROWS) {                    // scrollbar
-    int track = LIST_ROWS * ROW_H;
-    int bar = max(12, track * LIST_ROWS / n_items);
-    int y = LIST_TOP + (track - bar) * scroll / max(1, n_items - LIST_ROWS);
-    g->drawFrame(W - 9, LIST_TOP, 6, track);
-    g->drawBox(W - 9, y, 6, bar);
-  }
+  drawScrollbar(LIST_TOP, LIST_ROWS * ROW_H, n_items, LIST_ROWS, scroll);
 }
 
 // ---------------------------------------------------------------------------
@@ -381,7 +505,6 @@ int stepDigit(int d, int dir) {
 
 void buildGrid() {
   n_grid = 0;
-  grid[n_grid++] = TILE_MENU;
   int p = settings::active();
   if (p < 0) return;
   // The pads are only offered when they would do something useful (at least 3 of 5 keys).
@@ -395,7 +518,6 @@ void buildGrid() {
 
 void buildMenu() {
   n_menu = 0;
-  menu_items[n_menu++] = M_BACK;
   for (int i = 0; i < settings::favCount(); i++) menu_items[n_menu++] = settings::fav(i);
   menu_items[n_menu++] = M_BROWSE;
   menu_items[n_menu++] = M_SCAN;
@@ -418,18 +540,16 @@ char letterOf(const char *name) {
 
 void buildLetters() {
   n_letters = 0;
-  letters[n_letters++] = '<';                  // back
   for (int b = 0; b < irdb::numBrands() && n_letters < (int)sizeof(letters); b++) {
     char c = letterOf(irdb::brandName(b));
     if (!memchr(letters, c, n_letters)) letters[n_letters++] = c;
   }
-  std::sort(letters + 1, letters + n_letters);
+  std::sort(letters, letters + n_letters);
 }
 
 void buildBrands() {
   n_brand_list = 0;
   if (!brand_list) return;
-  brand_list[n_brand_list++] = -1;             // back
   for (int b = 0; b < irdb::numBrands(); b++)
     if (letterOf(irdb::brandName(b)) == cur_letter) brand_list[n_brand_list++] = b;
 }
@@ -442,7 +562,7 @@ irdb::ScanFilter scanFilter(int cat) {
   return f;
 }
 
-// Device types that have remotes in the current search scope (+ "All types" first, after < Back)
+// Device types that have remotes in the current search scope ("All types" first)
 void buildCats() {
   n_cat_list = 0;
   cat_list[n_cat_list] = -1; cat_count[n_cat_list++] = irdb::countProfiles(scanFilter(-1));
@@ -462,12 +582,19 @@ void stopSend() {
 }
 
 void go(Screen s, int new_sel = 0) {
+  if (screen == S_REMOTE) { remote_sel = sel; remote_scroll = scroll; }
   screen = s; sel = new_sel; scroll = 0; dirty = true;
   // A key that is still held while the screen changes must not also act on the new screen.
   for (Key &k : keys) if (k.down) k.swallow = true;
   stopSend();
   switch (s) {
-    case S_REMOTE:  buildGrid(); if (sel >= n_grid) sel = 0; break;
+    case S_REMOTE:
+      buildGrid();
+      // back on the tile it was left on (same device), so a pad or the menu doesn't lose the place
+      if (remote_for == settings::active()) { sel = remote_sel; scroll = remote_scroll; }
+      remote_for = settings::active();
+      if (sel >= n_grid) { sel = 0; scroll = 0; }
+      break;
     case S_MENU:    buildMenu(); break;
     case S_LETTERS: buildLetters(); break;
     case S_BRANDS:  buildBrands(); break;
@@ -481,8 +608,7 @@ void go(Screen s, int new_sel = 0) {
 // ---------------------------------------------------------------------------
 const char *tileLabel(int t) {
   switch (t) {
-    case TILE_MENU:   return "Menu";
-    case TILE_ALL:    return "All keys...";
+    case TILE_ALL:    return "All keys";
     case TILE_NAVPAD: return "Nav pad";
     case TILE_VOLPAD: return "Vol pad";
     case TILE_NUMBER: return "Ch 123";
@@ -492,64 +618,62 @@ const char *tileLabel(int t) {
 
 void drawRemote() {
   int p = settings::active();
-  char sub[64] = "";
-  if (p >= 0) snprintf(sub, sizeof(sub), "%s", irdb::profileName(p));
-  drawHeader(p >= 0 ? irdb::brandName(irdb::profileBrand(p)) : "Long-Range Remote", sub);
+  drawHeader(p >= 0 ? irdb::brandName(irdb::profileBrand(p)) : "Long-Range Remote", p >= 0 ? irdb::profileName(p) : "");
 
-  int y_off = 0, rows_vis = GRID_ROWS;
   if (irdb::numProfiles() == 0) {                // no codes at all: say how to get them
-    g->setFont(u8g2_font_helvB12_tr);
-    g->drawStr(12, 62, "No IR codes loaded.");
+    g->setFont(u8g2_font_helvB14_tr);
+    g->drawStr(12, 62, "No IR codes loaded");
     g->setFont(u8g2_font_helvR10_tr);
     drawClipped(12, 86, W - 24, sdstore::status());
-    g->drawStr(12, 112, "Copy irdb.bin (firmware/sd_card) to the SD card,");
-    g->drawStr(12, 130, "or upload it from a phone: join Wi-Fi \"" WIFI_AP_SSID "\"");
+    g->drawStr(12, 114, "Copy irdb.bin (firmware/sd_card) to the SD card,");
+    g->drawStr(12, 132, "or upload it from a phone: join Wi-Fi \"" WIFI_AP_SSID "\"");
     char b[80]; snprintf(b, sizeof(b), "(password " WIFI_AP_PASSWORD "), open http://%s,", sta_ip[0] ? sta_ip : ap_ip);
-    g->drawStr(12, 148, b);
-    g->drawStr(12, 166, "Settings > SD card > Upload code database.");
-    y_off = 170; rows_vis = 1;
-  } else if (p < 0) {
-    g->setFont(u8g2_font_helvB12_tr);
-    g->drawStr(12, 62, "No device selected yet.");
-    g->setFont(u8g2_font_helvR10_tr);
-    g->drawStr(12, 88, "On the remote: SELECT on Menu, then Browse");
-    g->drawStr(12, 106, "brands or Code search.");
-    g->drawStr(12, 132, "Or on a phone: join Wi-Fi \"" WIFI_AP_SSID "\"");
-    char b[80]; snprintf(b, sizeof(b), "(password " WIFI_AP_PASSWORD "), open http://%s", sta_ip[0] ? sta_ip : ap_ip);
     g->drawStr(12, 150, b);
-    y_off = 170; rows_vis = 1;
+    g->drawStr(12, 168, "Settings > SD card > Upload code database.");
+    drawFooter(nullptr, "{OK} or {BACK} Menu");
+    return;
   }
-  const int TW = 97, TH = 42, X0 = 3, Y0 = HEADER_H + 5;
+  if (p < 0) {
+    g->setFont(u8g2_font_helvB14_tr);
+    g->drawStr(12, 64, "No device chosen yet");
+    g->setFont(u8g2_font_helvR12_tr);
+    g->drawStr(12, 96, "Press OK, then pick your device's brand");
+    g->drawStr(12, 116, "or run a code search.");
+    g->setFont(u8g2_font_helvR10_tr);
+    g->drawStr(12, 152, "Or set it up from a phone: join Wi-Fi \"" WIFI_AP_SSID "\"");
+    char b[80]; snprintf(b, sizeof(b), "(password " WIFI_AP_PASSWORD ") and open http://%s", sta_ip[0] ? sta_ip : ap_ip);
+    g->drawStr(12, 170, b);
+    drawFooter(nullptr, "{OK} or {BACK} Menu");
+    return;
+  }
+  const int TW = 95, TH = 41, X0 = 3, Y0 = HEADER_H + 4;
   if (sel >= n_grid) sel = 0;
   if (sel < 0) sel = n_grid - 1;
   int row = sel / GRID_COLS;
   if (row < scroll) scroll = row;
-  if (row >= scroll + rows_vis) scroll = row - rows_vis + 1;
-  for (int i = scroll * GRID_COLS; i < n_grid && i < (scroll + rows_vis) * GRID_COLS; i++) {
+  if (row >= scroll + GRID_ROWS) scroll = row - GRID_ROWS + 1;
+  for (int i = scroll * GRID_COLS; i < n_grid && i < (scroll + GRID_ROWS) * GRID_COLS; i++) {
     int r = i / GRID_COLS - scroll, c = i % GRID_COLS;
-    int x = X0 + c * (TW + 2), y = Y0 + y_off + r * (TH + 3);
+    int x = X0 + c * (TW + 2), y = Y0 + r * (TH + 3);
     const char *label = tileLabel(grid[i]);
-    bool special = grid[i] < 0;
+    bool special = grid[i] < 0;                  // opens a screen instead of sending a code
     if (i == sel) {
       g->drawRBox(x, y, TW, TH, 6);
       g->setDrawColor(0);
+      if (special) g->drawRFrame(x + 3, y + 3, TW - 6, TH - 6, 4);
     } else {
       g->drawRFrame(x, y, TW, TH, 6);
-      if (special) g->drawRFrame(x + 2, y + 2, TW - 4, TH - 4, 5);
+      if (special) g->drawRFrame(x + 3, y + 3, TW - 6, TH - 6, 4);
     }
     g->setFont(u8g2_font_helvB14_tr);
-    if (g->getStrWidth(label) > TW - 8) g->setFont(u8g2_font_helvB10_tr);
+    if (g->getStrWidth(label) > TW - 10) g->setFont(u8g2_font_helvB10_tr);
     drawCentered(x + TW / 2, y + TH / 2 + 6, label);
     g->setDrawColor(1);
   }
   int total_rows = (n_grid + GRID_COLS - 1) / GRID_COLS;
-  if (total_rows > GRID_ROWS && p >= 0) {
-    char pg[48]; snprintf(pg, sizeof(pg), "rows %d-%d of %d", scroll + 1, min(total_rows, scroll + GRID_ROWS), total_rows);
-    g->setFont(u8g2_font_helvR08_tr);
-    g->drawStr(W - 4 - g->getStrWidth(pg), H - FOOTER_H - 2, pg);
-  }
-  char line[120]; lastSentLine(line, sizeof(line));
-  drawFooter(line, "Arrows: move  |  SELECT: press = send, hold = repeat");
+  drawScrollbar(Y0, GRID_ROWS * (TH + 3) - 3, total_rows, GRID_ROWS, scroll);
+  bool sp = sel < n_grid && grid[sel] < 0;
+  drawFooterSent(sp ? "{OK} Open    {BACK} Menu" : "{OK} Send    {OK hold} Repeat    {BACK} Menu");
 }
 
 void drawPad() {
@@ -559,12 +683,12 @@ void drawPad() {
   // A picture of the control board's keys with what each one sends.
   // Layout matches the board: 4-way cross on the left, BACK at its lower right, big SELECT on the right.
   struct Rect { int x, y, w, h; } const rc[K__N] = {
-    {110, 42, 84, 50}, {110, 200, 84, 50}, {16, 121, 84, 50}, {204, 121, 84, 50}, {300, 108, 92, 76},
-    {204, 200, 84, 50}};
+    {110, 38, 84, 50}, {110, 196, 84, 50}, {16, 117, 84, 50}, {204, 117, 84, 50}, {300, 104, 92, 76},
+    {204, 196, 84, 50}};
   for (int s = 0; s < K__N; s++) {
     uint8_t k = KEY_NONE;
     int c = padCode(cur_pad, s, &k);
-    const char *lab = c >= 0 ? IR_KEY_LABELS[k] : (s == K_BACK ? "< exit" : "-");
+    const char *lab = c >= 0 ? IR_KEY_LABELS[k] : (s == K_BACK ? "Leave" : "-");
     int x = rc[s].x, y = rc[s].y, w = rc[s].w, h = rc[s].h;
     bool active = keys[s].down && !keys[s].swallow;
     if (active) { g->drawRBox(x, y, w, h, 8); g->setDrawColor(0); }
@@ -574,8 +698,8 @@ void drawPad() {
     drawCentered(x + w / 2, y + h / 2 + 6, lab);
     g->setDrawColor(1);
   }
-  char line[120]; lastSentLine(line, sizeof(line));
-  drawFooter(line, "Keys send these directly (hold = repeat)  |  hold BACK or SELECT: leave");
+  drawFooterSent(padCode(cur_pad, K_BACK) >= 0 ? "Each key sends what it shows    {BACK hold} Leave"
+                                               : "Each key sends what it shows    {BACK} Leave");
 }
 
 void drawNumber() {
@@ -586,304 +710,341 @@ void drawNumber() {
   char done[8]; snprintf(done, sizeof(done), "%s", num_digits);
   char cur[2] = {(char)('0' + num_cur), 0};
   int wd = g->getStrWidth(done), wc = g->getStrWidth("0");
-  int x = W / 2 - (wd + wc + 8) / 2, y = 130;
+  int x = W / 2 - (wd + wc + 8) / 2, y = 122;
   g->drawStr(x, y, done);
   int cx = x + wd + 4;
-  g->drawRFrame(cx - 4, y - 50, wc + 8, 60, 6);
+  g->drawRFrame(cx - 5, y - 51, wc + 10, 62, 6);
   g->drawStr(cx, y, cur);
-  g->setFont(u8g2_font_helvR10_tr);
-  drawCentered(W / 2, 170, "UP / DOWN: change digit    RIGHT: next digit    LEFT: delete");
-  drawCentered(W / 2, 190, "SELECT: send the number    BACK: back");
+  // small arrows above and below the box: UP / DOWN change this digit
+  g->drawTriangle(cx + wc / 2 - 6, y - 55, cx + wc / 2 + 6, y - 55, cx + wc / 2, y - 62);
+  g->drawTriangle(cx + wc / 2 - 6, y + 15, cx + wc / 2 + 6, y + 15, cx + wc / 2, y + 22);
+  int hw1 = drawHints(0, 0, "{UP}{DOWN} Digit    {RIGHT} Next digit    {LEFT} Delete", false);
+  drawHints(W / 2 - hw1 / 2, 176, "{UP}{DOWN} Digit    {RIGHT} Next digit    {LEFT} Delete", true);
   if (num_send[0]) {
-    char b[48]; snprintf(b, sizeof(b), "sending %s ...", num_send);
+    char b[48]; snprintf(b, sizeof(b), "Sending %s ...", num_send);
     g->setFont(u8g2_font_helvB12_tr);
-    drawCentered(W / 2, 222, b);
+    drawCentered(W / 2, 212, b);
+  } else {
+    g->setFont(u8g2_font_helvR10_tr);
+    drawCentered(W / 2, 210, "The digits are sent one after another, like typing them.");
   }
-  char line[120]; lastSentLine(line, sizeof(line));
-  drawFooter(line, "Sends the digit keys one after another, like typing on the TV remote");
+  drawFooterSent("{OK} Send the number    {BACK} Back");
 }
 
 void drawAllKeys() {
   int p = settings::active();
   drawHeader("All keys", irdb::profileName(p));
   int c0 = irdb::profileFirstCode(p), n = irdb::profileCodeCount(p);
-  drawList(n + 1, [&](int i, char *b, size_t sz) {
-    if (i == 0) { snprintf(b, sz, "< Back"); return; }
-    const IrCode &c = irdb::code(c0 + i - 1);
-    snprintf(b, sz, "%s   (%s)", irdb::codeName(c0 + i - 1), irProtoName(c.proto));
+  drawList(n, [&](int i, Row &r) {
+    const IrCode &c = irdb::code(c0 + i);
+    snprintf(r.text, sizeof(r.text), "%s", irdb::codeName(c0 + i));
+    snprintf(r.value, sizeof(r.value), "%s", irProtoName(c.proto));
   });
-  char line[120]; lastSentLine(line, sizeof(line));
-  drawFooter(line, "UP/DOWN: move  |  SELECT: send (hold repeats)  |  BACK: back");
+  drawFooterSent("{OK} Send    {OK hold} Repeat    {BACK} Back");
 }
 
 void drawMenu() {
-  drawHeader("Menu", "devices & tools");
-  drawList(n_menu, [&](int i, char *b, size_t sz) {
+  drawHeader("Menu", "");
+  int first_tool = settings::favCount();
+  drawList(n_menu, [&](int i, Row &r) {
     int m = menu_items[i];
+    r.rule = i == first_tool || m == M_POWER;
     switch (m) {
-      case M_BACK:   snprintf(b, sz, "< Back to remote"); break;
-      case M_BROWSE: snprintf(b, sz, "Browse brands (%d in database)", irdb::numBrands()); break;
-      case M_SCAN:   snprintf(b, sz, "Code search (find codes for your device)"); break;
-      case M_REMOVE: snprintf(b, sz, "Remove current device from list"); break;
+      case M_BROWSE: snprintf(r.text, sizeof(r.text), "Add a device: pick the brand"); r.more = true; break;
+      case M_SCAN:   snprintf(r.text, sizeof(r.text), "Add a device: code search"); r.more = true; break;
+      case M_REMOVE: snprintf(r.text, sizeof(r.text), "Remove the current device"); break;
       case M_POWER: {
         static const char *const names[LED_POWER_LEVELS] = LED_POWER_NAMES;
-        snprintf(b, sz, "LED power: %s  (SELECT = change)", names[settings::ledPower()]);
+        snprintf(r.text, sizeof(r.text), "LED power");
+        snprintf(r.value, sizeof(r.value), "%s", names[settings::ledPower()]);
         break;
       }
       case M_SOUND:
-        if (!sound::ready()) snprintf(b, sz, "Sound: %s", sound::status());
-        else if (settings::soundMuted()) snprintf(b, sz, "Sound: muted  (volume %d of %d)", settings::soundVolume(), SOUND_VOLUME_MAX);
-        else snprintf(b, sz, "Sound: volume %d of %d", settings::soundVolume(), SOUND_VOLUME_MAX);
+        snprintf(r.text, sizeof(r.text), "Key sounds");
+        if (!sound::ready()) snprintf(r.value, sizeof(r.value), "%s", sound::status());
+        else if (settings::soundMuted()) snprintf(r.value, sizeof(r.value), "muted");
+        else snprintf(r.value, sizeof(r.value), "volume %d of %d", settings::soundVolume(), SOUND_VOLUME_MAX);
         break;
       case M_WIFI: {
         String s = settings::wifiSsid();
-        snprintf(b, sz, "Wi-Fi network: %s", s.length() ? s.c_str() : "not set");
+        snprintf(r.text, sizeof(r.text), "Wi-Fi");
+        snprintf(r.value, sizeof(r.value), "%s", s.length() ? s.c_str() : "not set");
+        r.more = true;
         break;
       }
-      case M_STATUS: snprintf(b, sz, "Status: battery, SD card, Wi-Fi"); break;
+      case M_STATUS: snprintf(r.text, sizeof(r.text), "Status"); r.more = true; break;
       default:
-        snprintf(b, sz, "%s %s - %s", m == settings::active() ? "*" : " ",
-                 irdb::brandName(irdb::profileBrand(m)), irdb::profileName(m));
+        r.mark = m == settings::active() ? 2 : 1;
+        snprintf(r.text, sizeof(r.text), "%s", irdb::brandName(irdb::profileBrand(m)));
+        snprintf(r.value, sizeof(r.value), "%s", irdb::profileName(m));
     }
   });
-  if (sel < n_menu && menu_items[sel] == M_SOUND)
-    drawFooter("Sounds: a click on each key press.", "LEFT/RIGHT: quieter / louder  |  SELECT: mute / unmute  |  BACK: back");
-  else
-    drawFooter("Your devices are listed here; * = active.", "UP/DOWN: move  |  SELECT/RIGHT: choose  |  BACK: back");
+  int m = sel < n_menu ? menu_items[sel] : M_STATUS;
+  switch (m) {
+    case M_BROWSE: { char b[64]; snprintf(b, sizeof(b), "%d brands in the code database.", irdb::numBrands());
+                     drawFooter(b, "{OK} Open    {BACK} Remote"); break; }
+    case M_SCAN:   drawFooter("Tries codes one by one until your device reacts.", "{OK} Open    {BACK} Remote"); break;
+    case M_REMOVE: drawFooter("Takes it off this list. The codes stay in the database.", "{OK} Remove    {BACK} Remote"); break;
+    case M_POWER:  drawFooter("Full for long range; Half and Low save the AA cells.", "{OK} Change    {BACK} Remote"); break;
+    case M_SOUND:  drawFooter("A click on each key press.", "{LEFT}{RIGHT} Volume    {OK} Mute    {BACK} Remote"); break;
+    case M_WIFI:   drawFooter("Your home network, for the web remote.", "{OK} Open    {BACK} Remote"); break;
+    case M_STATUS: drawFooter("Batteries, SD card, web addresses.", "{OK} Open    {BACK} Remote"); break;
+    default:       drawFooter("Your devices. The dot marks the one in use.", "{OK} Use this device    {BACK} Remote");
+  }
 }
 
 void drawLetters() {
-  drawHeader(browse_for_scan ? "Code search" : "Browse", "first letter of the brand");
-  const int COLS = 8, TW = 47, TH = 38, X0 = 4, Y0 = HEADER_H + 8;
+  drawHeader(browse_for_scan ? "Code search" : "Add a device", "brand's first letter");
+  const int COLS = LETTER_COLS, TW = 54, TH = 52, X0 = 5, Y0 = HEADER_H + 6;
   if (sel >= n_letters) sel = 0;
   if (sel < 0) sel = n_letters - 1;
-  g->setFont(u8g2_font_helvB14_tr);
+  g->setFont(u8g2_font_helvB18_tr);
   for (int i = 0; i < n_letters; i++) {
     int x = X0 + (i % COLS) * (TW + 2), y = Y0 + (i / COLS) * (TH + 3);
-    char s[8];
-    if (letters[i] == '<') strcpy(s, "<");
-    else { s[0] = letters[i]; s[1] = 0; }
-    if (i == sel) { g->drawRBox(x, y, TW, TH, 5); g->setDrawColor(0); }
-    else g->drawRFrame(x, y, TW, TH, 5);
-    drawCentered(x + TW / 2, y + TH / 2 + 7, s);
+    char s[2] = {letters[i], 0};
+    if (i == sel) { g->drawRBox(x, y, TW, TH, 6); g->setDrawColor(0); }
+    else g->drawRFrame(x, y, TW, TH, 6);
+    drawCentered(x + TW / 2, y + TH / 2 + 9, s);
     g->setDrawColor(1);
   }
-  drawFooter(nullptr, "Arrows: move  |  SELECT: choose  |  BACK: back");
+  drawFooter(nullptr, "{OK} Choose    {BACK} Back        # = other brands (3M, ...)");
 }
 
 void drawBrands() {
   char t[24]; snprintf(t, sizeof(t), "Brands: %c", cur_letter);
-  drawHeader(t, browse_for_scan ? "code search" : "browse");
-  drawList(n_brand_list, [&](int i, char *b, size_t sz) {
+  drawHeader(t, browse_for_scan ? "code search" : "");
+  drawList(n_brand_list, [&](int i, Row &r) {
     int br = brand_list[i];
-    if (br < 0) snprintf(b, sz, "< Back");
-    else snprintf(b, sz, "%s   (%d)", irdb::brandName(br), irdb::brandProfileCount(br));
+    int n = irdb::brandProfileCount(br);
+    snprintf(r.text, sizeof(r.text), "%s", irdb::brandName(br));
+    snprintf(r.value, sizeof(r.value), "%d remote%s", n, n == 1 ? "" : "s");
+    r.more = true;
   });
-  drawFooter(nullptr, "UP/DOWN: move (hold = fast)  |  SELECT/RIGHT: choose  |  BACK: back");
+  drawFooter(nullptr, "{OK} Choose    {BACK} Back        hold {UP}{DOWN} = fast");
 }
 
 void drawProfiles() {
-  drawHeader(irdb::brandName(cur_brand), "choose the remote / code set");
+  drawHeader(irdb::brandName(cur_brand), "choose the remote");
   int p0 = irdb::brandFirstProfile(cur_brand), n = irdb::brandProfileCount(cur_brand);
-  drawList(n + 1, [&](int i, char *b, size_t sz) {
-    if (i == 0) { snprintf(b, sz, "< Back"); return; }
-    int p = p0 + i - 1;
-    snprintf(b, sz, "[%s] %s  (%d keys)", IR_CAT_NAMES[irdb::profileCategory(p)], irdb::profileName(p),
-             irdb::profileCodeCount(p));
+  drawList(n, [&](int i, Row &r) {
+    int p = p0 + i;
+    snprintf(r.text, sizeof(r.text), "%s", irdb::profileName(p));
+    snprintf(r.value, sizeof(r.value), "%s, %d keys", IR_CAT_NAMES[irdb::profileCategory(p)], irdb::profileCodeCount(p));
   });
-  drawFooter("Pick the closest model; try Code search if none works.",
-             "UP/DOWN: move  |  SELECT/RIGHT: use this device  |  BACK: back");
+  drawFooter("Pick the closest model. If none works, try a code search.", "{OK} Use this remote    {BACK} Back");
 }
 
-// "Search in" list for code search: < Back, All brands, each brand group, Pick one brand...
-// item i: 0 = back, 1 = all, 2..1+groups = group i-2, last = pick a brand
-int scanSrcCount() { return irdb::numGroups() + 3; }
+// "Search in" list for code search: All brands, each brand group, Pick one brand...
+// item i: 0 = all, 1..groups = group i-1, last = pick a brand
+int scanSrcCount() { return irdb::numGroups() + 2; }
 
 void drawScanSrc() {
   drawHeader("Code search", "where to search");
-  drawList(scanSrcCount(), [&](int i, char *b, size_t sz) {
+  drawList(scanSrcCount(), [&](int i, Row &r) {
     int ng = irdb::numGroups();
-    if (i == 0) snprintf(b, sz, "< Back");
-    else if (i == 1) snprintf(b, sz, "All brands (%d)", irdb::numBrands());
-    else if (i - 2 < ng) snprintf(b, sz, "%s  (%d brands)", irdb::groupName(i - 2), irdb::groupBrandCount(i - 2));
-    else snprintf(b, sz, "Pick a single brand...");
+    r.more = true;
+    if (i == 0) { snprintf(r.text, sizeof(r.text), "All brands"); snprintf(r.value, sizeof(r.value), "%d brands", irdb::numBrands()); }
+    else if (i - 1 < ng) { snprintf(r.text, sizeof(r.text), "%s", irdb::groupName(i - 1));
+                           snprintf(r.value, sizeof(r.value), "%d brands", irdb::groupBrandCount(i - 1)); }
+    else { snprintf(r.text, sizeof(r.text), "One brand..."); r.rule = true; }
   });
-  drawFooter("Narrower = fewer codes to try. Duplicates are skipped.", "UP/DOWN: move  |  SELECT/RIGHT: choose  |  BACK: back");
+  drawFooter("Narrower = fewer codes to try. Duplicates are skipped.", "{OK} Choose    {BACK} Back");
 }
 
 void drawScanCat() {
-  drawHeader("Code search", "device type");
-  drawList(n_cat_list + 1, [&](int i, char *b, size_t sz) {
-    if (i == 0) { snprintf(b, sz, "< Back"); return; }
-    int c = cat_list[i - 1];
-    snprintf(b, sz, "%s  (%d remotes)", c < 0 ? "All types" : catLabel(c), cat_count[i - 1]);
+  drawHeader("Code search", "kind of device");
+  drawList(n_cat_list, [&](int i, Row &r) {
+    int c = cat_list[i];
+    snprintf(r.text, sizeof(r.text), "%s", c < 0 ? "All kinds" : catLabel(c));
+    snprintf(r.value, sizeof(r.value), "%d remote%s", cat_count[i], cat_count[i] == 1 ? "" : "s");
+    r.more = true;
   });
-  drawFooter("Choosing the type skips codes for other kinds of device.", "UP/DOWN: move  |  SELECT/RIGHT: choose  |  BACK: back");
+  drawFooter("Choosing the kind skips codes for other devices.", "{OK} Choose    {BACK} Back");
 }
 
 void drawScanKey() {
-  drawHeader("Code search", scan_cat >= 0 ? catLabel(scan_cat)
-                            : cur_brand >= 0 ? irdb::brandName(cur_brand)
-                            : scan_group >= 0 ? irdb::groupName(scan_group) : "all brands");
-  drawList(N_SCAN_KEYS + 1, [&](int i, char *b, size_t sz) {
-    if (i == 0) snprintf(b, sz, "< Back");
-    else snprintf(b, sz, "Test with: %s", IR_KEY_LABELS[SCAN_KEYS[i - 1]]);
+  drawHeader("Code search", "key to test with");
+  drawList(N_SCAN_KEYS, [&](int i, Row &r) {
+    snprintf(r.text, sizeof(r.text), "%s", IR_KEY_LABELS[SCAN_KEYS[i]]);
+    r.more = true;
   });
-  drawFooter("Aim at the device. Each step sends a different code.",
-             "UP/DOWN: move  |  SELECT/RIGHT: start  |  BACK: back");
+  drawFooter("Aim at the device. Each step sends a different code.", "{OK} Start    {BACK} Back");
 }
 
 void drawScan() {
   drawHeader("Code search", IR_KEY_LABELS[scan_key]);
-  g->setFont(u8g2_font_helvB12_tr);
   if (n_scan == 0) {
-    g->drawStr(12, 70, "No code sets with this key here.");
-    g->setFont(u8g2_font_helvR10_tr);
-    g->drawStr(12, 96, "Press BACK to pick another key or type.");
-  } else {
-    int c = scan_cands[scan_pos].code;
-    int p = scan_cands[scan_pos].profile;
-    char b[96];
-    g->setFont(u8g2_font_logisoso32_tn);
-    snprintf(b, sizeof(b), "%d/%d", scan_pos + 1, n_scan);
-    drawCentered(W / 2, 90, b);
     g->setFont(u8g2_font_helvB14_tr);
-    drawCenteredFit(125, irdb::brandName(irdb::profileBrand(p)));
+    g->drawStr(12, 70, "No remotes here have this key");
     g->setFont(u8g2_font_helvR12_tr);
-    snprintf(b, sizeof(b), "[%s] %s", IR_CAT_NAMES[irdb::profileCategory(p)], irdb::profileName(p));
-    drawCenteredFit(148, b);
-    const IrCode &x = irdb::code(c);
-    g->setFont(u8g2_font_helvR12_tr);
-    if (scan_cands[scan_pos].shared > 1)
-      snprintf(b, sizeof(b), "%s  (%s)  - same code on %u remotes", irdb::codeName(c), irProtoName(x.proto),
-               (unsigned)scan_cands[scan_pos].shared);
-    else
-      snprintf(b, sizeof(b), "%s  (%s)", irdb::codeName(c), irProtoName(x.proto));
-    drawCenteredFit(170, b);
-    g->setFont(u8g2_font_helvR10_tr);
-    drawCentered(W / 2, 205, "Did the device react?");
-    drawCentered(W / 2, 223, "Yes: hold SELECT to use this code set.");
-    drawCentered(W / 2, 241, "No: RIGHT for the next one (LEFT goes back one).");
+    g->drawStr(12, 98, "Press BACK and pick another key or kind.");
+    drawFooter(nullptr, "{BACK} Back");
+    return;
   }
-  char line[120]; lastSentLine(line, sizeof(line));
-  drawFooter(line, "RIGHT: next  |  LEFT: prev  |  SELECT: again, hold = use it  |  BACK: stop");
+  int p = scan_cands[scan_pos].profile;
+  char b[96];
+  // progress: "12 of 48" with a bar
+  g->setFont(u8g2_font_logisoso32_tn);
+  snprintf(b, sizeof(b), "%d", scan_pos + 1);
+  int nw = g->getStrWidth(b);
+  char of[24]; snprintf(of, sizeof(of), "of %d", n_scan);
+  g->setFont(u8g2_font_helvR12_tr);
+  int ow = g->getStrWidth(of);
+  int x = W / 2 - (nw + 8 + ow) / 2;
+  g->drawStr(x + nw + 8, 78, of);
+  g->setFont(u8g2_font_logisoso32_tn);
+  g->drawStr(x, 80, b);
+  g->drawFrame(40, 90, W - 80, 7);
+  g->drawBox(40, 90, max(3, (W - 80) * (scan_pos + 1) / n_scan), 7);
+  g->setFont(u8g2_font_helvB14_tr);
+  drawCenteredFit(124, irdb::brandName(irdb::profileBrand(p)));
+  g->setFont(u8g2_font_helvR12_tr);
+  snprintf(b, sizeof(b), "%s  (%s)", irdb::profileName(p), IR_CAT_NAMES[irdb::profileCategory(p)]);
+  drawCenteredFit(146, b);
+  g->setFont(u8g2_font_helvR10_tr);
+  if (scan_cands[scan_pos].shared > 1) {
+    snprintf(b, sizeof(b), "the same code is on %u remotes", (unsigned)scan_cands[scan_pos].shared);
+    drawCenteredFit(165, b);
+  }
+  // the two answers, as big as the question
+  g->drawRFrame(10, 178, 186, 76, 6);
+  g->drawRFrame(204, 178, 186, 76, 6);
+  g->setFont(u8g2_font_helvB12_tr);
+  drawCentered(103, 199, "It reacted");
+  drawCentered(297, 199, "Nothing happened");
+  int w1 = drawHints(0, 0, "{OK hold} Use this remote", false);
+  drawHints(103 - w1 / 2, 224, "{OK hold} Use this remote", true);
+  int w2 = drawHints(0, 0, "{RIGHT} Next code", false);
+  drawHints(297 - w2 / 2, 224, "{RIGHT} Next code", true);
+  g->setFont(u8g2_font_helvR08_tr);
+  drawCentered(103, 245, "OK = send it again");
+  drawCentered(297, 245, "LEFT = previous code");
+  drawFooterSent("{RIGHT} Next    {LEFT} Previous    {OK} Again    {BACK} Stop");
 }
 
 void drawStatus() {
   drawHeader("Status", "");
-  g->setFont(u8g2_font_helvR10_tr);
   char b[112];
-  int y = 52;
-  const int DY = 19;
+  const int LX = 10, VX = 104, DY = 18;
+  int y = 50;
+  auto label = [&](const char *t) { g->setFont(u8g2_font_helvB10_tr); g->drawStr(LX, y, t); g->setFont(u8g2_font_helvR10_tr); };
+  auto value = [&](const char *t) { drawClipped(VX, y, W - VX - 8, t); y += DY; };
+  auto battery = [&](int pct, float volts, const char *extra) {
+    drawBattery(VX, y - 10, pct);
+    if (pct < 0) snprintf(b, sizeof(b), "%s", extra);
+    else snprintf(b, sizeof(b), "%d%%   %.2f V%s%s", pct, volts, *extra ? "   " : "", extra);
+    drawClipped(VX + 30, y, W - VX - 38, b); y += DY;
+  };
   float v = hw::packVolts();
-  if (isnan(v) || v < 1) snprintf(b, sizeof(b), "AA pack (LEDs):  out (no cells in)");
-  else snprintf(b, sizeof(b), "AA pack (LEDs):  %.2f V  (%d %%)%s", v, hw::packPercent(),
-                batteryLow() ? "  LOW - swap in charged cells" : "");
-  g->drawStr(10, y, b); y += DY;
+  label("AA cells");
+  if (isnan(v) || v < 1) battery(-1, 0, "none in - the LEDs are off");
+  else battery(hw::packPercent(), v, batteryLow() ? "LOW - put in charged cells" : "");
   float sv = hw::screenVolts();
-  if (sv < 2.0f) snprintf(b, sizeof(b), "Screen battery:  none / not readable");
-  else snprintf(b, sizeof(b), "Screen battery:  %.2f V  (%d %%)", sv, hw::screenPercent());
-  g->drawStr(10, y, b); y += DY;
+  label("Screen");
+  if (sv < 2.0f) battery(-1, 0, "battery not readable");
+  else battery(hw::screenPercent(), sv, "");
   if (uint8_t st = hw::stuckKeys()) {
-    snprintf(b, sizeof(b), "Keys:  held since power-up - stuck or shorted?%s%s%s%s%s%s", st & (1 << KEYBIT_UP) ? " UP" : "",
+    label("Keys");
+    snprintf(b, sizeof(b), "stuck or shorted:%s%s%s%s%s%s", st & (1 << KEYBIT_UP) ? " UP" : "",
              st & (1 << KEYBIT_DOWN) ? " DOWN" : "", st & (1 << KEYBIT_LEFT) ? " LEFT" : "",
              st & (1 << KEYBIT_RIGHT) ? " RIGHT" : "", st & (1 << KEYBIT_SELECT) ? " SELECT" : "",
              st & (1 << KEYBIT_BACK) ? " BACK" : "");
-    drawClipped(10, y, W - 20, b); y += DY;
+    value(b);
   }
-  snprintf(b, sizeof(b), "SD card:  %s", sdstore::status()); drawClipped(10, y, W - 20, b); y += DY;
-  snprintf(b, sizeof(b), "Database:  %s", irdb::sourceName()); g->drawStr(10, y, b); y += DY;
-  snprintf(b, sizeof(b), "   %d brands, %d remotes, %d codes", irdb::numBrands(), irdb::numProfiles(), irdb::numCodes());
-  g->drawStr(10, y, b); y += DY;
+  label("SD card"); value(sdstore::status());
+  label("Codes");
+  snprintf(b, sizeof(b), "%d brands, %d remotes, %d codes", irdb::numBrands(), irdb::numProfiles(), irdb::numCodes());
+  value(b);
   if (irdb::numUserProfiles()) {
-    snprintf(b, sizeof(b), "   incl. %d of your own remotes from the SD card", irdb::numUserProfiles());
-    g->drawStr(10, y, b); y += DY;
+    snprintf(b, sizeof(b), "incl. %d of your own remotes (.ir files)", irdb::numUserProfiles());
+    value(b);
   }
-  y += 6;
-  snprintf(b, sizeof(b), "Wi-Fi \"%s\"  password  %s", WIFI_AP_SSID, WIFI_AP_PASSWORD); g->drawStr(10, y, b); y += DY;
-  snprintf(b, sizeof(b), "   web remote:  http://%s", ap_ip); g->drawStr(10, y, b); y += DY;
+  g->drawHLine(LX, y - 11, W - 2 * LX); y += 6;
+  label("Phone link");
+  snprintf(b, sizeof(b), "Wi-Fi \"%s\", password %s", WIFI_AP_SSID, WIFI_AP_PASSWORD); value(b);
+  snprintf(b, sizeof(b), "http://%s", ap_ip); value(b);
+  label("Home Wi-Fi");
   if (sta_ip[0]) {
-    snprintf(b, sizeof(b), "Home Wi-Fi \"%s\":  http://%s", sta_ssid, sta_ip); drawClipped(10, y, W - 20, b); y += DY;
-    snprintf(b, sizeof(b), "   or  http://%s.local", MDNS_HOSTNAME); g->drawStr(10, y, b);
+    snprintf(b, sizeof(b), "\"%s\"", sta_ssid); value(b);
+    snprintf(b, sizeof(b), "http://%s  or  http://%s.local", sta_ip, MDNS_HOSTNAME); value(b);
   } else {
     String s = settings::wifiSsid();
-    if (s.length()) snprintf(b, sizeof(b), "Home Wi-Fi \"%s\":  %s", s.c_str(), wifimgr::statusText());
-    else snprintf(b, sizeof(b), "Home Wi-Fi: not set (Menu > Wi-Fi network)");
-    drawClipped(10, y, W - 20, b);
+    if (s.length()) { snprintf(b, sizeof(b), "\"%s\"", s.c_str()); value(b); value(wifimgr::statusText()); }
+    else value("not set  (Menu > Wi-Fi)");
   }
-  drawFooter(nullptr, "Any key: back");
+  drawFooter(nullptr, "{any key} Back");
 }
 
 // ---- Wi-Fi ----
 bool wifiHasNetwork() { return settings::wifiSsid().length() > 0; }
-int wifiRows() { return wifiHasNetwork() ? 4 : 2; }
+int wifiRows() { return wifiHasNetwork() ? 3 : 1; }
 
 void drawWifi() {
   drawHeader("Wi-Fi", "your home network");
   if (sel != W_FORGET) forget_armed = false;
   String ssid = settings::wifiSsid(), pass = settings::wifiPass();
-  drawList(wifiRows(), [&](int i, char *b, size_t sz) {
+  drawList(wifiRows(), [&](int i, Row &r) {
     switch (i) {
-      case W_BACK: snprintf(b, sz, "< Back"); break;
       case W_NETWORK:
-        if (ssid.length()) snprintf(b, sz, "Network:  %s", ssid.c_str());
-        else snprintf(b, sz, "Network:  none - choose one");
+        snprintf(r.text, sizeof(r.text), "Network");
+        snprintf(r.value, sizeof(r.value), "%s", ssid.length() ? ssid.c_str() : "none - choose one");
+        r.more = true;
         break;
       case W_PASSWORD:
-        if (pass.length()) {
-          char stars[17];
-          int n = std::min((int)pass.length(), 16);
-          memset(stars, '*', n); stars[n] = 0;
-          snprintf(b, sz, "Password:  %s  (%u characters)", stars, (unsigned)pass.length());
-        } else {
-          snprintf(b, sz, "Password:  none (open network)");
-        }
+        snprintf(r.text, sizeof(r.text), "Password");
+        if (pass.length()) snprintf(r.value, sizeof(r.value), "%u characters", (unsigned)pass.length());
+        else snprintf(r.value, sizeof(r.value), "none (open network)");
+        r.more = true;
         break;
       case W_FORGET:
-        snprintf(b, sz, forget_armed ? "Forget it?  SELECT again = yes" : "Forget this network");
+        snprintf(r.text, sizeof(r.text), forget_armed ? "Forget it?  OK again = yes" : "Forget this network");
+        r.rule = true;
         break;
     }
   });
-  g->setFont(u8g2_font_helvR10_tr);
   char b[140];
-  int y = LIST_TOP + 4 * ROW_H + 20;
-  if (!ssid.length()) snprintf(b, sizeof(b), "Status:  not set - only the remote's own LR-Remote network");
-  else if (sta_ip[0]) snprintf(b, sizeof(b), "Status:  connected - web remote at http://%s", sta_ip);
-  else snprintf(b, sizeof(b), "Status:  %s", wifimgr::statusText());
-  drawClipped(10, y, W - 20, b); y += 19;
-  snprintf(b, sizeof(b), "Kept in:  %s", settings::wifiSource());
-  drawClipped(10, y, W - 20, b); y += 19;
-  if (wifi_msg[0]) { g->setFont(u8g2_font_helvB10_tr); drawClipped(10, y, W - 20, wifi_msg); }
-  drawFooter(nullptr, "UP/DOWN: move  |  SELECT: change  |  BACK: back");
+  const int LX = 10, VX = 84;
+  int y = LIST_TOP + 3 * ROW_H + 26;
+  auto line = [&](const char *lab, const char *val) {
+    g->setFont(u8g2_font_helvB10_tr); g->drawStr(LX, y, lab);
+    g->setFont(u8g2_font_helvR10_tr); drawClipped(VX, y, W - VX - 8, val); y += 19;
+  };
+  if (!ssid.length()) line("Status", "no home network set");
+  else if (sta_ip[0]) { snprintf(b, sizeof(b), "connected - web remote at http://%s", sta_ip); line("Status", b); }
+  else line("Status", wifimgr::statusText());
+  line("Kept in", settings::wifiSource());
+  if (wifi_msg[0]) { g->setFont(u8g2_font_helvB10_tr); drawClipped(LX, y, W - 20, wifi_msg); }
+  drawFooter(nullptr, sel == W_FORGET ? "{OK} Forget    {BACK} Back" : "{OK} Change    {BACK} Back");
 }
 
 const char *signalWord(int rssi) {
   return rssi >= -60 ? "strong" : rssi >= -70 ? "good" : rssi >= -80 ? "weak" : "very weak";
 }
 
-// Network list rows: 0 back, then the networks (or one "scanning" row), then "type a name", "scan again".
-int netRows() { return 1 + (n_net_list < 0 ? 1 : n_net_list) + 2; }
+// Network list rows: the networks (or one "scanning" row), then "type a name", "scan again".
+int netRows() { return (n_net_list < 0 ? 1 : n_net_list) + 2; }
 int netRowOther() { return netRows() - 2; }
 int netRowRescan() { return netRows() - 1; }
 
 void drawWifiNets() {
-  drawHeader("Wi-Fi", "nearby 2.4 GHz networks");
+  drawHeader("Wi-Fi", "nearby networks");
   String cur = settings::wifiSsid();
-  drawList(netRows(), [&](int i, char *b, size_t sz) {
-    if (i == 0) snprintf(b, sz, "< Back");
-    else if (i == netRowOther()) snprintf(b, sz, "Other: type the name (hidden network)...");
-    else if (i == netRowRescan()) snprintf(b, sz, "Scan again");
-    else if (n_net_list < 0) snprintf(b, sz, "   scanning...");
+  drawList(netRows(), [&](int i, Row &r) {
+    if (i == netRowOther()) { snprintf(r.text, sizeof(r.text), "Hidden network: type its name"); r.more = true; r.rule = true; }
+    else if (i == netRowRescan()) snprintf(r.text, sizeof(r.text), "Scan again");
+    else if (n_net_list < 0) snprintf(r.text, sizeof(r.text), "Scanning...");
     else {
-      const wifimgr::Network &n = net_list[i - 1];
-      snprintf(b, sz, "%s%s   (%s%s)", cur == n.ssid ? "* " : "", n.ssid, signalWord(n.rssi), n.open ? ", open" : "");
+      const wifimgr::Network &n = net_list[i];
+      r.mark = cur == n.ssid ? 2 : 1;
+      snprintf(r.text, sizeof(r.text), "%s", n.ssid);
+      snprintf(r.value, sizeof(r.value), "%s%s", signalWord(n.rssi), n.open ? ", open" : "");
     }
   });
-  char line[64];
+  char line[80];
   if (n_net_list < 0) snprintf(line, sizeof(line), "Scanning for networks...");
   else if (n_net_list == 0) snprintf(line, sizeof(line), "No networks found - try Scan again");
-  else snprintf(line, sizeof(line), "%d network%s found;  * = the one in use", n_net_list, n_net_list == 1 ? "" : "s");
-  drawFooter(line, "UP/DOWN: move  |  SELECT: choose  |  BACK: back");
+  else snprintf(line, sizeof(line), "%d found (2.4 GHz only). The dot marks the one in use.", n_net_list);
+  drawFooter(line, "{OK} Choose    {BACK} Back");
 }
 
 // ---- keyboard ----
@@ -946,7 +1107,7 @@ void drawText() {
     }
   }
   drawFooter(text_err[0] ? text_err : nullptr,
-             "SELECT: type  |  BACK: delete, hold = cancel  |  Done: save");
+             "{OK} Type    {BACK} Delete    {BACK hold} Cancel");
 }
 
 // Move on the keyboard. UP/DOWN go to the key in the next row nearest the current one (rows differ
@@ -1059,13 +1220,13 @@ void render() {
 // ---------------------------------------------------------------------------
 int listSize() {
   switch (screen) {
-    case S_ALLKEYS:  return irdb::profileCodeCount(settings::active()) + 1;
+    case S_ALLKEYS:  return irdb::profileCodeCount(settings::active());
     case S_MENU:     return n_menu;
     case S_BRANDS:   return n_brand_list;
-    case S_PROFILES: return irdb::brandProfileCount(cur_brand) + 1;
+    case S_PROFILES: return irdb::brandProfileCount(cur_brand);
     case S_SCANSRC:  return scanSrcCount();
-    case S_SCANCAT:  return n_cat_list + 1;
-    case S_SCANKEY:  return N_SCAN_KEYS + 1;
+    case S_SCANCAT:  return n_cat_list;
+    case S_SCANKEY:  return N_SCAN_KEYS;
     case S_WIFI:     return wifiRows();
     case S_WIFINETS: return netRows();
     default:         return 1;
@@ -1083,17 +1244,48 @@ void startSend(int code) {
   send_held = true;
 }
 
+// One screen back, landing on the row that led here.
 void back() {
   switch (screen) {
     case S_PAD: case S_NUMBER: case S_ALLKEYS: case S_MENU: go(S_REMOTE); break;
-    case S_LETTERS: go(browse_for_scan ? S_SCANSRC : S_MENU); break;
-    case S_SCANSRC: go(S_MENU); break;
-    case S_BRANDS:  go(S_LETTERS); break;
-    case S_PROFILES: go(S_BRANDS); break;
-    case S_SCANCAT: go(cur_brand >= 0 ? S_BRANDS : S_SCANSRC); break;
-    case S_SCANKEY: go(S_SCANCAT); break;
-    case S_SCAN:    go(S_SCANKEY); break;
-    case S_STATUS:  go(S_MENU); break;
+    case S_LETTERS:
+      if (browse_for_scan) go(S_SCANSRC, scanSrcCount() - 1);
+      else { go(S_MENU); sel = menuIndex(M_BROWSE); }
+      break;
+    case S_SCANSRC: go(S_MENU); sel = menuIndex(M_SCAN); break;
+    case S_BRANDS: {
+      go(S_LETTERS);
+      const char *at = (const char *)memchr(letters, cur_letter, n_letters);
+      if (at) sel = (int)(at - letters);
+      break;
+    }
+    case S_PROFILES: {
+      int b = cur_brand;
+      go(S_BRANDS);
+      for (int i = 0; i < n_brand_list; i++) if (brand_list[i] == b) sel = i;
+      break;
+    }
+    case S_SCANCAT:
+      if (cur_brand >= 0) {
+        int b = cur_brand;
+        go(S_BRANDS);
+        for (int i = 0; i < n_brand_list; i++) if (brand_list[i] == b) sel = i;
+      } else {
+        go(S_SCANSRC, scan_group >= 0 ? scan_group + 1 : 0);
+      }
+      break;
+    case S_SCANKEY: {
+      int c = scan_cat;
+      go(S_SCANCAT);
+      for (int i = 0; i < n_cat_list; i++) if (cat_list[i] == c) sel = i;
+      break;
+    }
+    case S_SCAN: {
+      go(S_SCANKEY);
+      for (int i = 0; i < N_SCAN_KEYS; i++) if (SCAN_KEYS[i] == scan_key) sel = i;
+      break;
+    }
+    case S_STATUS:  go(S_MENU); sel = menuIndex(M_STATUS); break;
     case S_WIFI:    go(S_MENU); sel = menuIndex(M_WIFI); break;
     case S_WIFINETS: go(S_WIFI, W_NETWORK); break;
     case S_TEXT:    textCancel(); break;
@@ -1105,20 +1297,17 @@ void back() {
 void choose() {
   switch (screen) {
     case S_REMOTE:
+      if (n_grid == 0) { go(S_MENU); break; }      // no device yet: the menu is the only way on
       if (sel >= n_grid) break;
-      if (grid[sel] == TILE_MENU) go(S_MENU);
-      else if (grid[sel] == TILE_ALL) go(S_ALLKEYS);
+      if (grid[sel] == TILE_ALL) go(S_ALLKEYS);
       else if (grid[sel] == TILE_NAVPAD) { cur_pad = 0; go(S_PAD); }
       else if (grid[sel] == TILE_VOLPAD) { cur_pad = 1; go(S_PAD); }
       else if (grid[sel] == TILE_NUMBER) { num_len = 0; num_digits[0] = 0; num_cur = digitAvail(0) ? 0 : 1; go(S_NUMBER); }
       break;
-    case S_ALLKEYS:
-      if (sel == 0) go(S_REMOTE);
-      break;
     case S_MENU: {
+      if (sel >= n_menu) break;
       int m = menu_items[sel];
-      if (m == M_BACK) go(S_REMOTE);
-      else if (m == M_BROWSE) { browse_for_scan = false; go(S_LETTERS); }
+      if (m == M_BROWSE) { browse_for_scan = false; go(S_LETTERS); }
       else if (m == M_SCAN) { browse_for_scan = true; go(S_SCANSRC); }
       else if (m == M_REMOVE) { settings::removeFav(settings::active()); go(S_MENU); }
       else if (m == M_POWER) { settings::setLedPower((settings::ledPower() + 1) % LED_POWER_LEVELS); dirty = true; }
@@ -1133,42 +1322,35 @@ void choose() {
       break;
     }
     case S_LETTERS:
-      if (letters[sel] == '<') back();
-      else { cur_letter = letters[sel]; go(S_BRANDS); }
+      if (sel < n_letters) { cur_letter = letters[sel]; go(S_BRANDS); }
       break;
     case S_BRANDS:
-      if (brand_list[sel] < 0) go(S_LETTERS);
-      else {
+      if (sel < n_brand_list) {
         cur_brand = brand_list[sel];
         go(browse_for_scan ? S_SCANCAT : S_PROFILES);
       }
       break;
     case S_PROFILES:
-      if (sel == 0) go(S_BRANDS);
-      else { settings::setActive(irdb::brandFirstProfile(cur_brand) + sel - 1); go(S_REMOTE); }
+      if (sel < irdb::brandProfileCount(cur_brand)) { settings::setActive(irdb::brandFirstProfile(cur_brand) + sel); go(S_REMOTE); }
       break;
     case S_SCANSRC: {
       int ng = irdb::numGroups();
-      if (sel == 0) go(S_MENU);
-      else if (sel == 1) { cur_brand = -1; scan_group = -1; go(S_SCANCAT); }
-      else if (sel - 2 < ng) { cur_brand = -1; scan_group = sel - 2; go(S_SCANCAT); }
+      if (sel == 0) { cur_brand = -1; scan_group = -1; go(S_SCANCAT); }
+      else if (sel - 1 < ng) { cur_brand = -1; scan_group = sel - 1; go(S_SCANCAT); }
       else { scan_group = -1; go(S_LETTERS); }
       break;
     }
     case S_SCANCAT:
-      if (sel == 0) back();
-      else { scan_cat = cat_list[sel - 1]; go(S_SCANKEY); }
+      if (sel < n_cat_list) { scan_cat = cat_list[sel]; go(S_SCANKEY); }
       break;
     case S_SCANKEY:
-      if (sel == 0) back();
-      else { scan_key = SCAN_KEYS[sel - 1]; buildScan(); go(S_SCAN); scanSendCurrent(); }
+      if (sel < N_SCAN_KEYS) { scan_key = SCAN_KEYS[sel]; buildScan(); go(S_SCAN); scanSendCurrent(); }
       break;
     case S_STATUS:
-      go(S_MENU);
+      back();
       break;
     case S_WIFI:
-      if (sel == W_BACK) back();
-      else if (sel == W_NETWORK) { n_net_list = -1; wifimgr::requestNetworks(); go(S_WIFINETS, 1); }
+      if (sel == W_NETWORK) { n_net_list = -1; wifimgr::requestNetworks(); go(S_WIFINETS); }
       else if (sel == W_PASSWORD) {
         pending_ssid = settings::wifiSsid();
         pending_secured = false;
@@ -1184,11 +1366,10 @@ void choose() {
       }
       break;
     case S_WIFINETS:
-      if (sel == 0) back();
-      else if (sel == netRowRescan()) { n_net_list = -1; wifimgr::requestNetworks(); dirty = true; }
+      if (sel == netRowRescan()) { n_net_list = -1; wifimgr::requestNetworks(); sel = 0; dirty = true; }
       else if (sel == netRowOther()) openText(T_SSID, String(""));
-      else if (n_net_list > 0) {
-        const wifimgr::Network &n = net_list[sel - 1];
+      else if (n_net_list > 0 && sel < n_net_list) {
+        const wifimgr::Network &n = net_list[sel];
         if (n.open) {                            // nothing to type
           char err[80];
           if (!applyWifi(n.ssid, "", err, sizeof(err))) snprintf(wifi_msg, sizeof(wifi_msg), "%s", err);
@@ -1222,9 +1403,9 @@ void gridMove(int k, int cols, int n) {
 void onKey(int k, Act a) {
   dirty = true;
   // BACK: one screen back everywhere. The pads handle it themselves (Nav pad: the device's Back key);
-  // on the remote screen, the top level, it does nothing.
+  // on the remote screen, the top level, it opens the menu.
   if (k == K_BACK && screen != S_PAD && screen != S_TEXT) {
-    if (a == A_PRESS && screen != S_REMOTE) back();
+    if (a == A_PRESS) { if (screen == S_REMOTE) go(S_MENU); else back(); }
     return;
   }
   // Menu > Sound: LEFT / RIGHT change the volume on the spot (SELECT mutes: choose()). Each step
@@ -1245,7 +1426,7 @@ void onKey(int k, Act a) {
         if (a == A_PRESS) {
           int p = settings::active();
           if (p >= 0 && sel < n_grid && grid[sel] >= 0) startSend(irdb::profileFindKey(p, (uint8_t)grid[sel]));
-          else choose();
+          else choose();                           // a pad / number / all-keys tile, or no device: the menu
         } else if (a == A_UP) stopSend();
       } else if (a == A_PRESS || a == A_REPEAT) {
         gridMove(k, GRID_COLS, n_grid);
@@ -1289,8 +1470,7 @@ void onKey(int k, Act a) {
     case S_ALLKEYS: {
       if (k == K_SELECT) {
         if (a == A_PRESS) {
-          if (sel == 0) go(S_REMOTE);
-          else startSend(irdb::profileFirstCode(settings::active()) + sel - 1);
+          if (sel < listSize()) startSend(irdb::profileFirstCode(settings::active()) + sel);
         } else if (a == A_UP) stopSend();
       } else if (k == K_UP && (a == A_PRESS || a == A_REPEAT)) { sel--; if (sel < 0) sel = listSize() - 1; }
       else if (k == K_DOWN && (a == A_PRESS || a == A_REPEAT)) { sel++; if (sel >= listSize()) sel = 0; }
@@ -1303,7 +1483,7 @@ void onKey(int k, Act a) {
         if (a == A_RELEASE) choose();
         else if (a == A_LONG) back();
       } else if (a == A_PRESS || a == A_REPEAT) {
-        gridMove(k, 8, n_letters);
+        gridMove(k, LETTER_COLS, n_letters);
       }
       break;
     }
@@ -1322,7 +1502,7 @@ void onKey(int k, Act a) {
       break;
     }
     case S_STATUS:
-      if (a == A_PRESS) go(S_MENU);
+      if (a == A_PRESS) back();
       break;
     // ---- keyboard: arrows move, SELECT types, BACK deletes (held = leave) ----
     case S_TEXT: {
@@ -1443,6 +1623,7 @@ void loop() {
   }
   uint32_t status_every = screen == S_WIFI ? 2000 : 10000;     // Wi-Fi screen: connection status
   if (millis() - last_status_draw > status_every) { last_status_draw = millis(); dirty = true; }   // battery
+  if (ir_shown && !irActive()) dirty = true;                    // the send is over: clear the header's IR mark
   if (dirty) render();
 }
 

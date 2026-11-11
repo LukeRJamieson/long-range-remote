@@ -35,6 +35,7 @@ void enterStandby() {
     g_standby = true;
     logln("Idle: standby - the web page still works on the home network");
     wifimgr::standby(true);
+    ui::requestRedraw();          // the header shows "Standby"
   }
   if (g_slow) return;
   g_slow = true;
@@ -49,6 +50,7 @@ void leaveStandby() {
   standbyBusy();
   g_standby = false;
   wifimgr::standby(false);
+  ui::requestRedraw();
   logln("Idle: out of standby");
 }
 
@@ -73,6 +75,8 @@ void sleepNow() {
 }  // namespace
 
 void begin() { g_last = millis(); }
+
+bool inStandby() { return g_standby; }
 
 void activity() {
   g_last = millis();

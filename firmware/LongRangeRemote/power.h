@@ -11,5 +11,6 @@
 namespace power {
 void begin();
 void loop();          // call from the Arduino loop()
+bool inStandby();      // on the home network with the access point off (see config.h, HOME_STANDBY_MIN)
 void activity();      // something happened (key, web request): restart the idle timer
 }

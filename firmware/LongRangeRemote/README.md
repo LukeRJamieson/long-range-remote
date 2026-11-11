@@ -91,23 +91,28 @@ page shows the same message, with the upload button.
 
 | Where | Keys |
 |---|---|
-| Anywhere | **BACK goes one screen back.** (On the remote screen, the top level, it does nothing.) |
-| Lists (menu, brands, models) | UP/DOWN move (hold = fast). RIGHT or SELECT chooses. BACK (or LEFT, or holding SELECT) goes back |
+| Anywhere | **BACK goes one screen back.** On the remote screen, the top level, it opens the **menu**. The bottom line of every screen shows what the keys do there (OK = SELECT) |
+| Lists (menu, brands, models) | UP/DOWN move (hold = fast). RIGHT or SELECT chooses. BACK (or LEFT, or holding SELECT) goes back, to the row you came from |
 | Remote screen (grid of the device's keys) | Arrows move. **SELECT sends**, and holding it repeats (volume, channel) |
 | **Vol pad** | UP/DOWN = volume, LEFT/RIGHT = channel −/+ (or preset / tune / track), SELECT = mute. BACK leaves |
 | **Nav pad** | Arrows = the device's arrows, SELECT = OK, BACK = the device's own Back / Return (for disc and streaming menus). Hold BACK or SELECT to leave |
 | **Ch 123** (channel number) | UP/DOWN pick the digit, RIGHT adds the next digit, LEFT deletes. SELECT sends the number. BACK leaves |
 | Code search | RIGHT next code, LEFT previous code (each one is sent). SELECT sends again. **Hold SELECT = "that worked, use it"**. BACK stops |
 
-- Pad and number tiles only appear when the device has those keys.
+- Pad and number tiles only appear when the device has those keys. Tiles with a double border
+  (Vol pad, Nav pad, Ch 123, All keys) open a screen; the others send a code.
+- The remote screen remembers where you were when you come back from a pad or the menu.
+- **Header:** the two batteries (AA = the LED pack, Scr = the screen's own cell), `IR` while a code
+  goes out, and the network state: `AP` (only the remote's own network), `WiFi` (on the home
+  network), `Standby` or `Asleep`.
 - Channel numbers go out 350 ms apart, because TVs ignore digits sent faster than a person types.
 
 ### Finding your device
 
-- **Menu → Browse brands:** first letter → brand → model.
+- **Menu → Add a device: pick the brand:** first letter → brand → model.
   - Model names come from Flipper-IRDB (real remotes).
   - IRDB entries are code sets: "TV 7,7" means device 7, sub-device 7.
-- **Menu → Code search:** choose where to search (a brand, a group such as "Popular TV
+- **Menu → Add a device: code search:** choose where to search (a brand, a group such as "Popular TV
   brands", or all), then the device type, then a test key (Power, Vol +, Mute, CH +, ...).
   Step through until the device reacts and hold SELECT.
   - Remotes that share a code are tried only once.
