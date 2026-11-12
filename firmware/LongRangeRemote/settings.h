@@ -31,6 +31,13 @@ void setSoundVolume(int level);    // clamps, saves and applies it
 bool soundMuted();
 void setSoundMuted(bool m);        // saves and applies it; the volume is kept for unmuting
 
+// Code search Auto: time between codes in ms, one of SCAN_AUTO_STEPS_MS (saved). Used by the screen
+// and the web page, so both run at the same speed.
+int  scanAutoMs();
+void setScanAutoMs(int ms);        // snaps to the nearest step and saves it
+int  scanAutoStep(int ms, int dir);// the step next to ms: dir +1 slower, -1 faster (stops at the ends), 0 nearest
+void formatSeconds(int ms, char *out, size_t n);   // 750 -> "0.75 s", 1000 -> "1 s"
+
 // Home Wi-Fi network. Read from /wifi.txt on the SD card at start-up (format: wifi_file.h). If the
 // card has no wifi.txt, the defaults in config.h (HOME_WIFI_SSID / HOME_WIFI_PASSWORD) are used and
 // written to a new wifi.txt, so the card always shows what the remote uses.

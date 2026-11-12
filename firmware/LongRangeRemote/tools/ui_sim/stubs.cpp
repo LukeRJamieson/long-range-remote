@@ -70,6 +70,10 @@ void removeFav(int p) { favs.erase(std::remove(favs.begin(), favs.end(), p), fav
 int active() { return act; }
 void setActive(int p) { act = p; if (std::find(favs.begin(), favs.end(), p) == favs.end()) favs.push_back(p); }
 int ledPower() { return ledp; } void setLedPower(int l) { ledp = l; }
+static int automs = 1000;
+int scanAutoMs() { return automs; } void setScanAutoMs(int ms) { automs = scanAutoStep(ms, 0); }
+int scanAutoStep(int ms, int dir) { static const int S[] = SCAN_AUTO_STEPS_MS; int n = 6, b = 0; for (int i = 1; i < n; i++) if (abs(S[i] - ms) < abs(S[b] - ms)) b = i; b += dir; b = b < 0 ? 0 : b >= n ? n - 1 : b; return S[b]; }
+void formatSeconds(int ms, char *o, size_t n) { if (ms % 1000 == 0) snprintf(o, n, "%d s", ms / 1000); else if (ms % 100 == 0) snprintf(o, n, "%d.%d s", ms / 1000, ms % 1000 / 100); else snprintf(o, n, "%d.%02d s", ms / 1000, ms % 1000 / 10); }
 int soundVolume() { return vol; } void setSoundVolume(int l) { vol = l; } bool soundMuted() { return muted; } void setSoundMuted(bool m) { muted = m; }
 String wifiSsid() { return ss; } String wifiPass() { return pw; } const char *wifiSource() { return "wifi.txt on the SD card"; }
 bool setWifi(const String &s, const String &p, char *msg, size_t n) { ss = s; pw = p; snprintf(msg, n, "Saved to wifi.txt"); return true; }

@@ -16,6 +16,7 @@
 //   GET  /api/disc?a=...               Discover: a device that is not in the database (see hDisc)
 //   POST /api/upload?kind=ir&path=P    upload one of your own .ir files to /ir/P on the SD card
 //   /api/power?l=N                     LED power level (0 = full); the level is also in /api/state (lp, lpn)
+//   /api/scanauto?ms=N                 Code search Auto: ms between codes (shared with the screen; also in /api/state, auto)
 //   /api/restart                       restart (loads the new codes)
 //   POST /api/format?confirm=FORMAT&keep=1|0   format the SD card (ERASES IT). keep=1: put the code
 //                                      database (from memory) and wifi.txt back afterwards
@@ -109,6 +110,7 @@ void hState() {
   j.raw(",\"sta\":").str(wifimgr::ip().c_str());
   j.raw(",\"ssid\":").str(wifimgr::ssid().c_str());
   j.raw(",\"irout\":").str(irtx::outputDesc());
+  j.raw(",\"auto\":").num(settings::scanAutoMs());          // Code search Auto: ms between codes
   {
     static const char *const lpn[LED_POWER_LEVELS] = LED_POWER_NAMES;
     j.raw(",\"lp\":").num(settings::ledPower()).raw(",\"lpn\":[");
@@ -379,6 +381,13 @@ void hPower() {
   server.send(200, "text/plain", String(settings::ledPower()));
 }
 
+// Code search Auto speed, shared with the remote's own code search screen (saved on the remote)
+void hScanAuto() {
+  if (server.hasArg("ms")) settings::setScanAutoMs(server.arg("ms").toInt());
+  ui::requestRedraw();
+  server.send(200, "text/plain", String(settings::scanAutoMs()));
+}
+
 void hFormat() {
   if (server.method() != HTTP_POST || server.arg("confirm") != "FORMAT") return badRequest("POST with confirm=FORMAT");
   bool keep = server.arg("keep") != "0";
@@ -437,6 +446,7 @@ void begin() {
   on("/api/groups", hGroups);
   on("/api/fav", hFav);
   on("/api/power", hPower);
+  on("/api/scanauto", hScanAuto);
   on("/api/restart", hRestart);
   on("/api/format", hFormat);
   server.on("/api/upload", HTTP_POST, hUploadDone, hUploadData);

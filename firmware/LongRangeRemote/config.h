@@ -124,10 +124,17 @@
 #define ES8311_ADDR       0x18     // CE pulled low
 #define SOUND_VOLUME_MAX     10    // volume steps; each is 3 dB, 10 = loudest
 #define SOUND_VOLUME_DEFAULT  5
+
+// Code search, Auto (on the remote's screen and on the web page): the time between one code and the
+// next. These are the steps offered (Menu > Code search Auto, UP on the code search screen, or the
+// web page); the choice is saved. A TV can take a second or two to react, so faster means stepping
+// back a few codes after it does.
+#define SCAN_AUTO_STEPS_MS    {500, 750, 1000, 1500, 2000, 3000}
+#define SCAN_AUTO_DEFAULT_MS  1000
 // The NS4150B takes ~30 ms to start after PA_CTRL goes high (NS4150 datasheet: start-up time 30 ms), so a
 // click played the moment it is switched on is lost - that was the silent first key press after power-up
 // (the amplifier had gone off 3 s after the start-up chime). It now stays on for a minute after a sound
-// (idle sleep switches it off anyway; it draws a few mA), and a sound never starts until it has been on
+// (it draws a few mA), and a sound never starts until it has been on
 // for SOUND_AMP_START_MS.
 #define SOUND_AMP_HOLD_MS  60000   // amplifier stays on this long after a sound (the next one is instant)
 #define SOUND_AMP_START_MS 45      // wait this long after switching it on before a sound

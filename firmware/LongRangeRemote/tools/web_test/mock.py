@@ -13,6 +13,7 @@ FAMS = [["NEC", "most Asian brands: TVs, amps, soundbars, LED lights", 256], ["N
 D = dict(mode="idle", all=0, done=0, fam=0, pos=0, func=0, fpos=0, learned=[], restart=0)
 LOG = []
 SENDS = []
+AUTO = [1000]
 def state(err=""):
     s = dict(mode=D["mode"], all=D["all"], done=D["done"], sending=0, restart=D["restart"], err=err)
     if D["mode"] != "idle":
@@ -32,10 +33,11 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/api/meta": return self.out(json.dumps(dict(keys=KEYS, cats=["TV", "AVR", "Other"], protos=["NEC1", "Sony12"])))
         if u.path == "/api/brands": return self.out(json.dumps([["Samsung", 2, 0], ["Sony", 2, 2]]))
         if u.path == "/api/groups": return self.out(json.dumps([["Most popular", 2, 4]]))
-        if u.path == "/api/state": return self.out(json.dumps(dict(active=-1, favs=[], db=dict(brands=2, profiles=4, codes=100), power=0, powers=["Full", "Half", "Low"], last=dict(seq=len(SENDS), label="Power", proto="NEC", frames=1))))
+        if u.path == "/api/state": return self.out(json.dumps(dict(active=-1, favs=[], db=dict(brands=2, profiles=4, codes=100), power=0, powers=["Full", "Half", "Low"], auto=AUTO[0], last=dict(seq=len(SENDS), label="Power", proto="NEC", frames=1))))
         if u.path == "/api/scan": return self.out(json.dumps([[100 + i, i, "Brand%d" % i, "Remote %d" % i, "Power", 1] for i in range(40)]))
         if u.path == "/api/send":
             import time; SENDS.append([time.time(), int(q.get("c", -1))]); return self.out("ok", "text/plain")
+        if u.path == "/api/scanauto": AUTO[0] = int(q["ms"]); return self.out(str(AUTO[0]), "text/plain")
         if u.path == "/sends": return self.out(json.dumps(SENDS))
         if u.path == "/api/disc":
             a = q.get("a", "state"); LOG.append(u.query)

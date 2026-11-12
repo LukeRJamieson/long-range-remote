@@ -15,6 +15,7 @@ Preferences prefs;
 int g_favs[MAX_FAVOURITES];
 int g_nfav = 0;
 int g_active = -1;
+int g_scan_auto_ms = SCAN_AUTO_DEFAULT_MS;   // Code search Auto: time between codes
 
 // Home Wi-Fi (see loadWifi)
 String g_wifi_ssid, g_wifi_pass;
@@ -115,6 +116,7 @@ void begin() {
   irtx::setPower(prefs.getUChar("ledpwr", 0));
   sound::setVolume(prefs.getUChar("sndvol", SOUND_VOLUME_DEFAULT));
   sound::setMuted(prefs.getBool("sndmute", false));
+  g_scan_auto_ms = scanAutoStep(prefs.getUShort("scanauto", SCAN_AUTO_DEFAULT_MS), 0);
 }
 
 int ledPower() { return irtx::power(); }
@@ -136,6 +138,32 @@ bool soundMuted() { return sound::muted(); }
 void setSoundMuted(bool m) {
   sound::setMuted(m);
   prefs.putBool("sndmute", m);
+}
+
+static const int SCAN_AUTO_STEPS[] = SCAN_AUTO_STEPS_MS;
+static const int N_SCAN_AUTO_STEPS = sizeof(SCAN_AUTO_STEPS) / sizeof(SCAN_AUTO_STEPS[0]);
+
+int scanAutoStep(int ms, int dir) {
+  int best = 0;                                   // nearest step to ms
+  for (int i = 1; i < N_SCAN_AUTO_STEPS; i++)
+    if (abs(SCAN_AUTO_STEPS[i] - ms) < abs(SCAN_AUTO_STEPS[best] - ms)) best = i;
+  best += dir;
+  if (best < 0) best = 0;
+  if (best >= N_SCAN_AUTO_STEPS) best = N_SCAN_AUTO_STEPS - 1;
+  return SCAN_AUTO_STEPS[best];
+}
+
+int scanAutoMs() { return g_scan_auto_ms; }
+
+void setScanAutoMs(int ms) {
+  g_scan_auto_ms = scanAutoStep(ms, 0);
+  prefs.putUShort("scanauto", (uint16_t)g_scan_auto_ms);
+}
+
+void formatSeconds(int ms, char *out, size_t n) {
+  if (ms % 1000 == 0) snprintf(out, n, "%d s", ms / 1000);
+  else if (ms % 100 == 0) snprintf(out, n, "%d.%d s", ms / 1000, ms % 1000 / 100);
+  else snprintf(out, n, "%d.%02d s", ms / 1000, ms % 1000 / 10);
 }
 
 int favCount() { return g_nfav; }

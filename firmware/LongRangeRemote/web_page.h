@@ -268,6 +268,7 @@ async function refreshState(){
   const nd=$('#nodb');nd.hidden=STATE.db;
   if(!STATE.db)nd.textContent=STATE.card?('No code database loaded ('+STATE.sd+'). Go to Settings > SD card and upload irdb.bin (it is in the project folder firmware/sd_card).')
     :'No SD card. All IR codes are on the card: copy irdb.bin (project folder firmware/sd_card) to a FAT32 microSD card, insert it and restart.';
+  showSpeed(STATE.auto);
   const l=STATE.last;
   $('#last').textContent=l.seq?('Sent: '+l.label+'  ['+l.proto+'] x'+l.frames):'Nothing sent yet';
   const fv=$('#favs');fv.innerHTML='';
@@ -393,8 +394,11 @@ const autoSec=()=>+$('#sspeed').value||1;
 const stopAuto=()=>{if(AUTO){clearTimeout(AUTO);AUTO=null;AUTOGEN++;$('#sauto').innerHTML='Auto &#9654;'}};
 const autoNext=gen=>{AUTO=setTimeout(()=>autoTick(gen),Math.max(0,AUTOLAST+autoSec()*1000-Date.now()))};
 function autoTick(gen){scanStep(1).then(()=>{if(AUTO&&gen==AUTOGEN){AUTOLAST=Date.now();autoNext(gen)}})}
-try{const v=localStorage.getItem('lrr_auto_s');if(v&&[...$('#sspeed').options].some(o=>o.value==v))$('#sspeed').value=v;else $('#sspeed').value='1'}catch(e){$('#sspeed').value='1'}
-$('#sspeed').addEventListener('change',()=>{try{localStorage.setItem('lrr_auto_s',$('#sspeed').value)}catch(e){}updateCount();
+// The speed is saved on the remote and shared with its own code search screen (/api/scanauto)
+let SPEEDSET=0;
+const showSpeed=ms=>{if(!ms||Date.now()-SPEEDSET<3000)return;const v=String(ms/1000);if([...$('#sspeed').options].some(o=>o.value==v)&&$('#sspeed').value!=v){$('#sspeed').value=v;updateCount()}};
+$('#sspeed').value='1';
+$('#sspeed').addEventListener('change',()=>{SPEEDSET=Date.now();q('/api/scanauto?ms='+Math.round(autoSec()*1000));updateCount();
   if(AUTO){clearTimeout(AUTO);autoNext(AUTOGEN)}});   // running: the new speed counts from the last code
 // "Search in" values: "all", "g<group>", "b<brand>"
 const scanUrl=()=>{const v=$('#sbrand').value,t=$('#stype').value;let u='/api/scan?k='+KEYIDX[$('#skey').value]+'&t='+t;

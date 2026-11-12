@@ -173,9 +173,14 @@ const int N_SCAN_KEYS = sizeof(SCAN_KEYS);
 uint8_t scan_key = KEY_POWER;
 irdb::ScanCand *scan_cands = nullptr; int scan_cap = 0;   // sized numProfiles() at begin() (PSRAM)
 int n_scan = 0; int scan_pos = 0;
+// Code search Auto: steps to the next code by itself every settings::scanAutoMs()
+bool scan_auto = false;
+uint32_t scan_last_at = 0;            // when Auto last sent a code (or was started)
+bool scan_ok_stopped = false;         // OK stopped Auto: its release doesn't also send the code again
+char scan_msg[80] = "";               // one line on the code search screen (Auto stopped, speed changed)
 
 // Menu entries
-enum MenuItem { M_BROWSE = -100, M_DISCOVER, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_WIFI, M_STATUS };
+enum MenuItem { M_BROWSE = -100, M_DISCOVER, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_AUTO, M_WIFI, M_STATUS };
 int menu_items[MAX_FAVOURITES + 10]; int n_menu = 0;
 
 // Currently sending (a key held on a remote / pad screen)
@@ -527,6 +532,7 @@ void buildMenu() {
   if (settings::active() >= 0) menu_items[n_menu++] = M_REMOVE;
   menu_items[n_menu++] = M_POWER;
   menu_items[n_menu++] = M_SOUND;
+  menu_items[n_menu++] = M_AUTO;
   menu_items[n_menu++] = M_WIFI;
   menu_items[n_menu++] = M_STATUS;
 }
@@ -589,6 +595,7 @@ void buildDNames();                   // Discover: the list of key names (furthe
 void go(Screen s, int new_sel = 0) {
   if (screen == S_REMOTE) { remote_sel = sel; remote_scroll = scroll; }
   screen = s; sel = new_sel; scroll = 0; dirty = true;
+  if (s != S_SCAN) scan_auto = false;          // Auto only runs while its screen is showing
   // A key that is still held while the screen changes must not also act on the new screen.
   for (Key &k : keys) if (k.down) k.swallow = true;
   stopSend();
@@ -772,6 +779,12 @@ void drawMenu() {
         else if (settings::soundMuted()) snprintf(r.value, sizeof(r.value), "muted");
         else snprintf(r.value, sizeof(r.value), "volume %d of %d", settings::soundVolume(), SOUND_VOLUME_MAX);
         break;
+      case M_AUTO: {
+        char s[12]; settings::formatSeconds(settings::scanAutoMs(), s, sizeof(s));
+        snprintf(r.text, sizeof(r.text), "Code search Auto");
+        snprintf(r.value, sizeof(r.value), "a code every %s", s);
+        break;
+      }
       case M_WIFI: {
         String s = settings::wifiSsid();
         snprintf(r.text, sizeof(r.text), "Wi-Fi");
@@ -795,6 +808,7 @@ void drawMenu() {
     case M_REMOVE: drawFooter("Takes it off this list. The codes stay in the database.", "{OK} Remove    {BACK} Remote"); break;
     case M_POWER:  drawFooter("Full for long range; Half and Low save the AA cells.", "{OK} Change    {BACK} Remote"); break;
     case M_SOUND:  drawFooter("A click on each key press.", "{LEFT}{RIGHT} Volume    {OK} Mute    {BACK} Remote"); break;
+    case M_AUTO:   drawFooter("Code search Auto speed, here and on the web page.", "{LEFT} Faster    {RIGHT} Slower    {BACK} Remote"); break;
     case M_WIFI:   drawFooter("Your home network, for the web remote.", "{OK} Open    {BACK} Remote"); break;
     case M_STATUS: drawFooter("Batteries, SD card, web addresses.", "{OK} Open    {BACK} Remote"); break;
     default:       drawFooter("Your devices. The dot marks the one in use.", "{OK} Use this device    {BACK} Remote");
@@ -910,7 +924,17 @@ void drawScan() {
   snprintf(b, sizeof(b), "%s  (%s)", irdb::profileName(p), IR_CAT_NAMES[irdb::profileCategory(p)]);
   drawCenteredFit(146, b);
   g->setFont(u8g2_font_helvR10_tr);
-  if (scan_cands[scan_pos].shared > 1) {
+  char secs[12]; settings::formatSeconds(settings::scanAutoMs(), secs, sizeof(secs));
+  if (scan_auto) {                       // the Auto line, inverted so it is seen from across the room
+    g->setFont(u8g2_font_helvB10_tr);
+    snprintf(b, sizeof(b), "AUTO  -  a code every %s", secs);
+    int w = g->getStrWidth(b) + 16;
+    g->drawRBox(W / 2 - w / 2, 153, w, 17, 3);
+    g->setDrawColor(0); drawCentered(W / 2, 166, b); g->setDrawColor(1);
+  } else if (scan_msg[0]) {
+    g->setFont(u8g2_font_helvB10_tr);
+    drawCenteredFit(166, scan_msg);
+  } else if (scan_cands[scan_pos].shared > 1) {
     snprintf(b, sizeof(b), "the same code is on %u remotes", (unsigned)scan_cands[scan_pos].shared);
     drawCenteredFit(165, b);
   }
@@ -919,15 +943,18 @@ void drawScan() {
   g->drawRFrame(204, 178, 186, 76, 6);
   g->setFont(u8g2_font_helvB12_tr);
   drawCentered(103, 199, "It reacted");
-  drawCentered(297, 199, "Nothing happened");
+  drawCentered(297, 199, scan_auto ? "Auto is running" : "Nothing happened");
   int w1 = drawHints(0, 0, "{OK hold} Use this remote", false);
   drawHints(103 - w1 / 2, 224, "{OK hold} Use this remote", true);
-  int w2 = drawHints(0, 0, "{RIGHT} Next code", false);
-  drawHints(297 - w2 / 2, 224, "{RIGHT} Next code", true);
+  const char *right = scan_auto ? "{DOWN} Stop Auto" : "{RIGHT} Next code";
+  int w2 = drawHints(0, 0, right, false);
+  drawHints(297 - w2 / 2, 224, right, true);
   g->setFont(u8g2_font_helvR08_tr);
-  drawCentered(103, 245, "OK = send it again");
-  drawCentered(297, 245, "LEFT = previous code");
-  drawFooterSent("{RIGHT} Next    {LEFT} Previous    {OK} Again    {BACK} Stop");
+  drawCentered(103, 245, scan_auto ? "OK = stop here" : "OK = send it again");
+  if (scan_auto) drawCentered(297, 245, "UP = change the speed");
+  else { snprintf(b, sizeof(b), "DOWN = Auto, a code every %s", secs); drawCentered(297, 245, b); }
+  drawFooterSent(scan_auto ? "{DOWN} Stop    {UP} Speed    {OK hold} Use this"
+                           : "{RIGHT} Next    {LEFT} Prev    {DOWN} Auto    {UP} Speed");
 }
 
 void drawStatus() {
@@ -1456,6 +1483,34 @@ void scanSendCurrent() {
   if (n_scan > 0) irtx::tap(scan_cands[scan_pos].code);
 }
 
+void scanAutoStop(const char *why) {
+  if (!scan_auto) return;
+  scan_auto = false;
+  snprintf(scan_msg, sizeof(scan_msg), "%s", why);
+  dirty = true;
+}
+
+void scanAutoStart() {
+  if (n_scan <= 0) return;
+  scan_auto = true;
+  scan_msg[0] = 0;
+  scan_last_at = millis();               // the code on screen was just tried: the next one after the gap
+  dirty = true;
+}
+
+// From loop(): the next code when its time has come and the transmitter is free. The speed is read
+// each time, so a change (UP, the menu or the web page) applies straight away.
+void scanAutoLoop() {
+  if (!scan_auto) return;
+  if (screen != S_SCAN || n_scan <= 0) { scan_auto = false; return; }
+  if ((int32_t)(millis() - (scan_last_at + (uint32_t)settings::scanAutoMs())) < 0 || irtx::isSending()) return;
+  if (scan_pos + 1 >= n_scan) { scanAutoStop("Auto reached the last code. LEFT steps back."); return; }
+  scan_pos++;
+  scanSendCurrent();
+  scan_last_at = millis();
+  dirty = true;
+}
+
 void startSend(int code) {
   if (code < 0) return;
   stopSend();
@@ -1662,8 +1717,20 @@ void onKey(int k, Act a) {
   dirty = true;
   // BACK: one screen back everywhere. The pads handle it themselves (Nav pad: the device's Back key);
   // on the remote screen, the top level, it opens the menu.
+  if (k == K_BACK && screen == S_SCAN && scan_auto) {       // BACK stops Auto first, a second press leaves
+    if (a == A_PRESS) scanAutoStop("Auto stopped. Slow device? LEFT steps back a code.");
+    return;
+  }
   if (k == K_BACK && screen != S_PAD && screen != S_TEXT) {
     if (a == A_PRESS) { if (screen == S_REMOTE) go(S_MENU); else back(); }
+    return;
+  }
+  // Menu > Code search Auto: LEFT / RIGHT = faster / slower
+  if (screen == S_MENU && sel < n_menu && menu_items[sel] == M_AUTO && (k == K_LEFT || k == K_RIGHT)) {
+    if (a == A_PRESS || a == A_REPEAT) {
+      settings::setScanAutoMs(settings::scanAutoStep(settings::scanAutoMs(), k == K_RIGHT ? 1 : -1));
+      dirty = true;
+    }
     return;
   }
   // Menu > Sound: LEFT / RIGHT change the volume on the spot (SELECT mutes: choose()). Each step
@@ -1746,13 +1813,33 @@ void onKey(int k, Act a) {
       break;
     }
     // ---- code search ----
+    // RIGHT next, LEFT previous (hold: another key), OK again (hold: use this remote),
+    // DOWN Auto on / off, UP Auto speed. While Auto runs, pressing OK, LEFT or RIGHT stops it first.
     case S_SCAN: {
-      bool fwd = (k == K_RIGHT || k == K_DOWN) && a == A_PRESS;
-      bool rev = (k == K_UP && a == A_PRESS) || (k == K_LEFT && a == A_RELEASE);
-      if (fwd && n_scan) { scan_pos = (scan_pos + 1) % n_scan; scanSendCurrent(); }
-      else if (rev && n_scan) { scan_pos = (scan_pos + n_scan - 1) % n_scan; scanSendCurrent(); }
-      else if (k == K_SELECT && a == A_RELEASE) scanSendCurrent();
+      if (k == K_UP && a == A_PRESS) {           // Auto speed: the next slower step, after the slowest the fastest
+        int ms = settings::scanAutoMs(), nx = settings::scanAutoStep(ms, 1);
+        settings::setScanAutoMs(nx != ms ? nx : settings::scanAutoStep(0, 0));
+        char s[12]; settings::formatSeconds(settings::scanAutoMs(), s, sizeof(s));
+        if (!scan_auto) snprintf(scan_msg, sizeof(scan_msg), "Auto speed: a code every %s  (DOWN starts it)", s);
+        dirty = true;
+        break;
+      }
+      if (k == K_DOWN && a == A_PRESS) {
+        if (scan_auto) scanAutoStop("Auto stopped. Slow device? LEFT steps back a code.");
+        else scanAutoStart();
+        break;
+      }
+      if (scan_auto && a == A_PRESS && (k == K_SELECT || k == K_LEFT || k == K_RIGHT)) {
+        scanAutoStop("Auto stopped. Slow device? LEFT steps back a code.");   // stopped now: a code going by during an OK hold isn't the one used
+        if (k == K_SELECT) scan_ok_stopped = true;
+      }
+      bool fwd = k == K_RIGHT && a == A_PRESS;
+      bool rev = k == K_LEFT && a == A_RELEASE;
+      if (fwd && n_scan) { scan_pos = (scan_pos + 1) % n_scan; scan_msg[0] = 0; scanSendCurrent(); }
+      else if (rev && n_scan) { scan_pos = (scan_pos + n_scan - 1) % n_scan; scan_msg[0] = 0; scanSendCurrent(); }
+      else if (k == K_SELECT && a == A_RELEASE) { if (!scan_ok_stopped) scanSendCurrent(); scan_ok_stopped = false; }
       else if (k == K_SELECT && a == A_LONG && n_scan) {     // "it works" -> use that code set
+        scan_ok_stopped = false;
         settings::setActive(scan_cands[scan_pos].profile);
         go(S_REMOTE);
       }
@@ -1884,6 +1971,7 @@ static void numberSendLoop() {
 void loop() {
   pollInputs();
   numberSendLoop();
+  scanAutoLoop();
   // react to changes made from the web UI
   if (settings::active() != last_active) {
     last_active = settings::active();
