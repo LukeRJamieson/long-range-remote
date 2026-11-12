@@ -148,6 +148,7 @@ void loadUserFiles() {
 // ---- uploads ----
 File g_up;
 bool g_up_db = false, g_up_failed = false;
+bool g_up_oui = false;                 // the Bluetooth scanner's /oui.bin (written as /oui.new first)
 size_t g_up_len = 0;
 char g_up_path[160];
 
@@ -266,8 +267,11 @@ bool uploadStart(bool database, const char *relpath, char *err, size_t en) {
   uploadAbort();
   if (!g_mounted) { snprintf(err, en, "no SD card"); return false; }
   g_up_db = database;
+  g_up_oui = !database && !strcmp(relpath, "oui.bin");
   if (database) {
     snprintf(g_up_path, sizeof(g_up_path), "%s", SD_DB_NEW);
+  } else if (g_up_oui) {
+    snprintf(g_up_path, sizeof(g_up_path), "/oui.new");
   } else {
     if (!safeRelPath(relpath)) { snprintf(err, en, "bad file name (must end in .ir, no .. or special characters)"); return false; }
     snprintf(g_up_path, sizeof(g_up_path), "%s/%s", SD_USER_DIR, relpath);
@@ -283,7 +287,7 @@ bool uploadWrite(const uint8_t *data, size_t len) {
   if (!g_up || g_up_failed) return false;
   if (g_up.write(data, len) != len) { g_up_failed = true; return false; }
   g_up_len += len;
-  if (!g_up_db && g_up_len > SD_MAX_FILE_BYTES) { g_up_failed = true; return false; }
+  if (!g_up_db && g_up_len > (g_up_oui ? 4u * 1024 * 1024 : SD_MAX_FILE_BYTES)) { g_up_failed = true; return false; }
   return true;
 }
 
@@ -294,6 +298,17 @@ bool uploadFinish(char *msg, size_t mn) {
     SD_MMC.remove(g_up_path);
     snprintf(msg, mn, g_up_db ? "write error (card full?)" : "write error or file too big");
     return false;
+  }
+  if (g_up_oui) {                       // check the header before it replaces the current file
+    File f = SD_MMC.open("/oui.new", FILE_READ);
+    char hdr[4] = {0};
+    bool ok = f && f.read((uint8_t *)hdr, 4) == 4 && !memcmp(hdr, "OUI1", 4);
+    if (f) f.close();
+    if (!ok) { SD_MMC.remove("/oui.new"); snprintf(msg, mn, "not accepted: not an oui.bin file"); return false; }
+    SD_MMC.remove("/oui.bin");
+    if (!SD_MMC.rename("/oui.new", "/oui.bin")) { snprintf(msg, mn, "rename failed"); return false; }
+    snprintf(msg, mn, "oui.bin saved (%u KB)", (unsigned)(g_up_len / 1024));
+    return true;
   }
   if (!g_up_db) {
     snprintf(msg, mn, "saved %s (%u bytes)", g_up_path, (unsigned)g_up_len);
@@ -332,6 +347,25 @@ bool uploadFinish(char *msg, size_t mn) {
 
 void uploadAbort() {
   if (g_up) { g_up.close(); SD_MMC.remove(g_up_path); }
+}
+
+uint8_t *loadToPsram(const char *path, size_t *len, size_t max_len) {
+  *len = 0;
+  if (!g_mounted) return nullptr;
+  File f = SD_MMC.open(path, FILE_READ);
+  if (!f) return nullptr;
+  size_t n = f.size();
+  uint8_t *buf = n && n <= max_len ? (uint8_t *)heap_caps_malloc(n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) : nullptr;
+  size_t got = 0;
+  while (buf && got < n) {
+    int r = f.read(buf + got, std::min<size_t>(32768, n - got));
+    if (r <= 0) break;
+    got += r;
+  }
+  f.close();
+  if (buf && got != n) { heap_caps_free(buf); buf = nullptr; }
+  if (buf) *len = n;
+  return buf;
 }
 
 // ---- small settings files ----

@@ -26,9 +26,10 @@ int main() {
   seq("DDDR"); shot("keyboard_done"); press('S'); shot("wifi_set"); CHECK(settings::wifiSsid() == "Chateau Le Chat");
   sim.wifi_connected = true; ui::setNetworkInfo("192.168.4.1", "192.168.1.57", "Chateau Le Chat");
   seq("DD"); shot("wifi_forget"); press('B');
-  seq("D"); press('S'); shot("status"); ui::noteWebRequest("192.168.1.42"); ui::loop(); shot("status_web"); press('B'); shot("menu_after_status");
+  // two down: past Bluetooth scanner to Status
+  seq("DD"); press('S'); shot("status"); ui::noteWebRequest("192.168.1.42"); ui::loop(); shot("status_web"); press('B'); shot("menu_after_status");
   // code search
-  seq("UUUUUUU"); press('S'); shot("scansrc"); press('S'); shot("scancat"); seq("D"); press('S'); shot("scankey"); press('S'); shot("scan");
+  seq("UUUUUUUU"); press('S'); shot("scansrc"); press('S'); shot("scancat"); seq("D"); press('S'); shot("scankey"); press('S'); shot("scan");
   seq("RRR"); shot("scan4");
   // Auto: DOWN starts it (a code every 1 s), UP changes the speed, DOWN stops it, BACK then leaves
   { int s0 = sim.sends; press('D'); run(3050); int n1 = sim.sends - s0; shot("scan_auto");

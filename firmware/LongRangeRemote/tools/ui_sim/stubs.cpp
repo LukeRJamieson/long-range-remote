@@ -13,6 +13,7 @@
 #include "log.h"
 #include "sim.h"
 #include "discover.h"
+#include "ble_scan.h"
 uint32_t sim_ms = 1000;
 Sim sim;
 void logf(const char *, ...) {} void logln(const char *) {} void logBegin() {}
@@ -92,4 +93,10 @@ static void sendTap(const IrCodeParams &p, const char *l) { irtx::tapParams(p, l
 void begin() { setHooks({sendTap, txBusy, nowMs}); }
 bool saveAndRestart(char *err, size_t n) { if (!state().n_learned) { snprintf(err, n, "no keys named yet"); return false; } sim.saved_text = fileText(); sim.restart = true; return true; }
 bool restartPending() { return sim.restart; } void glueLoop() {}
+}
+
+// Bluetooth scanner radio (ble_glue.cpp): the script feeds the list itself
+namespace blescan {
+void want(uint32_t) {} void loop() {} bool scanning() { return true; }
+const char *status() { return "scanning"; } bool ouiLoaded() { return true; }
 }

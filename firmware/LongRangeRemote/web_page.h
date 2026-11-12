@@ -55,6 +55,11 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
 .up input[type=file]{padding:8px;font-size:14px}
 .chk{display:flex;align-items:flex-start;gap:8px;margin:0;color:var(--fg);font-size:14px}.chk input{width:auto;margin:2px 0 0;flex:none}
 .warn{background:#4a3a1a;color:#ffd98a;border-radius:10px;padding:12px;margin:8px 0}
+.sig{display:inline-flex;align-items:flex-end;gap:2px;height:16px;flex:none}.sig i{width:4px;background:var(--btn2);border-radius:1px}.sig i.on{background:var(--acc)}
+.brow{flex-direction:column;align-items:stretch;gap:4px;cursor:pointer}.brow.gone{opacity:.5}
+.brow .top{display:flex;align-items:center;gap:10px}.brow .sub{color:var(--mut);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:28px}
+.trk{font-size:11px;background:#5a2226;color:#ffb3ae;border-radius:6px;padding:2px 6px;flex:none}
+.bdet{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px;padding:6px 0 2px 28px}.bdet b{color:var(--mut);font-weight:600}.bdet span{overflow-wrap:anywhere}
 </style></head><body>
 <header>
   <div id="dev">Long-Range Remote</div><div id="devsub">loading...</div>
@@ -62,7 +67,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
 </header>
 <nav id="tabs">
   <button data-t="remote" class="on">Remote</button><button data-t="browse">Browse</button>
-  <button data-t="scan">Code search</button><button data-t="manual">Discover</button><button data-t="settings">Settings</button>
+  <button data-t="scan">Code search</button><button data-t="manual">Discover</button><button data-t="ble">Bluetooth</button><button data-t="settings">Settings</button>
 </nav>
 <main>
 <section id="t-remote" class="on"><div id="nodb" class="warn" hidden></div><div id="remote"></div></section>
@@ -148,6 +153,19 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#0f1114;border-top:1px 
   </div>
 </section>
 
+<section id="t-ble">
+  <div class="acts" style="align-items:center;margin-top:12px"><span id="blestat" class="mut" style="flex:1">Starting the Bluetooth radio...</span>
+    <select id="blesort" style="width:auto;padding:9px"><option value="0">By signal</option><option value="1">By name</option><option value="2">Newest first</option></select>
+    <button class="b" id="bleclr">Clear</button></div>
+  <input id="blefind" placeholder="Filter: name, brand, type or address">
+  <label class="chk" style="margin:8px 2px"><input type="checkbox" id="bletrk"><span>Trackers only (AirTag / Find My, Tile, Chipolo, Find Hub)</span></label>
+  <div class="list" id="blelist"></div>
+  <p class="mut">Tap a device for its details. The remote listens while this tab or its own Bluetooth screen is open. It hears <b>Bluetooth LE</b> only: devices that use nothing but classic Bluetooth (older headsets, car kits) don't show up. Phones, earbuds and watches use a <b>random address that changes</b> every few minutes, so one phone can be listed twice. Each brand and type says where it came from: the maker data or services in the advert, its appearance value, its name, or (fixed addresses only) the MAC prefix.</p>
+  <div class="up" id="bleoui" hidden><b>MAC maker list (oui.bin)</b>
+    <span class="mut">Not on the SD card, so devices with a fixed (public) address show no maker from their MAC. Upload <b>firmware/sd_card/oui.bin</b> from the project (about 600 KB), or copy it to the card.</span>
+    <input type="file" id="upoui" accept=".bin"><button class="b" id="upouigo">Upload oui.bin</button><div class="mut" id="ouimsg"></div></div>
+</section>
+
 <section id="t-settings">
   <h3>My devices</h3>
   <p class="mut">The saved remotes shown at the top of the page. Removing one only takes it off this list; it stays in the database and can be added again from Browse or Code search.</p>
@@ -212,6 +230,7 @@ document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id=='t-'+b.dataset.t));
   if(b.dataset.t=='settings')renderInfo();
   if(b.dataset.t=='manual')disc('state');
+  if(b.dataset.t=='ble')bleRefresh();
 });
 
 // ---------- SD card uploads ----------
@@ -509,6 +528,60 @@ function renderInfo(){
   await refreshState();
   setInterval(()=>{if(!document.hidden){refreshState().then(()=>{if($('#t-settings').classList.contains('on'))renderInfo()})}},4000);
 })();
+// ---------- Bluetooth scanner ----------
+// Polls /api/ble while the tab is open (that also keeps the remote's radio scanning). Rows keep
+// their details open across refreshes, by MAC address.
+let BLET=null;const BLEOPEN=new Set();
+const bleBars=r=>r>=-55?4:r>=-67?3:r>=-78?2:r>=-88?1:0;
+const bleAgo=ms=>{const s=Math.round(ms/1000);return s<2?'now':s<120?s+' s ago':s<7200?Math.round(s/60)+' min ago':Math.round(s/3600)+' h ago'};
+function bleSig(r,gone){const w=el('span','sig'),n=gone?0:bleBars(r);for(let i=0;i<4;i++){const b=el('i',i<n?'on':'');b.style.height=(4+i*4)+'px';w.append(b)}return w}
+function bleDet(d){
+  const g=el('div','bdet'),add=(k,v)=>{if(v===''||v==null)return;g.append(el('b',null,k),el('span',null,String(v)))};
+  const src=s=>s?'  (from '+s+')':'';
+  add('Type',d.t+src(d.ts));add('Brand',(d.b||'not known')+src(d.bs));add('Detail',d.d);
+  add('Name',d.n||'(none sent)');add('Address',d.m+'  '+d.k);
+  if(d.pub)add('MAC maker',d.o||(BLEOUI?'prefix not registered':'oui.bin not on the SD card'));
+  add('Signal',d.r+' dBm now, average '+d.a+', strongest '+d.x);
+  if(d.tx!=null)add('Tx power',d.tx+' dBm  (very roughly '+Math.pow(10,(d.tx-41-d.a)/25).toFixed(1)+' m away)');
+  add('Heard','first '+bleAgo(d.age)+', last '+bleAgo(d.ago)+', '+d.c+' adverts');
+  add('Appearance',d.ap);add('Services',d.s);add('Maker data',d.md);add('Raw advert',d.raw);
+  return g;
+}
+let BLEOUI=true;
+function bleRender(r){
+  BLEOUI=r.oui;$('#bleoui').hidden=r.oui;
+  const f=$('#blefind').value.trim().toLowerCase(),trk=$('#bletrk').checked;
+  const list=r.devices.filter(d=>(!trk||d.tr)&&(!f||[d.l,d.n,d.b,d.t,d.d,d.m,d.o].join(' ').toLowerCase().includes(f)));
+  const near=r.devices.filter(d=>d.ago<30000).length;
+  $('#blestat').textContent=near+' nearby'+(r.devices.length>near?', '+(r.devices.length-near)+' gone':'')+' · '+r.status;
+  const box=$('#blelist');box.textContent='';
+  if(!list.length){box.append(el('div','empty',r.devices.length?'Nothing matches the filter.':'Listening for Bluetooth devices...'));return}
+  for(const d of list){
+    const gone=d.ago>=30000,row=el('div','row brow'+(gone?' gone':'')),top=el('div','top');
+    top.append(bleSig(d.a,gone),el('span','t',d.l));
+    if(d.tr)top.append(el('span','trk','tracker'));
+    top.append(el('span','s',gone?'gone '+bleAgo(d.ago):d.a+' dBm'));
+    const type=d.t=='Unknown'?'':d.t;
+    row.append(top,el('div','sub',[d.b,type].filter(x=>x).join(' · ')+(d.b||type?' · ':'')+d.m));
+    if(BLEOPEN.has(d.m))row.append(bleDet(d));
+    row.onclick=()=>{BLEOPEN.has(d.m)?BLEOPEN.delete(d.m):BLEOPEN.add(d.m);bleRender(r)};
+    box.append(row);
+  }
+}
+let BLELAST=null;
+async function bleRefresh(){
+  clearTimeout(BLET);BLET=null;
+  if(!$('#t-ble').classList.contains('on'))return;
+  try{BLELAST=await get('/api/ble?s='+$('#blesort').value);bleRender(BLELAST)}catch(e){$('#blestat').textContent='The remote did not answer - trying again'}
+  if($('#t-ble').classList.contains('on'))BLET=setTimeout(bleRefresh,1500);
+}
+$('#blesort').onchange=bleRefresh;
+$('#blefind').oninput=$('#bletrk').onchange=()=>{if(BLELAST)bleRender(BLELAST)};
+$('#bleclr').onclick=async()=>{await q('/api/ble?clear=1');BLEOPEN.clear();bleRefresh()};
+$('#upouigo').onclick=async()=>{
+  const f=$('#upoui').files[0];if(!f)return;
+  try{$('#ouimsg').textContent=await upload('/api/upload?kind=oui',f,'Uploading oui.bin');bleRefresh()}catch(e){$('#ouimsg').textContent='Failed: '+e}
+};
 </script>
 </body></html>
 )rawliteral";

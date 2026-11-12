@@ -41,6 +41,7 @@
 #include "ui.h"
 #include "config.h"
 #include "discover.h"
+#include "ble_scan.h"
 #include "log.h"
 
 #include "hw.h"
@@ -59,6 +60,7 @@
 #include <esp_heap_caps.h>
 #include <algorithm>
 #include <math.h>
+#include <stdarg.h>
 
 namespace ui {
 namespace {
@@ -106,7 +108,8 @@ Key keys[K__N];
 // ---------------------------------------------------------------------------
 enum Screen { S_REMOTE, S_PAD, S_NUMBER, S_ALLKEYS, S_MENU, S_LETTERS, S_BRANDS, S_PROFILES,
               S_SCANSRC, S_SCANCAT, S_SCANKEY, S_SCAN, S_STATUS, S_WIFI, S_WIFINETS, S_TEXT,
-              S_DFAM, S_DSWEEP, S_DNARROW, S_DLEARN, S_DNAME, S_DDONE };      // Discover (discover.h)
+              S_DFAM, S_DSWEEP, S_DNARROW, S_DLEARN, S_DNAME, S_DDONE,        // Discover (discover.h)
+              S_BLE, S_BLEDEV };                                               // Bluetooth scanner (ble_scan.h)
 Screen screen = S_REMOTE;
 int sel = 0, scroll = 0;              // selection + first visible item/row of the current screen
 int last_active = -2;
@@ -180,7 +183,7 @@ bool scan_ok_stopped = false;         // OK stopped Auto: its release doesn't al
 char scan_msg[80] = "";               // one line on the code search screen (Auto stopped, speed changed)
 
 // Menu entries
-enum MenuItem { M_BROWSE = -100, M_DISCOVER, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_AUTO, M_WIFI, M_STATUS };
+enum MenuItem { M_BROWSE = -100, M_DISCOVER, M_SCAN, M_REMOVE, M_POWER, M_SOUND, M_AUTO, M_WIFI, M_BLE, M_STATUS };
 int menu_items[MAX_FAVOURITES + 10]; int n_menu = 0;
 
 // Currently sending (a key held on a remote / pad screen)
@@ -534,6 +537,7 @@ void buildMenu() {
   menu_items[n_menu++] = M_SOUND;
   menu_items[n_menu++] = M_AUTO;
   menu_items[n_menu++] = M_WIFI;
+  menu_items[n_menu++] = M_BLE;
   menu_items[n_menu++] = M_STATUS;
 }
 
@@ -792,6 +796,7 @@ void drawMenu() {
         r.more = true;
         break;
       }
+      case M_BLE: snprintf(r.text, sizeof(r.text), "Bluetooth scanner"); r.more = true; break;
       case M_STATUS: snprintf(r.text, sizeof(r.text), "Status"); r.more = true; break;
       default:
         r.mark = m == settings::active() ? 2 : 1;
@@ -810,6 +815,7 @@ void drawMenu() {
     case M_SOUND:  drawFooter("A click on each key press.", "{LEFT}{RIGHT} Volume    {OK} Mute    {BACK} Remote"); break;
     case M_AUTO:   drawFooter("Code search Auto speed, here and on the web page.", "{LEFT} Faster    {RIGHT} Slower    {BACK} Remote"); break;
     case M_WIFI:   drawFooter("Your home network, for the web remote.", "{OK} Open    {BACK} Remote"); break;
+    case M_BLE:    drawFooter("Bluetooth devices nearby: maker, type, address, signal.", "{OK} Open    {BACK} Remote"); break;
     case M_STATUS: drawFooter("Batteries, SD card, web addresses.", "{OK} Open    {BACK} Remote"); break;
     default:       drawFooter("Your devices. The dot marks the one in use.", "{OK} Use this device    {BACK} Remote");
   }
@@ -1037,6 +1043,188 @@ void dTitle(char *out, size_t n, const discover::State &st) {
   char at[40];
   discover::addrText(st.fam, st.addr, at, sizeof(at));
   snprintf(out, n, "%s, %s", discover::family(st.fam).name, at);
+}
+
+// ---------------------------------------------------------------------------
+// Bluetooth scanner (ble_scan.h): a list of the devices heard, then one device's details.
+// The list keeps the selection on the same device while the order changes; it is re-sorted every
+// two seconds, not on every advert, so the rows don't jump about under the cursor.
+// ---------------------------------------------------------------------------
+int ble_sort = blescan::SORT_SIGNAL;
+int ble_order[blescan::MAX_DEVICES]; int ble_n = 0;
+uint32_t ble_sorted_at = 0;
+uint8_t ble_mac[6]; bool ble_have_mac = false;    // the selected device
+const int BLE_ROW_H = 38;
+const int BLE_ROWS = (H - FOOTER_H - LIST_TOP) / BLE_ROW_H;
+
+void bleResort(bool force) {
+  if (!force && millis() - ble_sorted_at < 2000 && ble_n == min(blescan::count(), blescan::MAX_DEVICES)) return;
+  ble_sorted_at = millis();
+  ble_n = blescan::sorted(ble_order, blescan::MAX_DEVICES, ble_sort, millis());
+  if (ble_have_mac)                                  // keep the cursor on the same device
+    for (int i = 0; i < ble_n; i++)
+      if (!memcmp(blescan::device(ble_order[i]).mac, ble_mac, 6)) { sel = i; break; }
+}
+
+void bleRemember() {                                 // the device under the cursor
+  if (sel >= 0 && sel < ble_n) { memcpy(ble_mac, blescan::device(ble_order[sel]).mac, 6); ble_have_mac = true; }
+}
+
+// 4 bars, the strong ones filled; x, y = bottom left
+void drawBars(int x, int y, int rssi, bool stale) {
+  int b = stale ? 0 : blescan::bars(rssi);
+  for (int i = 0; i < 4; i++) {
+    int h = 4 + i * 3;
+    if (i < b) g->drawBox(x + i * 5, y - h, 4, h);
+    else g->drawFrame(x + i * 5, y - h, 4, h);
+  }
+}
+
+void agoText(uint32_t ms, char *out, size_t n) {
+  uint32_t s = ms / 1000;
+  if (s < 2) snprintf(out, n, "now");
+  else if (s < 120) snprintf(out, n, "%lu s ago", (unsigned long)s);
+  else if (s < 7200) snprintf(out, n, "%lu min ago", (unsigned long)(s / 60));
+  else snprintf(out, n, "%lu h ago", (unsigned long)(s / 3600));
+}
+
+void drawBle() {
+  bleResort(false);
+  char sub[48];
+  snprintf(sub, sizeof(sub), "%d nearby, %s", ble_n, blescan::status());
+  drawHeader("Bluetooth", sub);
+  if (!ble_n) {
+    g->setFont(u8g2_font_helvB12_tr);
+    drawCenteredFit(120, strcmp(blescan::status(), "Bluetooth failed to start") ? "Listening for Bluetooth devices..." : "Bluetooth failed to start");
+    g->setFont(u8g2_font_helvR10_tr);
+    drawCenteredFit(148, "Phones, earbuds, watches, trackers, TVs, speakers:");
+    drawCenteredFit(166, "anything that advertises over Bluetooth LE.");
+    drawFooter(nullptr, "{BACK} Menu");
+    return;
+  }
+  keepVisible(ble_n, BLE_ROWS);
+  bleRemember();
+  uint32_t now = millis();
+  char b[64], c[96], t[24];
+  for (int r = 0; r < BLE_ROWS && scroll + r < ble_n; r++) {
+    int i = scroll + r;
+    const blescan::Device &d = blescan::device(ble_order[i]);
+    bool stale = now - d.last_ms > blescan::STALE_MS;
+    int y = LIST_TOP + r * BLE_ROW_H;
+    if (i == sel) { g->drawRBox(2, y, W - 14, BLE_ROW_H - 2, 4); g->setDrawColor(0); }
+    drawBars(8, y + 20, (int)d.rssi_avg, stale);
+    // line 1: what it is, signal on the right
+    g->setFont(u8g2_font_helvR10_tr);
+    if (stale) { agoText(now - d.last_ms, t, sizeof(t)); snprintf(b, sizeof(b), "gone %s", t); }
+    else snprintf(b, sizeof(b), "%d dBm", (int)lroundf(d.rssi_avg));
+    int vw = g->getStrWidth(b);
+    g->drawStr(W - 20 - vw, y + 17, b);
+    g->setFont(u8g2_font_helvB12_tr);
+    blescan::label(d, c, sizeof(c));
+    drawClipped(36, y + 17, W - 20 - vw - 8 - 36, c);
+    // line 2: brand, type, tracker mark
+    g->setFont(u8g2_font_helvR08_tr);
+    const char *type = strcmp(d.id.type, "Unknown") ? d.id.type : "";
+    snprintf(c, sizeof(c), "%s%s%s%s", d.id.brand, d.id.brand[0] && type[0] ? "  -  " : "", type,
+             !d.id.brand[0] && !type[0] ? (d.kind == bleid::ADDR_PUBLIC ? "maker not known" : "random address, nothing else said") : "");
+    drawClipped(36, y + 32, W - 20 - 36, c);
+    g->setDrawColor(1);
+  }
+  drawScrollbar(LIST_TOP, BLE_ROWS * BLE_ROW_H, ble_n, BLE_ROWS, scroll);
+  snprintf(b, sizeof(b), "{OK} Details    {UP}{DOWN} Move    {OK hold} Sort: %s", blescan::sortName(ble_sort));
+  drawFooter(nullptr, b);
+}
+
+// Details: label / value lines, scrolled with UP / DOWN. Refreshed every second, so the signal
+// meter at the top can be used to walk towards a device.
+int ble_dscroll = 0, ble_dlines = 0;
+
+void drawBleDev() {
+  int di = ble_have_mac ? blescan::find(ble_mac) : -1;
+  if (di < 0) {
+    drawHeader("Bluetooth", "");
+    g->setFont(u8g2_font_helvB12_tr);
+    drawCenteredFit(130, "That device is no longer in the list.");
+    drawFooter(nullptr, "{BACK} List");
+    return;
+  }
+  const blescan::Device &d = blescan::device(di);
+  uint32_t now = millis();
+  char title[48], b[160], t1[24], t2[24];
+  blescan::label(d, title, sizeof(title));
+  drawHeader(title, "");
+  // signal meter: -100 .. -30 dBm across the screen
+  int top = HEADER_H + 6;
+  bool stale = now - d.last_ms > blescan::STALE_MS;
+  int fill = stale ? 0 : max(0, min(W - 24, ((int)d.rssi + 100) * (W - 24) / 70));
+  g->drawFrame(10, top, W - 20, 14);
+  g->drawBox(12, top + 2, fill, 10);
+  g->setFont(u8g2_font_helvB10_tr);
+  if (stale) { agoText(now - d.last_ms, t1, sizeof(t1)); snprintf(b, sizeof(b), "Not heard for %s", t1 + 0); }
+  else snprintf(b, sizeof(b), "%d dBm   (average %d, strongest %d)", d.rssi, (int)lroundf(d.rssi_avg), d.rssi_max);
+  g->drawStr(10, top + 30, b);
+  // the lines below
+  struct Line { const char *label; char value[110]; };
+  static Line L[16];
+  int n = 0;
+  auto add = [&](const char *label, const char *fmt, ...) {
+    if (n >= 16) return;
+    L[n].label = label;
+    va_list ap; va_start(ap, fmt); vsnprintf(L[n].value, sizeof(L[n].value), fmt, ap); va_end(ap);
+    n++;
+  };
+  add("Type", "%s%s%s%s", d.id.type, d.id.type_src[0] ? "  (from " : "", d.id.type_src, d.id.type_src[0] ? ")" : "");
+  add("Brand", "%s%s%s%s", d.id.brand[0] ? d.id.brand : "not known", d.id.brand_src[0] ? "  (from " : "", d.id.brand_src, d.id.brand_src[0] ? ")" : "");
+  if (d.id.detail[0]) add("Detail", "%s%s", d.id.detail, d.id.tracker ? "  - a tracker" : "");
+  add("Name", "%s", d.adv.name[0] ? d.adv.name : "(none sent)");
+  blescan::macText(d.mac, t1, sizeof(t1));
+  add("Address", "%s  %s", t1, bleid::addrKindText(d.kind));
+  if (d.kind == bleid::ADDR_PUBLIC) add("MAC maker", "%s", d.oui[0] ? d.oui : blescan::ouiLoaded() ? "prefix not registered" : "oui.bin not on the SD card");
+  agoText(now - d.first_ms, t1, sizeof(t1)); agoText(now - d.last_ms, t2, sizeof(t2));
+  add("Heard", "first %s, last %s, %lu adverts", t1, t2, (unsigned long)d.count);
+  if (d.adv.has_tx) {
+    // rough distance: free-space loss at 1 m on 2.4 GHz is about 41 dB, path-loss exponent 2.5 indoors
+    float m = powf(10.0f, (d.adv.tx_power - 41 - d.rssi_avg) / 25.0f);
+    add("Tx power", "%d dBm  -> very roughly %.1f m away", d.adv.tx_power, m);
+  }
+  if (d.adv.has_app) add("Appearance", "%04X  %s", d.adv.appearance, bleid::appearanceName(d.adv.appearance) ? bleid::appearanceName(d.adv.appearance) : "");
+  bleid::servicesText(d.adv, b, sizeof(b));
+  if (b[0]) add("Services", "%s", b);
+  if (d.adv.has_mfr) {
+    const char *co = bleid::companyName(d.adv.company);
+    int o = snprintf(b, sizeof(b), "%04X %s:", d.adv.company, co ? co : "");
+    for (int i = 0; i < d.adv.mfr_len && o < (int)sizeof(b) - 4; i++) o += snprintf(b + o, sizeof(b) - o, " %02X", d.adv.mfr[i]);
+    add("Maker data", "%s", b);
+  }
+  // draw, two lines per value where it is long
+  const int LX = 10, VX = 100, DY = 17, Y0 = top + 52, Y1 = H - FOOTER_H - 4;
+  int rows_fit = (Y1 - Y0) / DY + 1;
+  ble_dlines = n;
+  if (ble_dscroll > n - 1) ble_dscroll = max(0, n - 1);
+  int y = Y0, i = ble_dscroll;
+  for (; i < n && y <= Y1; i++) {
+    g->setFont(u8g2_font_helvB10_tr);
+    g->drawStr(LX, y, L[i].label);
+    g->setFont(u8g2_font_helvR10_tr);
+    const char *v = L[i].value;
+    int maxw = W - VX - 8;
+    if ((int)g->getStrWidth(v) <= maxw || y + DY > Y1) { drawClipped(VX, y, maxw, v); y += DY; continue; }
+    int cut = strlen(v);                                   // wrap at a space that fits
+    char tmp[110];
+    while (cut > 0) {
+      while (cut > 0 && v[cut] != ' ') cut--;
+      snprintf(tmp, sizeof(tmp), "%.*s", cut, v);
+      if ((int)g->getStrWidth(tmp) <= maxw) break;
+      cut--;
+    }
+    if (cut <= 0) { drawClipped(VX, y, maxw, v); y += DY; continue; }
+    g->drawStr(VX, y, tmp); y += DY;
+    drawClipped(VX, y, maxw, v + cut + 1); y += DY;
+  }
+  (void)rows_fit;
+  bool can_scroll = i < n || ble_dscroll > 0;            // lines below the screen, or scrolled down
+  if (i >= n && ble_dscroll > 0) ble_dlines = ble_dscroll + 1;   // all shown: DOWN does nothing more
+  drawFooter(nullptr, can_scroll ? "{UP}{DOWN} Scroll    {BACK} List" : "{BACK} List");
 }
 
 void drawDFam() {
@@ -1453,6 +1641,8 @@ void render() {
     case S_DLEARN:   drawDLearn(); break;
     case S_DNAME:    drawDName(); break;
     case S_DDONE:    drawDDone(); break;
+    case S_BLE:      drawBle(); break;
+    case S_BLEDEV:   drawBleDev(); break;
   }
   g->sendBuffer();
   dirty = false;
@@ -1475,6 +1665,7 @@ int listSize() {
     case S_DFAM:     return discover::numFamilies() + 1;
     case S_DNAME:    return n_d_names;
     case S_DDONE:    return 3;
+    case S_BLE:      return ble_n;
     default:         return 1;
   }
 }
@@ -1561,6 +1752,8 @@ void back() {
     }
     case S_STATUS:  go(S_MENU); sel = menuIndex(M_STATUS); break;
     case S_DFAM:    go(S_MENU); sel = menuIndex(M_DISCOVER); break;
+    case S_BLE:     go(S_MENU); sel = menuIndex(M_BLE); break;
+    case S_BLEDEV:  go(S_BLE); bleResort(true); break;
     case S_DSWEEP: {
       discover::State st = discover::state();
       discover::stop();
@@ -1610,6 +1803,7 @@ void choose() {
       }
       else if (m == M_WIFI) { wifi_msg[0] = 0; go(S_WIFI); }
       else if (m == M_STATUS) go(S_STATUS);
+      else if (m == M_BLE) { ble_have_mac = false; blescan::want(); go(S_BLE); bleResort(true); }
       else { settings::setActive(m); go(S_REMOTE); }
       break;
     }
@@ -1640,6 +1834,9 @@ void choose() {
       break;
     case S_STATUS:
       back();
+      break;
+    case S_BLE:
+      if (sel < ble_n) { bleRemember(); ble_dscroll = 0; go(S_BLEDEV); }
       break;
     case S_DFAM:
       discover::sweepStart(sel == 0 ? -1 : sel - 1);
@@ -1849,6 +2046,19 @@ void onKey(int k, Act a) {
     case S_STATUS:
       if (a == A_PRESS) back();
       break;
+    // ---- Bluetooth scanner ----
+    case S_BLE:
+      if (k == K_UP && (a == A_PRESS || a == A_REPEAT)) { sel--; if (sel < 0) sel = ble_n - 1; bleRemember(); }
+      else if (k == K_DOWN && (a == A_PRESS || a == A_REPEAT)) { sel++; if (sel >= ble_n) sel = 0; bleRemember(); }
+      else if ((k == K_RIGHT && a == A_PRESS) || (k == K_SELECT && a == A_RELEASE)) choose();
+      else if (k == K_LEFT && a == A_PRESS) back();
+      else if (k == K_SELECT && a == A_LONG) { ble_sort = (ble_sort + 1) % blescan::N_SORTS; bleResort(true); }
+      break;
+    case S_BLEDEV:
+      if (k == K_UP && (a == A_PRESS || a == A_REPEAT)) { if (ble_dscroll > 0) ble_dscroll--; }
+      else if (k == K_DOWN && (a == A_PRESS || a == A_REPEAT)) { if (ble_dscroll + 1 < ble_dlines) ble_dscroll++; }
+      else if ((k == K_LEFT || k == K_SELECT) && a == A_PRESS) back();
+      break;
     // ---- Discover ----
     case S_DSWEEP:
       if (k == K_SELECT && a == A_PRESS) { discover::reacted(); go(S_DNARROW); }
@@ -1984,7 +2194,9 @@ void loop() {
     int n = wifimgr::networks(net_list, MAX_NET_LIST);
     if (n >= 0) { n_net_list = n; dirty = true; }
   }
-  uint32_t status_every = screen == S_WIFI || screen == S_STATUS ? 2000 : 10000;   // Wi-Fi / Status: connection, web requests
+  bool ble_screen = screen == S_BLE || screen == S_BLEDEV;
+  if (ble_screen) blescan::want(3000);                          // the radio scans while these screens are up
+  uint32_t status_every = ble_screen ? 1000 : screen == S_WIFI || screen == S_STATUS ? 2000 : 10000;   // Bluetooth: live signal; Wi-Fi / Status: connection, web requests
   if (millis() - last_status_draw > status_every) { last_status_draw = millis(); dirty = true; }   // battery
   dFollow();
   if (ir_shown && !irActive()) dirty = true;                    // the send is over: clear the header's IR mark

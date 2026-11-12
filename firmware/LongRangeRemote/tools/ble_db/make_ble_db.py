@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Build the Bluetooth scanner's lookup tables.
+
+Outputs
+  ../../ble_db.h            compiled into the firmware: company IDs, 16-bit service UUIDs (Bluetooth SIG
+                            services and the UUIDs the SIG gives to member companies), GAP appearance values
+  ../../../sd_card/oui.bin  MAC address prefix -> vendor, for devices with a public address. On the SD card
+                            (about 1 MB, too big for the firmware); the scanner works without it.
+
+Inputs (downloaded once into --src, plain data files, nothing is run):
+  company_ids.json, service_uuids.json, gap_appearance.json
+      https://github.com/NordicSemiconductor/bluetooth-numbers-database (v1/)
+  packet-bluetooth.c  (Wireshark release-4.4: its bluetooth_uuid_vals table lists the member UUIDs)
+      https://raw.githubusercontent.com/wireshark/wireshark/release-4.4/epan/dissectors/packet-bluetooth.c
+  nmap-mac-prefixes   (IEEE OUI registry, short vendor names)
+      https://raw.githubusercontent.com/nmap/nmap/master/nmap-mac-prefixes
+  or, with --oui-csv, the IEEE's own MA-L list: https://standards-oui.ieee.org/oui/oui.csv
+
+  python3 make_ble_db.py --src DIR [--oui-csv oui.csv]
+"""
+import argparse, json, os, re, struct, datetime
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+FW = os.path.normpath(os.path.join(HERE, '..', '..'))
+
+# Legal-form endings, dropped so the names fit the screen ("Apple, Inc." -> "Apple")
+SUFFIXES = [', Inc.', ' Inc.', ', Inc', ' Inc', ', LLC', ' LLC', ' Co., Ltd.', ' Co.,Ltd.', ' Co., Ltd', ' Co.,Ltd',
+            ' Co. Ltd.', ' Co. Ltd', ' CO., LTD.', ' CO.,LTD.', ' CO., LTD', ' Co., Limited', ' Co.,Limited',
+            ' Company Limited', ' Pty Ltd', ' Pty. Ltd.', ' Pvt. Ltd.', ' Pvt Ltd', ' Ltd.', ' Ltd', ' LTD',
+            ' Limited', ' GmbH & Co. KG', ' GmbH', ' AG', ' S.A.', ' SA', ' A/S', ' AB', ' B.V.', ' BV', ' Oy',
+            ' Corporation', ' Corp.', ' Corp', ' d.o.o.', ' SAS', ' S.A.S.', ' S.r.l.', ' Srl', ' S.p.A.', ' plc',
+            ' PLC', ' KK', ' K.K.', ' NV', ' N.V.', ' ApS', ' AS', ' ASA', ' s.r.o.', ' sp. z o.o.', ' Sdn Bhd',
+            ' Sdn. Bhd.', ' Pte Ltd', ' Pte. Ltd.', ' Co.', ' Co']
+
+
+def short(name):
+    n = name.strip()
+    for _ in range(3):
+        for s in SUFFIXES:
+            if n.endswith(s) and len(n) > len(s) + 1:
+                n = n[: -len(s)].rstrip(' ,')
+    return n
+
+
+def c_str(s):
+    return s.replace('\\', '\\\\').replace('"', '\\"')
+
+
+def blob(names):
+    """names -> (offsets, C literal lines) with each name NUL-terminated, duplicates shared."""
+    seen, offs, parts, pos = {}, [], [], 0
+    for n in names:
+        if n not in seen:
+            seen[n] = pos
+            parts.append(n)
+            pos += len(n.encode('utf-8')) + 1
+        offs.append(seen[n])
+    lines, cur = [], ''
+    for p in parts:
+        cur += c_str(p) + '\\000'   # 3-digit escape: a name starting with a digit stays intact
+        if len(cur) > 100:
+            lines.append('  "%s"' % cur); cur = ''
+    if cur:
+        lines.append('  "%s"' % cur)
+    return offs, lines, pos
+
+
+def ascii(s):
+    return s.encode('ascii', 'replace').decode().replace('?', '')   # the screen font is ASCII
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--src', required=True)
+    ap.add_argument('--oui-csv', help="IEEE oui.csv instead of Nmap's nmap-mac-prefixes")
+    a = ap.parse_args()
+    src = a.src
+
+    # ---- company IDs (manufacturer specific data) ----
+    comp = json.load(open(os.path.join(src, 'company_ids.json')))
+    comp = sorted({c['code']: ascii(short(c['name'])) for c in comp}.items())
+
+    # ---- 16-bit UUIDs: SIG services (names) + member UUIDs (company names) ----
+    uu = {}
+    for s in json.load(open(os.path.join(src, 'service_uuids.json'))):
+        if len(s['uuid']) == 4:
+            uu[int(s['uuid'], 16)] = (0, ascii(s['name'].replace(' Service', '')))
+    ws = open(os.path.join(src, 'packet-bluetooth.c'), encoding='utf-8', errors='replace').read()
+    tab = ws[ws.index('const value_string bluetooth_uuid_vals[]'):]
+    tab = tab[: tab.index('};')]
+    for m in re.finditer(r'\{\s*0x([0-9A-Fa-f]{4}),\s*"([^"]*)"\s*\}', tab):
+        v = int(m.group(1), 16)
+        if 0xFC00 <= v <= 0xFEFF and v not in uu:      # member UUIDs: the name is the company's
+            uu[v] = (1, ascii(short(m.group(2))))
+    uu = sorted(uu.items())
+
+    # ---- appearance (category << 6 | subcategory) ----
+    app = []
+    for c in json.load(open(os.path.join(src, 'gap_appearance.json'))):
+        app.append((c['category'] << 6, ascii(c['name'])))
+        for sc in c.get('subcategory', []):
+            app.append(((c['category'] << 6) | sc['value'], ascii(sc['name'])))
+    app.sort()
+
+    co, cl, csz = blob([n for _, n in comp])
+    uo, ul, usz = blob([n for _, (k, n) in uu])
+    ao, al, asz = blob([n for _, n in app])
+    today = datetime.date.today().isoformat()
+    out = []
+    out.append('// ble_db.h - GENERATED by tools/ble_db/make_ble_db.py on %s. Do not edit.' % today)
+    out.append('// Lookup tables for the Bluetooth scanner (ble_ident.cpp). Sources: the Bluetooth SIG assigned numbers')
+    out.append('// as collected by NordicSemiconductor/bluetooth-numbers-database, and the member UUID list in Wireshark.')
+    out.append('#pragma once\n#include <stdint.h>\n\nnamespace bledb {\n')
+    out.append('// Company identifiers (the first two bytes of manufacturer specific data), sorted')
+    out.append('const int N_COMPANY = %d;' % len(comp))
+    out.append('const uint16_t COMPANY_ID[] = {' + ','.join(str(c) for c, _ in comp) + '};')
+    out.append('const uint32_t COMPANY_OFS[] = {' + ','.join(map(str, co)) + '};')
+    out.append('const char COMPANY_NAMES[] =\n' + '\n'.join(cl) + ';   // %d bytes\n' % csz)
+    out.append('// 16-bit UUIDs. KIND 0: a Bluetooth SIG service (name); 1: assigned to a company (company name)')
+    out.append('const int N_UUID16 = %d;' % len(uu))
+    out.append('const uint16_t UUID16[] = {' + ','.join(str(u) for u, _ in uu) + '};')
+    out.append('const uint8_t UUID16_KIND[] = {' + ','.join(str(k) for _, (k, n) in uu) + '};')
+    out.append('const uint16_t UUID16_OFS[] = {' + ','.join(map(str, uo)) + '};')
+    out.append('const char UUID16_NAMES[] =\n' + '\n'.join(ul) + ';   // %d bytes\n' % usz)
+    out.append('// GAP appearance values: category << 6 (generic) and category << 6 | subcategory')
+    out.append('const int N_APPEARANCE = %d;' % len(app))
+    out.append('const uint16_t APPEARANCE[] = {' + ','.join(str(v) for v, _ in app) + '};')
+    out.append('const uint16_t APPEARANCE_OFS[] = {' + ','.join(map(str, ao)) + '};')
+    out.append('const char APPEARANCE_NAMES[] =\n' + '\n'.join(al) + ';   // %d bytes\n' % asz)
+    out.append('}  // namespace bledb')
+    assert usz < 65536 and asz < 65536
+    open(os.path.join(FW, 'ble_db.h'), 'w').write('\n'.join(out) + '\n')
+    print('ble_db.h: %d companies, %d UUIDs (%d member), %d appearance values' %
+          (len(comp), len(uu), sum(1 for _, (k, n) in uu if k), len(app)))
+
+    # ---- oui.bin ----
+    # "OUI1", u32 count, u32 names length, then count x (3-byte prefix, 3-byte name offset) sorted by
+    # prefix, then the names (NUL-terminated). Little-endian. Only the 24-bit (MA-L) prefixes.
+    ouis = {}
+    if a.oui_csv:                                # Registry,Assignment,Organization Name,Organization Address
+        import csv
+        for row in csv.reader(open(a.oui_csv, encoding='utf-8', errors='replace')):
+            if len(row) >= 3 and row[0] == 'MA-L' and re.match(r'^[0-9A-Fa-f]{6}$', row[1]):
+                ouis[int(row[1], 16)] = ascii(short(row[2]))[:40]
+    else:
+        for line in open(os.path.join(src, 'nmap-mac-prefixes'), encoding='utf-8', errors='replace'):
+            m = re.match(r'^([0-9A-Fa-f]{6}) (.+)$', line.rstrip('\n'))
+            if m:
+                ouis[int(m.group(1), 16)] = ascii(short(m.group(2)))[:40]
+    names, pos, idx = {}, 0, []
+    for p in sorted(ouis):
+        n = ouis[p]
+        if n not in names:
+            names[n] = pos; pos += len(n) + 1
+        idx.append((p, names[n]))
+    body = b''.join(struct.pack('<I', p)[:3] + struct.pack('<I', o)[:3] for p, o in idx)
+    nb = b''.join(n.encode() + b'\0' for n, _ in sorted(names.items(), key=lambda x: x[1]))
+    path = os.path.join(FW, '..', 'sd_card', 'oui.bin')
+    with open(path, 'wb') as f:
+        f.write(b'OUI1' + struct.pack('<II', len(idx), len(nb)) + body + nb)
+    print('oui.bin: %d prefixes, %d vendor names, %d bytes' % (len(idx), len(names), 12 + len(body) + len(nb)))
+
+
+if __name__ == '__main__':
+    main()
