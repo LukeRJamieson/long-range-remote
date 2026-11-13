@@ -21,47 +21,27 @@ bool g_db = false;
 int g_files = 0;
 char g_status[280] = "no card";
 char g_db_note[200] = "";               // why the database is missing / which file was used
-uint8_t *g_image = nullptr;
-size_t g_image_len = 0;
+File g_dbf;                             // the database file, kept open: codes are read from it on demand
+char g_db_path[16] = "";
+size_t g_db_len = 0;
 
-// PSRAM the database may use: the rest is for your own remotes, the code search lists and the web
-// server. With the 8 MB PSRAM of the ESP32-S3-RLCD-4.2 that is about 6.5 MB (the full database
-// from tools/build_db.py is ~5.9 MB).
-size_t maxDatabaseBytes() {
-  size_t ps = ESP.getPsramSize();
-  return ps > 1600 * 1024 ? ps - 1536 * 1024 : 0;
+// irdb's reader: called from the main loop and the transmit task (never at once: irdb locks)
+bool dbRead(void *, uint32_t off, void *buf, uint32_t len) {
+  if (!g_dbf) return false;
+  if (!g_dbf.seek(off)) return false;
+  return g_dbf.read((uint8_t *)buf, len) == len;
 }
 
-// Load one database file into PSRAM. false (with err) if missing or invalid.
+// Open one database file and load its index into PSRAM. false (with err) if missing or invalid.
 bool loadDatabaseFile(const char *path, char *err, size_t en) {
-  File f = SD_MMC.open(path, FILE_READ);
-  if (!f) { snprintf(err, en, "not found"); return false; }
-  size_t len = f.size();
-  uint8_t hdr[64];
-  if (len < sizeof(hdr) || f.read(hdr, sizeof(hdr)) != sizeof(hdr)) { snprintf(err, en, "file too short"); f.close(); return false; }
-  if (!irdb::checkHeader(hdr, sizeof(hdr), err, en)) { f.close(); return false; }
-  if (len > maxDatabaseBytes()) {
-    snprintf(err, en, "%u KB is more than the %u KB of PSRAM for it", (unsigned)(len / 1024),
-             (unsigned)(maxDatabaseBytes() / 1024));
-    f.close();
-    return false;
-  }
-  uint8_t *buf = (uint8_t *)heap_caps_malloc(len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  if (!buf) { snprintf(err, en, "not enough PSRAM (OPI PSRAM enabled in the board settings?)"); f.close(); return false; }
-  memcpy(buf, hdr, sizeof(hdr));
-  size_t got = sizeof(hdr);
   uint32_t t0 = millis();
-  while (got < len) {
-    int n = f.read(buf + got, std::min<size_t>(32768, len - got));
-    if (n <= 0) break;
-    got += n;
-  }
-  f.close();
-  if (got != len) { snprintf(err, en, "read error"); heap_caps_free(buf); return false; }
-  if (!irdb::useImage(buf, len, err, en)) { heap_caps_free(buf); return false; }
-  g_image = buf;
-  g_image_len = len;
-  logf("SD: loaded %s (%u KB in %lu ms): %d brands, %d remotes, %d codes\n", path, (unsigned)(len / 1024),
+  g_dbf = SD_MMC.open(path, FILE_READ);
+  if (!g_dbf) { snprintf(err, en, "not found"); return false; }
+  size_t len = g_dbf.size();
+  if (!irdb::useFile(irdb::Reader{dbRead, nullptr, (uint32_t)len}, err, en)) { g_dbf.close(); return false; }
+  snprintf(g_db_path, sizeof(g_db_path), "%s", path);
+  g_db_len = len;
+  logf("SD: opened %s (%u KB, index loaded in %lu ms): %d brands, %d remotes, %d codes\n", path, (unsigned)(len / 1024),
        (unsigned long)(millis() - t0), irdb::numBrands(), irdb::numProfiles(), irdb::numCodes());
   return true;
 }
@@ -202,6 +182,18 @@ int userFiles() { return g_files; }
 
 bool format(bool keep, char *msg, size_t mn) {
   uploadAbort();                                   // no file may be open while the card is formatted
+  // keep: the database lives on the card, so it has to fit in PSRAM for the moment of the format
+  uint8_t *image = nullptr;
+  size_t image_len = 0;
+  if (keep && g_dbf) {
+    image = loadToPsram(g_db_path, &image_len, 64u * 1024 * 1024);
+    if (!image) {
+      snprintf(msg, mn, "Not formatted: the code database (%u MB) is too big to hold in memory while the card is "
+               "formatted. Format without keeping it and upload irdb.bin again afterwards.", (unsigned)(g_db_len >> 20));
+      return false;
+    }
+  }
+  if (g_dbf) g_dbf.close();                        // (code reads fail until a database file is open again)
   if (!g_mounted) {
     // Not mounted at start-up: no card then, or one that isn't FAT. Mount it now, letting the IDF
     // format it if it has no usable file system (it is formatted again properly below).
@@ -209,12 +201,13 @@ bool format(bool keep, char *msg, size_t mn) {
     if (!SD_MMC.setPins(SD_CLK_PIN, SD_CMD_PIN, SD_D0_PIN) ||
         !SD_MMC.begin("/sdcard", true /* 1-bit */, true /* format if mount fails */)) {
       snprintf(msg, mn, "no card found, or it can't be used (try another card)");
+      if (image) heap_caps_free(image);
       return false;
     }
     g_mounted = true;
   }
   sdmmc_card_t *card = SD_MMC.*SdmmcCard::member();
-  if (!card) { snprintf(msg, mn, "no card"); return false; }
+  if (!card) { snprintf(msg, mn, "no card"); if (image) heap_caps_free(image); return false; }
   esp_vfs_fat_mount_config_t cfg = {};
   cfg.max_files = 5;
   cfg.allocation_unit_size = 32 * 1024;            // 32 KB clusters: quick to read the 6 MB database
@@ -225,40 +218,44 @@ bool format(bool keep, char *msg, size_t mn) {
     snprintf(msg, mn, "format failed (%s) - the card may be faulty or write-protected", esp_err_to_name(e));
     snprintf(g_status, sizeof(g_status), "format failed - restart, or try another card");
     logf("SD: %s\n", msg);
+    if (image) heap_caps_free(image);
     return false;
   }
   logf("SD: formatted in %lu ms\n", (unsigned long)(millis() - t0));
   SD_MMC.mkdir(SD_USER_DIR);
   g_files = 0;
   if (!keep) {
+    if (image) heap_caps_free(image);
     snprintf(msg, mn, "Card formatted. It is empty: upload irdb.bin before the remote restarts.");
     setMountedStatus("formatted - empty: upload irdb.bin");
     return true;
   }
-  if (!g_image || !g_image_len) {
-    snprintf(msg, mn, "Card formatted. There was no code database in memory to put back: upload irdb.bin.");
+  if (!image) {
+    snprintf(msg, mn, "Card formatted. There was no code database to put back: upload irdb.bin.");
     setMountedStatus("formatted - empty: upload irdb.bin");
     return true;
   }
-  // The database in PSRAM is the irdb.bin (or irdb.old) it was loaded from, byte for byte.
   File f = SD_MMC.open(SD_DB_FILE, FILE_WRITE);
   size_t done = 0;
   if (f) {
-    while (done < g_image_len) {
-      size_t n = f.write(g_image + done, std::min<size_t>(32768, g_image_len - done));
+    while (done < image_len) {
+      size_t n = f.write(image + done, std::min<size_t>(32768, image_len - done));
       if (n == 0) break;
       done += n;
     }
     f.close();
   }
-  if (done != g_image_len) {
+  heap_caps_free(image);
+  if (done != image_len) {
     SD_MMC.remove(SD_DB_FILE);
     snprintf(msg, mn, "Card formatted, but writing irdb.bin back failed: upload it before the remote restarts.");
     setMountedStatus("formatted - irdb.bin missing: upload it");
     return true;
   }
-  logf("SD: irdb.bin written back (%u KB) in %lu ms\n", (unsigned)(g_image_len / 1024), (unsigned long)(millis() - t0));
-  snprintf(msg, mn, "Card formatted and irdb.bin put back (%u KB).", (unsigned)(g_image_len / 1024));
+  g_dbf = SD_MMC.open(SD_DB_FILE, FILE_READ);            // same bytes as before: carry on reading codes from it
+  snprintf(g_db_path, sizeof(g_db_path), "%s", SD_DB_FILE);
+  logf("SD: irdb.bin written back (%u KB) in %lu ms\n", (unsigned)(image_len / 1024), (unsigned long)(millis() - t0));
+  snprintf(msg, mn, "Card formatted and irdb.bin put back (%u KB).", (unsigned)(image_len / 1024));
   setMountedStatus("formatted, irdb.bin put back");
   return true;
 }
@@ -330,17 +327,17 @@ bool uploadFinish(char *msg, size_t mn) {
     snprintf(msg, mn, "not accepted: %s", err);
     return false;
   }
-  if (g_up_len > maxDatabaseBytes()) {
-    SD_MMC.remove(SD_DB_NEW);
-    snprintf(msg, mn, "not accepted: %u KB is more than the %u KB of PSRAM for it", (unsigned)(g_up_len / 1024),
-             (unsigned)(maxDatabaseBytes() / 1024));
-    return false;
-  }
+  // The open database file is about to be renamed (or removed): close it, and carry on reading the
+  // running database from wherever it ends up, until the restart that follows an upload.
+  const bool was_main = g_dbf && !strcmp(g_db_path, SD_DB_FILE);
+  if (g_dbf) g_dbf.close();
   if (SD_MMC.exists(SD_DB_FILE)) {
     SD_MMC.remove(SD_DB_OLD);
     SD_MMC.rename(SD_DB_FILE, SD_DB_OLD);
   }
-  if (!SD_MMC.rename(SD_DB_NEW, SD_DB_FILE)) { snprintf(msg, mn, "rename failed"); return false; }
+  bool renamed = SD_MMC.rename(SD_DB_NEW, SD_DB_FILE);
+  if (was_main) { g_dbf = SD_MMC.open(SD_DB_OLD, FILE_READ); snprintf(g_db_path, sizeof(g_db_path), "%s", SD_DB_OLD); }
+  if (!renamed) { snprintf(msg, mn, "rename failed"); return false; }
   snprintf(msg, mn, "irdb.bin updated (%u KB); the previous one is kept as irdb.old", (unsigned)(g_up_len / 1024));
   return true;
 }

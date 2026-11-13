@@ -3,9 +3,12 @@
 // Hierarchy:  Brand -> Profile (a model's remote or a code set) -> Code (one button)
 //
 // Where the tables come from (tools/build_db.py writes them):
-//   * /irdb.bin on the SD card: the database image, loaded into PSRAM at boot (sd_store.cpp). Nothing
-//     is compiled into the firmware, so the codes can be updated by copying a new file to the card
-//     (or uploading it from the web page). The file must have this firmware's IRDB_SCHEMA (ir_keys.h);
+//   * /irdb.bin on the SD card (sd_store.cpp). Only its index - names, brands, groups, remotes - is
+//     loaded into PSRAM at boot; the codes, raw signals and the key index (which remotes have a key,
+//     for code search) are read from the card when they are needed. So the file can be much bigger
+//     than the PSRAM. Nothing is compiled into the firmware: the codes are updated by copying a new
+//     file to the card (or uploading it from the web page). The file must have this firmware's
+//     IRDB_SCHEMA (ir_keys.h);
 //   * plus "your own" remotes: Flipper-format .ir files under /ir on the SD card, appended after the
 //     main database as extra brands.
 // Index spaces are global: brands / profiles / codes / raw signals of your own files follow those of
@@ -20,6 +23,8 @@ struct IrBrand   { uint32_t name; uint16_t first_prof; uint16_t n_prof; };
 struct IrGroup   { uint32_t name; uint16_t first; uint16_t count; };          // brand group (TV brands, ...)
 struct IrProfile { uint16_t brand; uint32_t name; uint8_t cat; uint8_t src; uint32_t first_code; uint16_t n_codes; };
 struct IrCode    { uint32_t name; uint16_t d, s, f; uint8_t proto; uint8_t key; };     // 12 bytes
+// A raw code (proto IRP_RAW) has no D / S / F: d and s hold the index of its raw signal.
+inline uint32_t irRawIndex(uint16_t d, uint16_t s) { return (uint32_t)d | ((uint32_t)s << 16); }
 // Raw capture, compressed: `count` samples, each an index into a table of `table_len` durations
 // (4-bit indices packed 2 per byte when table_len <= 16, else 1 byte each).
 struct IrRawSig  { uint32_t data_off; uint32_t table_off; uint32_t freq; uint16_t count; uint8_t table_len; uint8_t duty; };
@@ -30,10 +35,18 @@ enum IrSource : uint8_t { SRC_FLIPPER = 0, SRC_IRDB = 1, SRC_USER = 2 };
 namespace irdb {
 
 // ---- setup -------------------------------------------------------------------------------------
-// Validate a database image (see tools/build_db.py, bin_image()) and switch to it. The memory must
-// stay valid for as long as it is in use. On failure the previous database stays active and `err`
-// explains why.
+// How the database file is read: read(ctx, offset, buffer, length) fills the buffer, false on error.
+// It is called from the main loop and from the transmit task, never from both at once.
+struct Reader { bool (*read)(void *ctx, uint32_t off, void *buf, uint32_t len); void *ctx; uint32_t size; };
+// Switch to a database file (see tools/build_db.py, bin_image()): its header and index are read and
+// checked now, everything else when it is needed. On failure the previous database stays active
+// and `err` explains why.
+bool useFile(const Reader &rd, char *err, size_t err_len);
+// The same for a whole image in memory (PC tools); also checks every table row (verify()). The
+// memory must stay valid for as long as it is in use.
 bool useImage(const uint8_t *img, size_t len, char *err, size_t err_len);
+// Check every code, raw signal and key index row of the current database (reads all of it).
+bool verify(char *err, size_t err_len);
 // Check only the header of an image (first 64 bytes): magic, version, schema. For a quick look at a
 // file before reading megabytes of it.
 bool checkHeader(const uint8_t *hdr, size_t len, char *err, size_t err_len);
@@ -68,15 +81,17 @@ int profileFirstCode(int p);
 int profileCodeCount(int p);
 int profileFindKey(int p, uint8_t key);   // code index of a canonical key in a profile, or -1
 
-const IrCode &code(int c);
+IrCode code(int c);                  // main database: read from the card (a null code if that fails)
+int readCodes(int first, IrCode *out, int n);   // n codes in one go (for loops over many codes)
 const char *codeName(int c);
 int codeProfile(int c);              // binary search
 IrCodeParams codeParams(int c);
 
 // Raw signals
 int numRaw();
-const IrRawSig &raw(int r);
-uint16_t rawSample(const IrRawSig &r, int i);   // i-th duration (us) of a raw signal
+IrRawSig raw(int r);                 // count 0 if r is out of range or the card can't be read
+// The durations (us; mark, space, mark, ...) of raw signal r into out[]. Returns how many (<= max).
+int rawRead(int r, uint16_t *out, int max);
 
 // Code search: one candidate per DISTINCT signal. Remotes that share the exact same code for `key`
 // are merged; `profile` is the one with the most keys (the best remote to keep once it works) and
@@ -85,7 +100,7 @@ struct ScanCand { int code; int profile; uint16_t shared; };
 // Which remotes a code search covers. brand >= 0: one brand; else group >= 0: a brand group;
 // else all brands. category >= 0 additionally restricts to one device type (IR_CAT_NAMES index).
 struct ScanFilter { int brand = -1; int group = -1; int category = -1; };
-// For KEY_POWER, remotes with only a discrete "On" are included.
+// For KEY_POWER, remotes with only a discrete "On" (or only "Off") are included.
 int buildScan(const ScanFilter &filter, uint8_t key, ScanCand *out, int max_out);
 int buildScan(int brand, uint8_t key, ScanCand *out, int max_out);       // = one brand / all (-1)
 // Number of remotes a filter covers (any key) - for showing counts in menus.

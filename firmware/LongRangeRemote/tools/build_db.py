@@ -3,9 +3,13 @@
 build_db.py - Generate the universal IR code database for the Long-Range Remote firmware
 (derived from the HifiRemote generator).
 
-Sources (both open, community maintained):
+Sources (all open, community maintained):
   * Flipper-IRDB  https://github.com/Lucaslhm/Flipper-IRDB   (.ir files, parsed + raw)
   * IRDB          https://github.com/probonopd/irdb          (.csv files, IRP protocol/D/S/F)
+  * LIRC          https://github.com/probonopd/lirc-remotes  (--lirc: the LIRC remotes database as XML)
+  * JP1           https://github.com/hifiremote/deviceupgrades (--jp1: device upgrades, .rmdu / .txt)
+  * SmartIR       https://github.com/smartHomeHub/SmartIR    (--smartir: air conditioners, fans, ...)
+  The last three are read by more_sources.py.
 
 Every device category is imported: TVs, AV receivers, soundbars, projectors, set-top / cable /
 satellite boxes, streaming boxes, Blu-ray / DVD, VCRs, hi-fi (amps, CD, tuners, tape, MiniDisc),
@@ -35,10 +39,12 @@ Usage:
     (omit --irdb for a database built only from the CC0-licensed Flipper-IRDB)
 """
 import argparse
+from array import array
 import csv
 import os
 import re
 import struct
+import zlib
 import sys
 from collections import OrderedDict, defaultdict
 
@@ -605,7 +611,11 @@ def signal_key(code, db):
     """Identity of a transmitted signal (for de-duplication). NEC1/NEC2 send the same frame."""
     pr, d, s, f = code
     if PROTOS[pr] == "RAW":
-        return ("RAW", db.raw[d][0], tuple(db.raw[d][2]))
+        k = db.raw_keys.get(d)                    # (hashed once: there can be millions of samples)
+        if k is None:
+            k = db.raw_keys[d] = ("RAW", db.raw[d][0], len(db.raw[d][2]), zlib.crc32(db.raw[d][2].tobytes()),
+                                  zlib.adler32(db.raw[d][2].tobytes()))
+        return k
     if PROTOS[pr] == "NEC2":
         pr = P["NEC"]
     return (pr, d, s, f)
@@ -623,6 +633,8 @@ class DB:
         self.raw_base = 0      # raw samples used before the _Converted_ library is loaded
         self.dropped_dupes = 0
         self.irp_render = None   # (java, jar, class dir) when IrpTransmogrifier rendering is enabled
+        self.raw_keys = {}       # raw index -> identity (signal_key)
+        self.source_count = defaultdict(int)   # remotes added per extra source (before de-duplication)
 
     def raw_code(self, data, freq, duty, allow_raw=True):
         """Decode a raw capture to a protocol code if possible, else store it raw.
@@ -634,9 +646,13 @@ class DB:
             return (P[name], d, s, f)
         if not allow_raw:
             return None
+        return self.raw_store(data, freq, duty)
+
+    def raw_store(self, data, freq, duty):
+        """Keep a capture as a raw signal (no attempt to decode it)."""
         if len(data) % 2:
-            data = data + [0]
-        self.raw.append((freq, int(round(duty * 100)), data))
+            data = list(data) + [0]
+        self.raw.append((freq, int(round(duty * 100)), array("H", [min(v, 65535) for v in data])))   # 2 bytes a sample
         self.raw_samples += len(data)
         return (P["RAW"], len(self.raw) - 1, 0, 0)
 
@@ -1134,15 +1150,22 @@ def c_str(s):
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"').replace("?", "\\?") + '"'
 
 
+# IrProfile.src in the file: where a remote came from (0: Flipper-IRDB)
+SRC_NUM = {"I": 1, "L": 3, "J": 4, "S": 5}       # IRDB, LIRC, JP1, SmartIR (2 = your own files, in the firmware)
+
+
 def build_tables(db, cats=None):
     """Brand/profile/code/raw tables (the rows written to the header or the .bin).
     cats: set of category names to keep (None = all)."""
     pool, pool_idx = [], {}
 
+    pool_len = [0]
+
     def sidx(s):
         s = s.encode("ascii", "replace").decode()
         if s not in pool_idx:
-            pool_idx[s] = sum(len(x) + 1 for x in pool)
+            pool_idx[s] = pool_len[0]
+            pool_len[0] += len(s) + 1
             pool.append(s)
         return pool_idx[s]
 
@@ -1152,12 +1175,13 @@ def build_tables(db, cats=None):
     brand_rows, prof_rows, code_rows = [], [], []
     for bi, b in enumerate(brands):
         first_prof = len(prof_rows)
-        for p in sorted(b["profiles"], key=lambda p: (p["src"] == "I", CATS.index(p["cat"]), p["name"].lower())):
+        for p in sorted(b["profiles"], key=lambda p: (p["src"] in "IL", CATS.index(p["cat"]), p["name"].lower())):
             first_code = len(code_rows)
             for c in p["codes"]:
                 pr, d, s_, f = c["code"]
                 code_rows.append((sidx(c["name"]), d, s_, f, pr, c["key"]))
-            prof_rows.append((bi, sidx(p["name"]), CATS.index(p["cat"]), 1 if p["src"] == "I" else 0,
+            assert len(code_rows) - first_code < 65536, "IrProfile.n_codes is 16-bit: " + p["name"]
+            prof_rows.append((bi, sidx(p["name"]), CATS.index(p["cat"]), SRC_NUM.get(p["src"], 0),
                               first_code, len(code_rows) - first_code))
         brand_rows.append((sidx(b["name"]), first_prof, len(prof_rows) - first_prof))
     assert len(prof_rows) < 65536, "IrBrand.first_prof is 16-bit"
@@ -1170,8 +1194,10 @@ def build_tables(db, cats=None):
             group_brands += idx
     used = sorted({r[1] for r in code_rows if r[4] == P["RAW"]})
     remap = {old: new for new, old in enumerate(used)}
-    code_rows = [(r[0], remap[r[1]], r[2], r[3], r[4], r[5]) if r[4] == P["RAW"] else r for r in code_rows]
-    raw_rows, raw_bytes, raw_table = [], bytearray(), []
+    # a raw code's signal index is split over d (low 16 bits) and s (high 16 bits)
+    code_rows = [(r[0], remap[r[1]] & 0xFFFF, remap[r[1]] >> 16, 0, r[4], r[5]) if r[4] == P["RAW"] else r
+                 for r in code_rows]
+    raw_rows, raw_bytes, raw_table, raw_sig = [], bytearray(), [], []
     for freq, duty, data in (db.raw[i] for i in used):
         data = [min(v, 65535) for v in data]
         clusters = []
@@ -1195,11 +1221,37 @@ def build_tables(db, cats=None):
         else:
             raw_bytes += bytes(idx)
         raw_rows.append((data_off, table_off, freq, len(data), len(centers), duty))
-    return dict(pool=pool, brands=brand_rows, groups=group_rows, group_brands=group_brands, profiles=prof_rows,
+        # what the firmware will send (the clustered durations): its identity for the key index
+        blob = b"\xff" + struct.pack("<I", freq) + struct.pack("<%dH" % len(idx), *[centers[i] for i in idx])
+        raw_sig.append((zlib.crc32(blob) << 32) | zlib.adler32(blob))       # (fast in C: there are megabytes)
+    # Key index: for every canonical key, the remotes that have it - (code, remote, signal id), in
+    # remote order. Code search reads one key's list instead of every remote's codes.
+    nec, nec2 = P["NEC"], P["NEC2"]
+
+    def sig_of(r):
+        if r[4] == P["RAW"]:
+            return raw_sig[r[1] | (r[2] << 16)]
+        return fnv64(struct.pack("<BHHH", nec if r[4] == nec2 else r[4], r[1], r[2], r[3]))
+
+    keyidx = [[] for _ in KEYS]
+    for pi, pr in enumerate(prof_rows):
+        for ci in range(pr[4], pr[4] + pr[5]):
+            k = code_rows[ci][5]
+            if k:
+                keyidx[k].append((ci, pi, sig_of(code_rows[ci])))
+    return dict(keyidx=keyidx, pool=pool, brands=brand_rows, groups=group_rows, group_brands=group_brands, profiles=prof_rows,
                 codes=code_rows, raw=raw_rows, raw_bytes=raw_bytes, raw_table=raw_table)
 
 
-BIN_MAGIC, BIN_VERSION = b"IRDB", 2
+BIN_MAGIC, BIN_VERSION = b"IRDB", 3
+
+
+def fnv64(data):
+    """64-bit FNV-1a (the firmware computes the same for your own remotes: ir_db.cpp, codeSig)."""
+    h = 0xcbf29ce484222325
+    for b in data:
+        h = ((h ^ b) * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF
+    return h
 
 
 def schema_hash():
@@ -1215,7 +1267,10 @@ def bin_image(t, used_irdb):
     IrBrand / IrGroup / IrProfile / IrCode / IrRawSig).
     Header: "IRDB", u32 version, u32 schema hash, u32 flags (bit 0: contains IRDB), u32 section count,
     then (u32 offset, u32 count) per section; every section starts 4-byte aligned.
-    Sections: strings, brands, groups, group brands, profiles, codes, raw signals, raw data, raw table."""
+    Sections: strings, brands, groups, group brands, profiles (the index: the firmware keeps these five
+    in memory), then codes, raw signals, raw data, raw table, key directory (per key: first entry,
+    count) and key index entries (u32 code, u16 remote, u16 0, u64 signal id), which it reads from
+    the SD card when needed."""
     sections = []
     strs = b"".join(s.encode("ascii", "replace") + b"\0" for s in t["pool"])
     sections.append((strs, len(strs)))
@@ -1227,6 +1282,13 @@ def bin_image(t, used_irdb):
     sections.append((b"".join(struct.pack("<IIIHBB", *r) for r in t["raw"]), len(t["raw"])))
     sections.append((bytes(t["raw_bytes"]), len(t["raw_bytes"])))
     sections.append((b"".join(struct.pack("<H", x) for x in t["raw_table"]), len(t["raw_table"])))
+    kd, ke, first = [], [], 0
+    for lst in t["keyidx"]:
+        kd.append(struct.pack("<II", first, len(lst)))
+        first += len(lst)
+        ke += [struct.pack("<IHHQ", c, p, 0, sig) for c, p, sig in lst]
+    sections.append((b"".join(kd), len(kd)))
+    sections.append((b"".join(ke), len(ke)))
     hdr_len = 4 + 4 + 4 + 4 + 4 + len(sections) * 8
     out = bytearray()
     offs = []
@@ -1290,10 +1352,13 @@ def write_header(db, out_path, keys_path, cats=None):
     # --- string pool (deduplicated) ---
     pool, pool_idx = [], {}
 
+    pool_len = [0]
+
     def sidx(s):
         s = s.encode("ascii", "replace").decode()
         if s not in pool_idx:
-            pool_idx[s] = sum(len(x) + 1 for x in pool)
+            pool_idx[s] = pool_len[0]
+            pool_len[0] += len(s) + 1
             pool.append(s)
         return pool_idx[s]
 
@@ -1304,12 +1369,12 @@ def write_header(db, out_path, keys_path, cats=None):
     for bi, b in enumerate(brands):
         first_prof = len(prof_rows)
         # Flipper (model-named) profiles first, then irdb code sets
-        for p in sorted(b["profiles"], key=lambda p: (p["src"] == "I", CATS.index(p["cat"]), p["name"].lower())):
+        for p in sorted(b["profiles"], key=lambda p: (p["src"] in "IL", CATS.index(p["cat"]), p["name"].lower())):
             first_code = len(code_rows)
             for c in p["codes"]:
                 pr, d, s, f = c["code"]
                 code_rows.append((sidx(c["name"]), d, s, f, pr, c["key"]))
-            prof_rows.append((bi, sidx(p["name"]), CATS.index(p["cat"]), 1 if p["src"] == "I" else 0,
+            prof_rows.append((bi, sidx(p["name"]), CATS.index(p["cat"]), SRC_NUM.get(p["src"], 0),
                               first_code, len(code_rows) - first_code))
         brand_rows.append((sidx(b["name"]), first_prof, len(prof_rows) - first_prof))
 
@@ -1479,6 +1544,9 @@ def main():
     ap.add_argument("--flipper", required=True)
     ap.add_argument("--irdb", default=None,
                     help="path to probonopd/irdb (optional; omit for a Flipper-IRDB-only, CC0 database)")
+    ap.add_argument("--lirc", default=None, help="path to probonopd/lirc-remotes (the LIRC database as XML)")
+    ap.add_argument("--jp1", default=None, help="path to hifiremote/deviceupgrades (JP1 device upgrades)")
+    ap.add_argument("--smartir", default=None, help="path to smartHomeHub/SmartIR (air conditioners, fans, ...)")
     ap.add_argument("--no-converted", action="store_true", help="skip Flipper-IRDB's _Converted_ library")
     ap.add_argument("--raw-budget", type=int, default=3000000,
                     help="max raw samples (2 bytes each) kept from the _Converted_ library (default 250000)")
@@ -1504,6 +1572,15 @@ def main():
         db.irp_render = ("java", os.path.abspath(a.irpt_jar), here)
     if a.irdb:
         load_irdb(db, a.irdb)
+    if a.lirc or a.jp1 or a.smartir:
+        import more_sources
+        if a.lirc:
+            more_sources.load_lirc(db, a.lirc)
+        if a.jp1:
+            more_sources.load_jp1(db, a.jp1)
+        if a.smartir:
+            more_sources.load_smartir(db, a.smartir)
+        print("extra sources, remotes read:", dict(db.source_count))
     if db.irp_render:
         render_irp_placeholders(db, a.irpt_xml)
     dedupe_profiles(db)
@@ -1530,6 +1607,14 @@ def main():
             r.write("\nSkipped (unsupported/non-hifi protocols):\n")
             for k, v in sorted(db.skipped.items(), key=lambda x: -x[1]):
                 r.write("  %-24s %6d\n" % (k, v))
+            kept = defaultdict(int)
+            for b in brands:
+                for p in b["profiles"]:
+                    kept[{"F": "Flipper-IRDB", "C": "Flipper-IRDB (converted)", "I": "IRDB", "L": "LIRC", "J": "JP1",
+                          "S": "SmartIR"}.get(p["src"], p["src"])] += 1
+            r.write("\nRemotes per source (after dropping duplicates):\n")
+            for k, v in sorted(kept.items(), key=lambda x: -x[1]):
+                r.write("  %-26s %6d\n" % (k, v))
             r.write("\nBrands (%d):\n" % len(brands))
             for b in brands:
                 r.write("  %-28s %4d profiles\n" % (b["name"], len(b["profiles"])))

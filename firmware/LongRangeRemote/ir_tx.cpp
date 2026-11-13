@@ -101,12 +101,13 @@ size_t buildSymbols(const uint32_t *t, uint16_t count) {
 
 // Raw signals are stored as uint16 durations in flash.
 size_t buildRawSymbols(int raw_index) {
-  const IrRawSig &r = irdb::raw(raw_index);
+  static uint16_t t[2000];                                   // (only the transmit task comes here)
+  int count = irdb::rawRead(raw_index, t, 2000);             // from the SD card for database codes
   SymWriter w;
-  for (uint16_t i = 0; i < r.count; i++) {
-    uint32_t d = irdb::rawSample(r, i);
+  for (int i = 0; i < count; i++) {
+    uint32_t d = t[i];
     bool mark = (i & 1) == 0;
-    if (!mark && i == r.count - 1 && d < 40000) d = 40000;   // guarantee an inter-frame gap
+    if (!mark && i == count - 1 && d < 40000) d = 40000;     // guarantee an inter-frame gap
     if (d == 0) d = 1;
     w.put(mark, d);
   }
@@ -170,9 +171,11 @@ bool runAction(const Msg &m, Msg &pending) {
 
   g_toggle = !g_toggle;                                  // new key press -> flip RC5/RC6 toggle
   if (is_raw) {
-    const IrRawSig &r = irdb::raw(p.d);
+    const int ri = (int)irRawIndex(p.d, p.s);
+    const IrRawSig r = irdb::raw(ri);
+    if (r.count == 0) return false;                          // card not readable: nothing to send
     applyCarrier(r.freq ? r.freq : 38000, r.duty ? r.duty : 33);
-    n_first = buildRawSymbols(p.d);
+    n_first = buildRawSymbols(ri);
     setLast(m, p, r.freq);
   } else {
     if (!irEncode(p, g_toggle, g_sig)) return false;
@@ -307,7 +310,7 @@ bool begin(int gpio, bool active_low, bool open_drain, int drive_strength) {
   applyCarrier(38000, 33);
   if (rmt_enable(g_chan) != ESP_OK) return false;
 
-  xTaskCreatePinnedToCore(txTask, "irtx", 6144, nullptr, 5, nullptr, 1);
+  xTaskCreatePinnedToCore(txTask, "irtx", 8192, nullptr, 5, nullptr, 1);   // reads raw signals from the SD card
   return true;
 }
 

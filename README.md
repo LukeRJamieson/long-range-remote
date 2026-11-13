@@ -233,8 +233,8 @@ The keys use pins the Waveshare board brings out but doesn't need:
 ## Firmware
 
 **`firmware/LongRangeRemote/` is the firmware to use.** It is a universal remote:
-- **all IR codes on the SD card** (`firmware/sd_card/irdb.bin`): about 1,640 brands, 6,760
-  remotes and 233,000 codes from Flipper-IRDB + IRDB. Update them by swapping the file or
+- **all IR codes on the SD card** (`firmware/sd_card/irdb.bin`): about 1,890 brands, 10,670
+  remotes and 530,000 codes from Flipper-IRDB, IRDB, LIRC, JP1 and SmartIR. Update them by swapping the file or
   uploading it from your phone, without reflashing;
 - set-top-box protocols such as DirecTV, Dish, Motorola and TiVo, pre-rendered with
   IrpTransmogrifier;
@@ -249,7 +249,7 @@ The keys use pins the Waveshare board brings out but doesn't need:
 - key sounds on the display board's speaker, with volume and mute (Menu → Sound).
 
 Build it with Partition Scheme "16M Flash (3MB APP/9.9MB FATFS)" and **OPI PSRAM**, which holds
-the codes. Then put `irdb.bin` on a FAT32 microSD card. See `firmware/LongRangeRemote/README.md`.
+the index of the code database (the codes themselves are read from the SD card). Then put `irdb.bin` on a FAT32 microSD card. See `firmware/LongRangeRemote/README.md`.
 
 ### Bring-up firmware
 

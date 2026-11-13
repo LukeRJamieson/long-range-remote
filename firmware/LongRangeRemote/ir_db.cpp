@@ -1,8 +1,15 @@
-// ir_db.cpp - accessors for the IR database (irdb.bin from the SD card, plus your own .ir files).
+// ir_db.cpp - accessors for the IR database (irdb.bin on the SD card, plus your own .ir files).
 // No Arduino dependencies: tools/test_all_codes.cpp compiles this file on a PC.
+//
+// Only the index of irdb.bin (names, brands, groups, remotes) is kept in memory. The codes, the raw
+// signals and the key index stay in the file and are read through a small page cache (readA), so the
+// database can be far bigger than the PSRAM. Reads are serialised by a mutex: the transmit task
+// fetches raw signals while the main loop browses.
 #include "ir_db.h"
 #include "ir_keys.h"
 #include <algorithm>
+#include <mutex>
+#include <unordered_map>
 #include <ctype.h>
 #include <stdio.h>
 #include <strings.h>
@@ -20,21 +27,83 @@ static_assert(sizeof(IrRawSig) == 16, "IrRawSig layout must match tools/build_db
 namespace irdb {
 namespace {
 
-// One set of tables (the main database image, or your own remotes)
+// One set of tables. For the main database (A) only the index tables are pointers into memory; its
+// codes / raw signals are read from the file (sections below). Your own remotes (U) are all in memory.
 struct View {
   const char *str = nullptr;      uint32_t str_len = 0;
   const IrBrand *brands = nullptr; int nb = 0;
   const IrGroup *groups = nullptr; int ng = 0;
   const uint16_t *group_brands = nullptr; int ngb = 0;
   const IrProfile *profiles = nullptr; int np = 0;
-  const IrCode *codes = nullptr; int nc = 0;
-  const IrRawSig *raw = nullptr; int nr = 0;
+  const IrCode *codes = nullptr; int nc = 0;            // codes: U only
+  const IrRawSig *raw = nullptr; int nr = 0;            // U only
   const uint8_t *raw_data = nullptr; uint32_t raw_data_len = 0;
   const uint16_t *raw_table = nullptr; uint32_t raw_table_len = 0;
 };
 View A;            // main database
 View U;            // your own remotes (indices continue after A's)
 char g_source[48] = "none";
+
+// Where the main database's on-card sections are (file offsets), and how to read them
+struct Store {
+  Reader rd = {nullptr, nullptr, 0};
+  const uint8_t *mem = nullptr;        // whole image in memory (PC tools) instead of a reader
+  uint32_t size = 0;
+  uint32_t off_codes = 0, off_raw = 0, off_raw_data = 0, off_raw_table = 0, off_keydir = 0, off_keyidx = 0;
+  uint32_t n_keyidx = 0;
+  void *ram = nullptr;                 // malloc'ed copy of the index sections (reader mode)
+} S;
+
+// ---- page cache ----
+const uint32_t PG = 4096;
+const int NPG = 48;                    // 192 KB
+struct Page { uint32_t no = UINT32_MAX; uint32_t tick = 0; };
+Page g_pg[NPG];
+uint8_t *g_pages = nullptr;
+uint32_t g_tick = 0;
+int g_last = -1;
+std::mutex g_mx;
+
+void cacheReset() {
+  for (auto &p : g_pg) p = Page();
+  g_last = -1;
+}
+
+// caller holds g_mx
+const uint8_t *page(uint32_t no) {
+  if (g_last >= 0 && g_pg[g_last].no == no) { g_pg[g_last].tick = ++g_tick; return g_pages + (size_t)g_last * PG; }
+  int victim = 0;
+  for (int i = 0; i < NPG; i++) {
+    if (g_pg[i].no == no) { g_last = i; g_pg[i].tick = ++g_tick; return g_pages + (size_t)i * PG; }
+    if (g_pg[i].tick < g_pg[victim].tick) victim = i;
+  }
+  if (!g_pages) g_pages = (uint8_t *)malloc((size_t)NPG * PG);
+  if (!g_pages || !S.rd.read) return nullptr;
+  uint64_t off = (uint64_t)no * PG;
+  if (off >= S.size) return nullptr;
+  uint32_t n = (uint32_t)std::min<uint64_t>(PG, S.size - off);
+  g_pg[victim].no = UINT32_MAX;
+  if (!S.rd.read(S.rd.ctx, (uint32_t)off, g_pages + (size_t)victim * PG, n)) { g_last = -1; return nullptr; }
+  if (n < PG) memset(g_pages + (size_t)victim * PG + n, 0, PG - n);
+  g_pg[victim].no = no; g_pg[victim].tick = ++g_tick; g_last = victim;
+  return g_pages + (size_t)victim * PG;
+}
+
+// Bytes of the main database file. false (buffer zeroed) if they can't be read (card pulled out).
+bool readA(uint32_t off, void *buf, uint32_t len) {
+  if ((uint64_t)off + len > S.size) { memset(buf, 0, len); return false; }
+  if (S.mem) { memcpy(buf, S.mem + off, len); return true; }
+  std::lock_guard<std::mutex> lk(g_mx);
+  uint8_t *out = (uint8_t *)buf;
+  while (len) {
+    const uint8_t *p = page(off / PG);
+    uint32_t in = off % PG, n = std::min(len, PG - in);
+    if (!p) { memset(out, 0, len); return false; }
+    memcpy(out, p + in, n);
+    out += n; off += n; len -= n;
+  }
+  return true;
+}
 
 // User tables under construction / in use (std::vector: on the ESP32-S3 these large blocks land in
 // PSRAM through the normal allocator)
@@ -50,11 +119,8 @@ struct UserTables {
 } UT;
 const int USER_MAX_PROFILES = 2000, USER_MAX_CODES = 60000;
 
-inline bool isU(int i, int nA) { return i >= nA; }
-
 inline const IrBrand &brandRow(int b) { return b < A.nb ? A.brands[b] : U.brands[b - A.nb]; }
 inline const IrProfile &profRow(int p) { return p < A.np ? A.profiles[p] : U.profiles[p - A.np]; }
-inline const IrCode &codeRow(int c) { return c < A.nc ? A.codes[c] : U.codes[c - A.nc]; }
 inline const char *strA(uint32_t off) { return off < A.str_len ? A.str + off : ""; }
 inline const char *strU(uint32_t off) { return off < U.str_len ? U.str + off : ""; }
 
@@ -68,7 +134,28 @@ void setErr(char *err, size_t n, const char *msg) {
 
 uint32_t rd32(const uint8_t *p) { return p[0] | (p[1] << 8) | (p[2] << 16) | ((uint32_t)p[3] << 24); }
 
+const IrCode kNullCode = {0, 0, 0, 0, 0, 0};   // name, d, s, f, proto, key
+const IrRawSig kNullRaw = {0, 0, 38000, 0, 1, 33};
+
+// A code row of the main database is only trusted after this (the file isn't checked row by row at
+// start-up any more: that would mean reading all of it).
+inline void sanitize(IrCode &c) {
+  if (c.proto >= IRP__COUNT || c.key >= KEY__COUNT || c.name >= A.str_len) c = kNullCode;
+}
+
+// profileFindKey(): the keys of the remote asked about last
+int g_km_prof = -1;
+int32_t g_km[KEY__COUNT];
+
+const int N_SECTIONS = 11;
+enum { SEC_STR, SEC_BRANDS, SEC_GROUPS, SEC_GROUP_BRANDS, SEC_PROFILES, SEC_CODES, SEC_RAW, SEC_RAW_DATA,
+       SEC_RAW_TABLE, SEC_KEYDIR, SEC_KEYIDX };
+struct KeyDir { uint32_t first, count; };
+struct KeyEnt { uint32_t code; uint16_t profile; uint16_t pad; uint32_t sig_lo, sig_hi; };
+
 }  // namespace
+
+static_assert(sizeof(KeyEnt) == 16, "KeyEnt layout must match tools/build_db.py");
 
 // =================================================================================== image loading
 bool checkHeader(const uint8_t *img, size_t len, char *err, size_t en) {
@@ -85,64 +172,135 @@ bool checkHeader(const uint8_t *img, size_t len, char *err, size_t en) {
   return true;
 }
 
-bool useImage(const uint8_t *img, size_t len, char *err, size_t en) {
-  if (!checkHeader(img, len, err, en)) return false;
-  if (((uintptr_t)img & 3) != 0) { setErr(err, en, "image not 4-byte aligned"); return false; }
-  uint32_t nsec = rd32(img + 16);
-  if (nsec != 9 || len < 20 + 9 * 8) { setErr(err, en, "unexpected section count"); return false; }
-  static const uint32_t ESZ[9] = {1, sizeof(IrBrand), sizeof(IrGroup), 2, sizeof(IrProfile), sizeof(IrCode),
-                                  sizeof(IrRawSig), 1, 2};
-  uint32_t off[9], cnt[9];
-  for (int i = 0; i < 9; i++) {
-    off[i] = rd32(img + 20 + 8 * i);
-    cnt[i] = rd32(img + 24 + 8 * i);
-    if ((off[i] & 3) || (uint64_t)off[i] + (uint64_t)cnt[i] * ESZ[i] > len) {
+// Open a database: header and index tables are read (and checked) now, the rest on demand.
+static bool openStore(const Reader &rd, const uint8_t *mem, uint32_t size, char *err, size_t en) {
+  if (U.np) { setErr(err, en, "load the main database before your own remotes"); return false; }
+  uint8_t hdr[20 + N_SECTIONS * 8];
+  auto rdraw = [&](uint32_t off, void *buf, uint32_t n) -> bool {
+    if ((uint64_t)off + n > size) return false;
+    if (mem) { memcpy(buf, mem + off, n); return true; }
+    return rd.read && rd.read(rd.ctx, off, buf, n);
+  };
+  if (size < sizeof(hdr) || !rdraw(0, hdr, sizeof(hdr))) { setErr(err, en, "file too short"); return false; }
+  if (!checkHeader(hdr, sizeof(hdr), err, en)) return false;
+  if (rd32(hdr + 16) != (uint32_t)N_SECTIONS) { setErr(err, en, "unexpected section count"); return false; }
+  static const uint32_t ESZ[N_SECTIONS] = {1, sizeof(IrBrand), sizeof(IrGroup), 2, sizeof(IrProfile), sizeof(IrCode),
+                                           sizeof(IrRawSig), 1, 2, sizeof(KeyDir), sizeof(KeyEnt)};
+  uint32_t off[N_SECTIONS], cnt[N_SECTIONS];
+  for (int i = 0; i < N_SECTIONS; i++) {
+    off[i] = rd32(hdr + 20 + 8 * i);
+    cnt[i] = rd32(hdr + 24 + 8 * i);
+    if ((off[i] & 3) || (uint64_t)off[i] + (uint64_t)cnt[i] * ESZ[i] > size) {
       setErr(err, en, "section outside the file (truncated?)"); return false;
     }
   }
+  // the index: sections 0..4, one after the other at the start of the file
+  uint32_t i0 = off[SEC_STR], i1 = off[SEC_PROFILES] + cnt[SEC_PROFILES] * (uint32_t)sizeof(IrProfile);
+  for (int i = SEC_STR; i < SEC_PROFILES; i++)
+    if (off[i + 1] < off[i] || off[i + 1] > i1) { setErr(err, en, "bad section order"); return false; }
+  if (i1 <= i0 || i1 - i0 > 64u * 1024 * 1024) { setErr(err, en, "bad index size"); return false; }
+  void *ram = nullptr;
+  const uint8_t *base;                          // base + file offset = the index tables
+  if (mem) {
+    if (((uintptr_t)mem & 3) != 0) { setErr(err, en, "image not 4-byte aligned"); return false; }
+    base = mem;
+  } else {
+    ram = malloc(i1 - i0);
+    if (!ram) { setErr(err, en, "not enough memory for the index (OPI PSRAM enabled in the board settings?)"); return false; }
+    for (uint32_t done = 0; done < i1 - i0;) {
+      uint32_t n = std::min<uint32_t>(32768, i1 - i0 - done);
+      if (!rd.read(rd.ctx, i0 + done, (uint8_t *)ram + done, n)) { free(ram); setErr(err, en, "read error"); return false; }
+      done += n;
+    }
+    base = (const uint8_t *)ram - i0;
+  }
   View v;
-  v.str = (const char *)img + off[0]; v.str_len = cnt[0];
-  v.brands = (const IrBrand *)(img + off[1]); v.nb = cnt[1];
-  v.groups = (const IrGroup *)(img + off[2]); v.ng = cnt[2];
-  v.group_brands = (const uint16_t *)(img + off[3]); v.ngb = cnt[3];
-  v.profiles = (const IrProfile *)(img + off[4]); v.np = cnt[4];
-  v.codes = (const IrCode *)(img + off[5]); v.nc = cnt[5];
-  v.raw = (const IrRawSig *)(img + off[6]); v.nr = cnt[6];
-  v.raw_data = img + off[7]; v.raw_data_len = cnt[7];
-  v.raw_table = (const uint16_t *)(img + off[8]); v.raw_table_len = cnt[8];
+  v.str = (const char *)base + off[SEC_STR]; v.str_len = cnt[SEC_STR];
+  v.brands = (const IrBrand *)(base + off[SEC_BRANDS]); v.nb = cnt[SEC_BRANDS];
+  v.groups = (const IrGroup *)(base + off[SEC_GROUPS]); v.ng = cnt[SEC_GROUPS];
+  v.group_brands = (const uint16_t *)(base + off[SEC_GROUP_BRANDS]); v.ngb = cnt[SEC_GROUP_BRANDS];
+  v.profiles = (const IrProfile *)(base + off[SEC_PROFILES]); v.np = cnt[SEC_PROFILES];
+  v.nc = cnt[SEC_CODES]; v.nr = cnt[SEC_RAW];
+  v.raw_data_len = cnt[SEC_RAW_DATA]; v.raw_table_len = cnt[SEC_RAW_TABLE];
   // Every index must stay inside its table, so a damaged file can't crash the remote later.
-  if (v.str_len == 0 || v.str[v.str_len - 1] != 0) { setErr(err, en, "bad string pool"); return false; }
-  for (int b = 0; b < v.nb; b++) {
+  const char *bad = nullptr;
+  if (v.str_len == 0 || v.str[v.str_len - 1] != 0) bad = "bad string pool";
+  if (v.np > 65535 || v.nb > 65535 || v.nc < 0) bad = "too many remotes";
+  for (int b = 0; b < v.nb && !bad; b++) {
     const IrBrand &r = v.brands[b];
-    if (r.name >= v.str_len || r.first_prof + r.n_prof > v.np) { setErr(err, en, "bad brand table"); return false; }
+    if (r.name >= v.str_len || r.first_prof + r.n_prof > v.np) bad = "bad brand table";
   }
-  for (int g = 0; g < v.ng; g++) {
+  for (int g = 0; g < v.ng && !bad; g++) {
     const IrGroup &r = v.groups[g];
-    if (r.name >= v.str_len || r.first + r.count > v.ngb) { setErr(err, en, "bad group table"); return false; }
+    if (r.name >= v.str_len || r.first + r.count > v.ngb) bad = "bad group table";
   }
-  for (int i = 0; i < v.ngb; i++) if (v.group_brands[i] >= v.nb) { setErr(err, en, "bad group table"); return false; }
-  for (int p = 0; p < v.np; p++) {
+  for (int i = 0; i < v.ngb && !bad; i++) if (v.group_brands[i] >= v.nb) bad = "bad group table";
+  for (int p = 0; p < v.np && !bad; p++) {
     const IrProfile &r = v.profiles[p];
-    if (r.name >= v.str_len || r.brand >= v.nb || r.cat >= IR_NUM_CATS || (uint64_t)r.first_code + r.n_codes > (uint64_t)v.nc) {
-      setErr(err, en, "bad remote table"); return false;
-    }
+    if (r.name >= v.str_len || r.brand >= v.nb || r.cat >= IR_NUM_CATS || (uint64_t)r.first_code + r.n_codes > (uint64_t)v.nc)
+      bad = "bad remote table";
   }
-  for (int c = 0; c < v.nc; c++) {
-    const IrCode &r = v.codes[c];
-    if (r.name >= v.str_len || r.proto >= IRP__COUNT || r.key >= KEY__COUNT || (r.proto == IRP_RAW && r.d >= v.nr)) {
-      setErr(err, en, "bad code table"); return false;
-    }
+  if (!bad && cnt[SEC_KEYDIR] != (uint32_t)KEY__COUNT) bad = "bad key index";
+  if (bad) { free(ram); setErr(err, en, bad); return false; }
+  {
+    std::lock_guard<std::mutex> lk(g_mx);
+    cacheReset();
+    free(S.ram);
+    S = Store();
+    S.rd = rd; S.mem = mem; S.size = size; S.ram = ram;
+    S.off_codes = off[SEC_CODES]; S.off_raw = off[SEC_RAW]; S.off_raw_data = off[SEC_RAW_DATA];
+    S.off_raw_table = off[SEC_RAW_TABLE]; S.off_keydir = off[SEC_KEYDIR]; S.off_keyidx = off[SEC_KEYIDX];
+    S.n_keyidx = cnt[SEC_KEYIDX];
   }
-  for (int r = 0; r < v.nr; r++) {
-    const IrRawSig &x = v.raw[r];
-    uint32_t bytes = x.table_len <= 16 ? (x.count + 1u) / 2 : x.count;
-    if (x.count == 0 || (uint64_t)x.data_off + bytes > v.raw_data_len ||
-        (uint64_t)x.table_off + x.table_len > v.raw_table_len || x.table_len == 0) {
-      setErr(err, en, "bad raw table"); return false;
-    }
-  }
-  if (U.np) { setErr(err, en, "load the main database before your own remotes"); return false; }
   A = v;
+  g_km_prof = -1;
+  return true;
+}
+
+bool useFile(const Reader &rd, char *err, size_t en) {
+  if (!rd.read) { setErr(err, en, "no reader"); return false; }
+  return openStore(rd, nullptr, rd.size, err, en);
+}
+
+bool useImage(const uint8_t *img, size_t len, char *err, size_t en) {
+  Store oldS = S; View oldA = A;
+  if (!openStore(Reader{nullptr, nullptr, 0}, img, (uint32_t)len, err, en)) return false;
+  if (!verify(err, en)) {                       // in memory the whole file can be checked at once
+    if (oldS.ram) { S = Store(); A = View(); }  // (its index was freed: nothing to go back to)
+    else { S = oldS; A = oldA; }
+    g_km_prof = -1;
+    return false;
+  }
+  return true;
+}
+
+bool verify(char *err, size_t en) {
+  const int CH = 512;
+  std::vector<IrCode> buf(CH);
+  for (int c = 0; c < A.nc; c += CH) {
+    int n = std::min(CH, A.nc - c);
+    if (!readA(S.off_codes + (uint32_t)c * sizeof(IrCode), buf.data(), n * sizeof(IrCode))) { setErr(err, en, "read error"); return false; }
+    for (int i = 0; i < n; i++) {
+      const IrCode &r = buf[i];
+      if (r.name >= A.str_len || r.proto >= IRP__COUNT || r.key >= KEY__COUNT ||
+          (r.proto == IRP_RAW && irRawIndex(r.d, r.s) >= (uint32_t)A.nr)) { setErr(err, en, "bad code table"); return false; }
+    }
+  }
+  for (int r = 0; r < A.nr; r++) {
+    IrRawSig x;
+    if (!readA(S.off_raw + (uint32_t)r * sizeof(IrRawSig), &x, sizeof(x))) { setErr(err, en, "read error"); return false; }
+    uint32_t bytes = x.table_len <= 16 ? (x.count + 1u) / 2 : x.count;
+    if (x.count == 0 || (uint64_t)x.data_off + bytes > A.raw_data_len ||
+        (uint64_t)x.table_off + x.table_len > A.raw_table_len || x.table_len == 0) { setErr(err, en, "bad raw table"); return false; }
+  }
+  for (int k = 0; k < KEY__COUNT; k++) {
+    KeyDir d;
+    if (!readA(S.off_keydir + k * sizeof(KeyDir), &d, sizeof(d)) || (uint64_t)d.first + d.count > S.n_keyidx) { setErr(err, en, "bad key index"); return false; }
+  }
+  for (uint32_t i = 0; i < S.n_keyidx; i++) {
+    KeyEnt e;
+    if (!readA(S.off_keyidx + i * sizeof(KeyEnt), &e, sizeof(e)) || e.code >= (uint32_t)A.nc || e.profile >= A.np) { setErr(err, en, "bad key index"); return false; }
+  }
   return true;
 }
 
@@ -153,6 +311,7 @@ void setSourceName(const char *s) { strncpy(g_source, s, sizeof(g_source) - 1); 
 void userBegin() {
   UT = UserTables();
   U = View();
+  g_km_prof = -1;
 }
 
 static uint32_t userStr(const char *s) {
@@ -209,7 +368,6 @@ bool userCode(const char *name, const IrCodeParams &p) {
 
 bool userRawCode(const char *name, const uint16_t *dur, int count, uint32_t freq, uint8_t duty) {
   if (count < 2 || count > 2000) return false;
-  if (A.nr + UT.raw.size() >= 65535) return false;      // IrCode::d is 16-bit
   // Compress like the generator: one table of distinct durations per signal (clustered within 12 %
   // while there are more than 255), 4-bit indices when <= 16 values, else 8-bit.
   std::vector<uint16_t> vals(dur, dur + count);
@@ -256,7 +414,8 @@ bool userRawCode(const char *name, const uint16_t *dur, int count, uint32_t freq
     for (int i = 0; i < count; i++) UT.raw_data.push_back(idxOf(vals[i]));
   }
   UT.raw.push_back(r);
-  return userAdd(name, IRP_RAW, (uint16_t)(A.nr + UT.raw.size() - 1), 0, 0);
+  uint32_t idx = (uint32_t)(A.nr + UT.raw.size() - 1);      // raw index: d = low 16 bits, s = high
+  return userAdd(name, IRP_RAW, (uint16_t)idx, (uint16_t)(idx >> 16), 0);
 }
 
 void userFinish() {
@@ -291,6 +450,7 @@ void userFinish() {
   U.raw_data = UT.raw_data.data(); U.raw_data_len = (uint32_t)UT.raw_data.size();
   U.raw_table = UT.raw_table.data(); U.raw_table_len = (uint32_t)UT.raw_table.size();
   if (U.np == 0) { U.nb = 0; }
+  g_km_prof = -1;
 }
 
 int numUserProfiles() { return U.np; }
@@ -323,20 +483,46 @@ bool profileFromIrdb(int p)       { return okP(p) && profRow(p).src == SRC_IRDB;
 int profileFirstCode(int p)       { return okP(p) ? (int)profRow(p).first_code : 0; }
 int profileCodeCount(int p)       { return okP(p) ? profRow(p).n_codes : 0; }
 
-int profileFindKey(int p, uint8_t key) {
-  if (!okP(p) || key == 0) return -1;
-  int c0 = profileFirstCode(p), n = profileCodeCount(p);
-  for (int i = 0; i < n; i++) {
-    if (codeRow(c0 + i).key == key) return c0 + i;
+int readCodes(int first, IrCode *out, int n) {
+  if (first < 0 || n <= 0) return 0;
+  n = std::min(n, totalCodes() - first);
+  if (n <= 0) return 0;
+  int done = 0;
+  if (first < A.nc) {
+    int na = std::min(n, A.nc - first);
+    readA(S.off_codes + (uint32_t)first * sizeof(IrCode), out, (uint32_t)na * sizeof(IrCode));   // zeroes = null codes on failure
+    for (int i = 0; i < na; i++) sanitize(out[i]);
+    done = na;
   }
-  return -1;
+  for (; done < n; done++) out[done] = U.codes[first + done - A.nc];
+  return n;
 }
 
-static const IrCode kNullCode = {0, 0, 0, 0, 0, 0};   // name, d, s, f, proto, key
-const IrCode &code(int c)     { return okC(c) ? codeRow(c) : kNullCode; }
+IrCode code(int c) {
+  IrCode x = kNullCode;
+  if (okC(c)) readCodes(c, &x, 1);
+  return x;
+}
+
+int profileFindKey(int p, uint8_t key) {
+  if (!okP(p) || key == 0 || key >= KEY__COUNT) return -1;
+  if (p != g_km_prof) {                      // read the remote's codes once, then answer from the table
+    for (auto &k : g_km) k = -1;
+    int c0 = profileFirstCode(p), n = profileCodeCount(p);
+    IrCode buf[64];
+    for (int i = 0; i < n; i += 64) {
+      int m = readCodes(c0 + i, buf, std::min(64, n - i));
+      for (int j = 0; j < m; j++)
+        if (buf[j].key && g_km[buf[j].key] < 0) g_km[buf[j].key] = c0 + i + j;
+    }
+    g_km_prof = p;
+  }
+  return g_km[key];
+}
+
 const char *codeName(int c) {
   if (!okC(c)) return "";
-  return c < A.nc ? strA(A.codes[c].name) : strU(U.codes[c - A.nc].name);
+  return c < A.nc ? strA(code(c).name) : strU(U.codes[c - A.nc].name);
 }
 
 int codeProfile(int c) {
@@ -350,50 +536,89 @@ int codeProfile(int c) {
 }
 
 IrCodeParams codeParams(int c) {
-  const IrCode &x = code(c);
+  IrCode x = code(c);
   IrCodeParams p;
   p.proto = x.proto; p.d = x.d; p.s = x.s; p.f = x.f;
   return p;
 }
 
-static const IrRawSig kNullRaw = {0, 0, 38000, 0, 1, 33};
-const IrRawSig &raw(int r) {
-  if (r >= 0 && r < A.nr) return A.raw[r];
-  if (r >= A.nr && r < A.nr + U.nr) return U.raw[r - A.nr];
-  return kNullRaw;
+IrRawSig raw(int r) {
+  IrRawSig x = kNullRaw;
+  if (r >= 0 && r < A.nr) {
+    if (!readA(S.off_raw + (uint32_t)r * sizeof(IrRawSig), &x, sizeof(x))) return kNullRaw;
+    uint32_t bytes = x.table_len <= 16 ? (x.count + 1u) / 2 : x.count;
+    if (x.count == 0 || x.table_len == 0 || (uint64_t)x.data_off + bytes > A.raw_data_len ||
+        (uint64_t)x.table_off + x.table_len > A.raw_table_len) return kNullRaw;
+  } else if (r >= A.nr && r < A.nr + U.nr) {
+    x = U.raw[r - A.nr];
+  }
+  return x;
 }
 
-uint16_t rawSample(const IrRawSig &r, int i) {
-  if (i < 0 || i >= r.count) return 0;
-  // which table set does this signal belong to?
-  const bool user = U.nr && &r >= U.raw && &r < U.raw + U.nr;
-  const uint8_t *data = user ? U.raw_data : A.raw_data;
-  const uint16_t *table = user ? U.raw_table : A.raw_table;
-  if (!data || !table) return 0;
-  uint8_t idx;
-  if (r.table_len <= 16) {
-    uint8_t b = data[r.data_off + i / 2];
-    idx = (i & 1) ? (b >> 4) : (b & 0x0F);
-  } else {
-    idx = data[r.data_off + i];
+int rawRead(int r, uint16_t *out, int max) {
+  IrRawSig x = raw(r);
+  if (x.count == 0 || !out) return 0;
+  const bool user = r >= A.nr;
+  int n = std::min<int>(x.count, max);
+  uint16_t table[256];
+  if (user) memcpy(table, U.raw_table + x.table_off, x.table_len * 2);
+  else if (!readA(S.off_raw_table + x.table_off * 2, table, x.table_len * 2u)) return 0;
+  const bool nib = x.table_len <= 16;
+  uint8_t buf[256];
+  for (int i = 0; i < n;) {
+    int per = nib ? 512 : 256;                               // samples per buffer
+    int m = std::min(per, n - i);
+    uint32_t bytes = nib ? (m + 1u) / 2 : (uint32_t)m, boff = x.data_off + (nib ? i / 2 : i);
+    if (user) memcpy(buf, U.raw_data + boff, bytes);
+    else if (!readA(S.off_raw_data + boff, buf, bytes)) return 0;
+    for (int k = 0; k < m; k++) {
+      uint8_t idx = nib ? ((k & 1) ? (buf[k / 2] >> 4) : (buf[k / 2] & 0x0F)) : buf[k];
+      if (idx >= x.table_len) idx = 0;
+      out[i + k] = table[idx];
+    }
+    i += m;
   }
-  if (idx >= r.table_len) idx = 0;
-  return table[r.table_off + idx];
+  return n;
+}
+
+// ---- signal identity -----------------------------------------------------------------------------
+// A 64-bit id of what goes on air, the same as tools/build_db.py stores in the key index: FNV-1a of
+// protocol + D + S + F, or for a raw signal CRC-32 (high half) and Adler-32 (low half) of its
+// carrier frequency and durations.
+// NEC1 and NEC2 differ only in how a HELD key repeats; a single press is the same frame.
+static uint64_t fnv(const uint8_t *p, size_t n, uint64_t h = 0xcbf29ce484222325ull) {
+  for (size_t i = 0; i < n; i++) { h ^= p[i]; h *= 0x100000001b3ull; }
+  return h;
+}
+
+static uint64_t codeSig(const IrCode &x) {
+  if (x.proto != IRP_RAW) {
+    uint8_t pr = x.proto == IRP_NEC2 ? (uint8_t)IRP_NEC : x.proto;
+    uint8_t b[7] = {pr, (uint8_t)x.d, (uint8_t)(x.d >> 8), (uint8_t)x.s, (uint8_t)(x.s >> 8), (uint8_t)x.f, (uint8_t)(x.f >> 8)};
+    return fnv(b, 7);
+  }
+  int r = (int)irRawIndex(x.d, x.s);
+  IrRawSig rs = raw(r);
+  std::vector<uint16_t> t(rs.count);
+  int n = rawRead(r, t.data(), rs.count);
+  uint32_t crc = 0xFFFFFFFFu, a1 = 1, a2 = 0;
+  auto put = [&](uint8_t b) {
+    crc ^= b;
+    for (int k = 0; k < 8; k++) crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1)));
+    a1 = (a1 + b) % 65521; a2 = (a2 + a1) % 65521;
+  };
+  put(0xFF);
+  for (int k = 0; k < 4; k++) put((uint8_t)(rs.freq >> (8 * k)));
+  for (int i = 0; i < n; i++) { put((uint8_t)t[i]); put((uint8_t)(t[i] >> 8)); }
+  return ((uint64_t)(crc ^ 0xFFFFFFFFu) << 32) | ((a2 << 16) | a1);
 }
 
 bool sameSignal(int a, int b) {
-  const IrCode &x = code(a), &y = code(b);
-  // NEC1 and NEC2 differ only in how a HELD key repeats; a single press is the same frame on air.
-  auto norm = [](uint8_t p) { return p == IRP_NEC2 ? (uint8_t)IRP_NEC : p; };
-  if (norm(x.proto) != norm(y.proto)) return false;
-  if (x.proto != IRP_RAW) return x.d == y.d && x.s == y.s && x.f == y.f;
-  if (x.d == y.d) return true;
-  const IrRawSig &rx = raw(x.d), &ry = raw(y.d);
-  if (rx.count != ry.count || rx.freq != ry.freq) return false;
-  for (int i = 0; i < rx.count; i++) {
-    if (rawSample(rx, i) != rawSample(ry, i)) return false;
-  }
-  return true;
+  if (a == b) return true;
+  IrCode x = code(a), y = code(b);
+  if (x.proto == IRP_RAW && y.proto == IRP_RAW && x.d == y.d && x.s == y.s) return true;
+  if ((x.proto == IRP_RAW) != (y.proto == IRP_RAW)) return false;
+  return codeSig(x) == codeSig(y);
 }
 
 int numGroups() { return A.ng; }
@@ -430,22 +655,74 @@ int countProfiles(const ScanFilter &flt) {
 
 int buildScan(const ScanFilter &flt, uint8_t key, ScanCand *out, int max_out) {
   int found = 0;
-  forEachProfile(flt, [&](int p) {
-    int c = profileFindKey(p, key);
-    if (c < 0 && key == KEY_POWER) c = profileFindKey(p, KEY_POWER_ON);
-    if (c < 0) return;
-    for (int j = 0; j < found; j++) {
-      if (sameSignal(out[j].code, c)) {           // same signal already queued: just count it
-        out[j].shared++;
-        if (profileCodeCount(p) > profileCodeCount(out[j].profile)) { out[j].profile = p; out[j].code = c; }
-        return;
-      }
+  if (key == 0 || key >= KEY__COUNT) return 0;
+  std::unordered_map<uint64_t, int> seen;                 // signal -> index in out[]
+  auto take = [&](int c, int p, uint64_t sig) {
+    auto it = seen.find(sig);
+    if (it != seen.end()) {                               // same signal already queued: just count it
+      ScanCand &o = out[it->second];
+      if (o.shared < 0xFFFF) o.shared++;
+      if (profileCodeCount(p) > profileCodeCount(o.profile)) { o.profile = p; o.code = c; }
+      return;
     }
     if (found < max_out) {
       out[found].code = c; out[found].profile = p; out[found].shared = 1;
-      found++;
+      seen[sig] = found++;
     }
-  });
+  };
+  // ---- main database: the key index lists (code, remote, signal) for every remote that has the key
+  std::vector<bool> brand_ok;                             // group filter: which brands
+  if (flt.brand < 0 && flt.group >= 0 && flt.group < A.ng) {
+    brand_ok.assign(A.nb, false);
+    for (int i = 0; i < groupBrandCount(flt.group); i++) brand_ok[groupBrand(flt.group, i)] = true;
+  }
+  auto inFilter = [&](int p) {
+    const IrProfile &r = A.profiles[p];
+    if (flt.category >= 0 && r.cat != flt.category) return false;
+    if (flt.brand >= 0) return (int)r.brand == flt.brand;
+    if (!brand_ok.empty()) return (bool)brand_ok[r.brand];
+    return true;
+  };
+  std::vector<bool> has;                                  // Power: remotes that have it (others may have "On")
+  auto pass = [&](uint8_t k, bool mark, bool skip_marked) {
+    KeyDir d;
+    if (!readA(S.off_keydir + k * sizeof(KeyDir), &d, sizeof(d)) || (uint64_t)d.first + d.count > S.n_keyidx) return;
+    KeyEnt buf[128];
+    for (uint32_t i = 0; i < d.count;) {
+      uint32_t m = std::min<uint32_t>(128, d.count - i);
+      if (!readA(S.off_keyidx + (d.first + i) * sizeof(KeyEnt), buf, m * sizeof(KeyEnt))) return;
+      for (uint32_t j = 0; j < m; j++) {
+        const KeyEnt &e = buf[j];
+        if (e.profile >= A.np || e.code >= (uint32_t)A.nc) continue;
+        if (skip_marked && has[e.profile]) continue;
+        if (mark) has[e.profile] = true;
+        if (inFilter(e.profile)) take((int)e.code, e.profile, ((uint64_t)e.sig_hi << 32) | e.sig_lo);
+      }
+      i += m;
+    }
+  };
+  if (A.np && !(flt.brand >= A.nb)) {
+    if (key == KEY_POWER) {
+      has.assign(A.np, false);
+      pass(KEY_POWER, true, false);
+      pass(KEY_POWER_ON, true, true);                     // only a discrete "On"
+      pass(KEY_POWER_OFF, false, true);                   // only "Off" (many air conditioners)
+    } else {
+      pass(key, false, false);
+    }
+  }
+  // ---- your own remotes (in memory)
+  if (U.np && (flt.brand < 0 || flt.brand >= A.nb) && !(flt.brand < 0 && flt.group >= 0)) {
+    for (int p = A.np; p < totalProfiles(); p++) {
+      const IrProfile &r = profRow(p);
+      if (flt.brand >= 0 && (int)r.brand != flt.brand) continue;
+      if (flt.category >= 0 && r.cat != flt.category) continue;
+      int c = profileFindKey(p, key);
+      if (c < 0 && key == KEY_POWER) c = profileFindKey(p, KEY_POWER_ON);
+      if (c < 0 && key == KEY_POWER) c = profileFindKey(p, KEY_POWER_OFF);
+      if (c >= 0) take(c, p, codeSig(code(c)));
+    }
+  }
   // Most widely shared codes first: one of those is the likeliest to work, so a search usually
   // succeeds in the first few steps instead of wading through one-off remotes in brand order.
   std::stable_sort(out, out + found, [](const ScanCand &x, const ScanCand &y) { return x.shared > y.shared; });

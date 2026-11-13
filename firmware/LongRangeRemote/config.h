@@ -143,7 +143,7 @@
 
 // SD card layout (FAT32). ALL IR codes live on the card - nothing is compiled into the firmware:
 //   /irdb.bin        the code database, made by tools/build_db.py (must match IRDB_SCHEMA in
-//                    ir_keys.h). Loaded into PSRAM at boot. Replace it to update the codes, or
+//                    ir_keys.h). Its index is loaded into PSRAM at boot, codes are read from the card. Replace it to update the codes, or
 //                    upload a new one from the web page (Settings).
 //   /irdb.old        previous database, kept by a web upload; used if irdb.bin won't load
 //   /ir/...          your own remotes as Flipper ".ir" files, any folder depth. The folder holding a

@@ -332,4 +332,4 @@ static const IrKeyName IR_KEY_NAMES[] = {
 
 // Numbering of protocols / keys / categories: a database file is only accepted when it matches
 #define IRDB_SCHEMA 0xC5BC0B1Au
-#define IRDB_BIN_VERSION 2
+#define IRDB_BIN_VERSION 3

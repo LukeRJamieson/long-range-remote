@@ -152,8 +152,12 @@ void ensure(int fam) {
   std::vector<uint16_t> addr_cnt(n_addr_space, 0);
   std::vector<uint16_t> keyhist((size_t)d.n_func * KEY__COUNT, 0);
   uint32_t func_cnt[256] = {0}, pw[256] = {0}, vol[256] = {0}, mute[256] = {0};
-  for (int c = 0, n = irdb::numCodes(); c < n; c++) {
-    const IrCode &ic = irdb::code(c);
+  // every code of the database: read from the card in chunks (a few seconds for a big database)
+  static IrCode chunk[512];
+  for (int c = 0, n = irdb::numCodes(), got = 0; c < n; c++) {
+    if (c % 512 == 0) got = irdb::readCodes(c, chunk, 512);
+    (void)got;
+    const IrCode &ic = chunk[c % 512];
     int a, fn;
     if (!decode(d.kind, ic, a, fn) || a >= n_addr_space || fn >= d.n_func) continue;
     if (addr_cnt[a] < 0xFFFF) addr_cnt[a]++;

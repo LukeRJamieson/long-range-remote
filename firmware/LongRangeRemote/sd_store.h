@@ -1,5 +1,5 @@
 // sd_store.h - the TF card holds all IR codes:
-//   /irdb.bin      the code database (made by tools/build_db.py), loaded into PSRAM at boot
+//   /irdb.bin      the code database (made by tools/build_db.py): index into PSRAM at boot, codes read on demand
 //   /irdb.old      the previous database, kept by a web upload; used if irdb.bin fails to load
 //   /ir/**/*.ir    your own remotes (Flipper Zero format)
 //   /wifi.txt      your home Wi-Fi network (see wifi_file.h; read and written by settings.cpp)
@@ -12,7 +12,7 @@
 #include <string>
 
 namespace sdstore {
-// Mount the card, load the database into PSRAM, then read your own .ir files. Safe without a card
+// Mount the card, open the database (index into PSRAM), then read your own .ir files. Safe without a card
 // (the database is then empty and the UI says how to fix it). Call before anything uses irdb.
 void begin();
 bool mounted();

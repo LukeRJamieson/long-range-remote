@@ -12,8 +12,9 @@ It is based on the HifiRemote firmware, which is left unchanged in its own folde
 
 - **All IR codes are on the SD card.** Nothing is compiled into the firmware, so you update the
   codes by swapping one file, or by uploading it from your phone. You never have to reflash.
-  - `irdb.bin` is the code database. It has about 1,640 brands, 6,760 remotes and 233,000
-    codes, generated from Flipper-IRDB and IRDB (Simon Peter's probonopd/irdb).
+  - `irdb.bin` is the code database. It has about 1,890 brands, 10,670 remotes and 530,000
+    codes, generated from Flipper-IRDB, IRDB (Simon Peter's probonopd/irdb), the LIRC remotes
+    database, JP1 device upgrades and SmartIR.
   - IRDB code sets in protocols the firmware has no encoder for are rendered to exact pulse
     timings with IrpTransmogrifier when the file is built. All 5,118 such codes render, covering
     55 protocols including DirecTV, Dish, Motorola/G.I. Cable, Scientific Atlanta, TiVo, XMP,
@@ -66,7 +67,7 @@ It is based on the HifiRemote firmware, which is left unchanged in its own folde
    | USB CDC On Boot | Enabled |
    | Flash Size | 16MB (128Mb) |
    | Partition Scheme | 16M Flash (3MB APP/9.9MB FATFS) |
-   | PSRAM | **OPI PSRAM** (the code database is loaded into it) |
+   | PSRAM | **OPI PSRAM** (the index of the code database is loaded into it) |
 
    The firmware is about 1.2 MB.
 3. Check `config.h` (optionally default home Wi-Fi). The keys are wired straight to GPIOs (UP 18, DOWN 3,
@@ -267,8 +268,11 @@ There are two ways:
 - **On a computer:** copy the new `irdb.bin` to the card.
 
 **Size and version limits:**
-- The database must fit in PSRAM. About 6.5 MB of the 8 MB is available for it, and today's file
-  is 5.9 MB.
+- Size is no longer limited by memory. Only the index (brand and remote names) is loaded into
+  PSRAM; the codes are read from the card when needed, so the file can be tens of megabytes.
+  A file that size is quicker to copy with a card reader than to upload over Wi-Fi.
+- While the card is out, database codes can't be sent (your on-screen remote shows them, but
+  nothing goes out). Put the card back and it carries on.
 - It must be built by this firmware's `tools/build_db.py`. The file carries a schema hash of the
   key / protocol / category numbering, and a mismatching file is refused with a clear message.
   New codes and new button-name rules never change that hash. Adding a new *kind* of key does, and
@@ -303,18 +307,37 @@ Zero, or a phone or PC tool that saves Flipper `.ir` files.
 
 You need:
 - Python 3 and Java 11+.
-- [Flipper-IRDB](https://github.com/Lucaslhm/Flipper-IRDB) and
-  [irdb](https://github.com/probonopd/irdb), cloned. Pull them again later for new codes.
+- The code sources, cloned (pull them again later for new codes):
+  [Flipper-IRDB](https://github.com/Lucaslhm/Flipper-IRDB),
+  [irdb](https://github.com/probonopd/irdb),
+  [lirc-remotes](https://github.com/probonopd/lirc-remotes) (the LIRC database),
+  [deviceupgrades](https://github.com/hifiremote/deviceupgrades) (JP1 device upgrades) and
+  [SmartIR](https://github.com/smartHomeHub/SmartIR) (mostly air conditioners).
+  `--lirc`, `--jp1`, `--smartir` and `--irdb` are each optional.
 - [IrpTransmogrifier](https://github.com/bengtmartensson/IrpTransmogrifier/releases)
   1.2.14, from the release zip. Its source zip provides `IrpProtocols.xml`.
 
 ```sh
 python3 tools/build_db.py --flipper Flipper-IRDB --irdb irdb \
+  --lirc lirc-remotes --jp1 deviceupgrades --smartir SmartIR \
   --irpt-jar IrpTransmogrifier-1.2.14-jar-with-dependencies.jar --irpt-xml IrpProtocols.xml \
   --keys ir_keys.h --bin ../sd_card/irdb.bin --report tools/db_report.txt
 ```
 
-This takes about 6 minutes. Then copy or upload `irdb.bin`.
+This takes a minute or two. Then copy `irdb.bin` to the card (or upload it; at 44 MB a card
+reader is quicker).
+
+How the extra sources are read (`tools/more_sources.py`):
+- **LIRC:** each remote's buttons, as protocol / device / function where the XML gives one, else
+  from its Pronto timing (decoded back to a protocol when it is one the firmware encodes).
+- **JP1:** RemoteMaster `.rmdu` and KeymapMaster `.txt` upgrades. The protocol "executors" for
+  the common protocols (NEC family, RC-5, RC-6, Sony, Panasonic, JVC, Aiwa, Denon, Sharp,
+  Pioneer and their combos) are translated; files using other executors are skipped and counted
+  in `tools/db_report.txt` (about 1,650 of 5,300 files).
+- **SmartIR:** every state of an air conditioner (mode, fan, temperature) is one code, so those
+  remotes have hundreds or thousands of keys named like `Cool Auto 24`.
+- A remote whose codes are all contained in another remote of the same brand is dropped, so the
+  sources don't pile up duplicates (about 5,200 dropped).
 - `ir_keys.h` only needs to go back into the firmware if `KEYS`, `CATS` or the protocol list
   changed. The tests below tell you if it did: the schema check fails.
 - `tools/irp_render/IrpRender.java` is the small batch renderer the script runs. It is compiled
@@ -378,7 +401,7 @@ g++ -std=gnu++17 -Itools/wifi_sim/stub -I. tools/wifi_sim/sim.cpp wifi_mgr.cpp -
 | `LongRangeRemote.ino` | Start-up order: LED supply off → keys/batteries → SD (codes) → settings → sound → IR → UI → web |
 | `config.h` | Pins, battery thresholds, Wi-Fi (defaults for a new `wifi.txt`), SD layout |
 | `hw.*` | Keys on GPIO18/3/44/43/0/14 (UP/DOWN/LEFT/RIGHT/SELECT/BACK) (internal pull-ups, debounced), the AA pack voltage (GPIO1), the screen's 18650 (GPIO4) |
-| `sd_store.*` | SD card: `irdb.bin` into PSRAM (falls back to `irdb.old`), `/ir` files, web uploads, safe rewrite of small files |
+| `sd_store.*` | SD card: opens `irdb.bin` (falls back to `irdb.old`) and reads codes from it on demand, `/ir` files, web uploads, safe rewrite of small files |
 | `ir_db.*`, `ir_keys.h` | Database reader (SD image + your remotes) and the generated key numbering |
 | `flipper_ir.*` | Flipper `.ir` parser and protocol conversion |
 | `ir_protocols.*`, `ir_tx.*` | Encoders and the RMT transmit task (ARM handling, hold/repeat) |
@@ -394,6 +417,11 @@ g++ -std=gnu++17 -Itools/wifi_sim/stub -I. tools/wifi_sim/sim.cpp wifi_mgr.cpp -
 
 Code databases:
 - **Flipper-IRDB:** CC0.
+- **SmartIR:** MIT.
+- **LIRC remotes** (probonopd/lirc-remotes) and **JP1 device upgrades**
+  (hifiremote/deviceupgrades): community collections of codes for people's own remotes. Neither
+  repository states a licence. Build without `--lirc` / `--jp1` if that matters for how you
+  share the database file.
 - **IRDB:** "Contains/accesses irdb by Simon Peter and contributors, used under permission. For
   licensing details and for information on how to contribute to the database, see
   https://github.com/probonopd/irdb".

@@ -272,7 +272,7 @@ $('#restart').onclick=()=>{if(confirm('Restart the remote now?'))restartRemote()
 $('#fmtgo').onclick=async()=>{
   const keep=$('#fmtkeep').checked;
   if(!confirm('Format the SD card?\n\nEVERYTHING on it is erased, including your own .ir files.'+
-    (keep?' The code database and home Wi-Fi are written back afterwards.':' The card will be empty: upload irdb.bin before the remote restarts.')))return;
+    (keep?' The code database and home Wi-Fi are written back afterwards (a database too big for the remote\'s memory can\'t be kept: the remote says so and does not format).':' The card will be empty: upload irdb.bin before the remote restarts.')))return;
   const b=$('#fmtgo');b.disabled=true;
   $('#fmtmsg').textContent='Formatting'+(keep?' and writing the codes back':'')+' - this takes up to a minute...';
   try{const r=await fetch('/api/format?confirm=FORMAT&keep='+(keep?1:0),{method:'POST'});

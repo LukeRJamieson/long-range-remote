@@ -13,6 +13,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 static size_t symbolsFor(const uint32_t *t, int n) {       // mirrors SymWriter in ir_tx.cpp
   size_t halves = 0;
@@ -39,9 +40,10 @@ int main(int argc, char **argv) {
   for (int c = 0; c < irdb::numCodes(); c++) {
     IrCodeParams p = irdb::codeParams(c);
     if (p.proto == IRP_RAW) {
-      const IrRawSig &r = irdb::raw(p.d);
-      uint32_t t[2100]; int n = r.count;
-      for (int i = 0; i < n; i++) t[i] = irdb::rawSample(r, i);
+      const IrRawSig r = irdb::raw((int)irRawIndex(p.d, p.s));
+      static uint16_t t16[2100]; uint32_t t[2100]; int n = irdb::rawRead((int)irRawIndex(p.d, p.s), t16, 2100);
+      if (n != r.count) { printf("raw %d: read %d of %d\n", c, n, r.count); fails++; }
+      for (int i = 0; i < n; i++) t[i] = t16[i];
       size_t s = symbolsFor(t, n); if (s > max_raw_syms) max_raw_syms = s;
       if (r.count % 2 || r.freq < 20000 || r.freq > 60000) { printf("bad raw %d\n", c); fails++; }
       raw++; continue;
@@ -71,10 +73,11 @@ int main(int argc, char **argv) {
       if (kind == 'R') {                        // raw: sample count, sum of samples, first sample
         int n = 0; long total = 0; int first = 0;
         sscanf(line + off, "%d %ld %d", &n, &total, &first);
-        const IrRawSig &r = irdb::raw(idx);
-        long got = 0; for (int i = 0; i < r.count; i++) got += irdb::rawSample(r, i);
+        const IrRawSig r = irdb::raw(idx);
+        static uint16_t t16[2100]; int rn = irdb::rawRead(idx, t16, 2100);
+        long got = 0; for (int i = 0; i < rn; i++) got += t16[i];
         checked++;
-        if (r.count != n || got != total || irdb::rawSample(r, 0) != first) {
+        if (r.count != n || got != total || t16[0] != first) {
           if (bad++ < 5) printf("raw %d mismatch: count %d/%d sum %ld/%ld\n", idx, r.count, n, got, total);
         }
         continue;
@@ -107,7 +110,8 @@ int main(int argc, char **argv) {
         }
         for (int i = 0; i < np; i++) {
           int c = irdb::profileFindKey(p0 + i, key);
-          if (c < 0 && key == 1) c = irdb::profileFindKey(p0 + i, 2);
+          if (c < 0 && key == 1) c = irdb::profileFindKey(p0 + i, KEY_POWER_ON);
+          if (c < 0 && key == 1) c = irdb::profileFindKey(p0 + i, KEY_POWER_OFF);   // as buildScan does
           if (c < 0) continue;
           remotes++;
           int hits = 0;
@@ -138,7 +142,8 @@ int main(int argc, char **argv) {
             int p = irdb::brandFirstProfile(b) + i;
             if (cat >= 0 && irdb::profileCategory(p) != cat) continue;
             int c = irdb::profileFindKey(p, 1);
-            if (c < 0) c = irdb::profileFindKey(p, 2);
+            if (c < 0) c = irdb::profileFindKey(p, KEY_POWER_ON);
+            if (c < 0) c = irdb::profileFindKey(p, KEY_POWER_OFF);
             if (c < 0) continue;
             remotes++;
             int hits = 0;
@@ -242,9 +247,10 @@ int main(int argc, char **argv) {
     for (int c = irdb::profileFirstCode(p); c < irdb::profileFirstCode(p) + irdb::profileCodeCount(p); c++) {
       IrCodeParams cp = irdb::codeParams(c);
       if (cp.proto == IRP_RAW) {
-        const IrRawSig &r = irdb::raw(cp.d);
-        if (r.count != 12 || irdb::rawSample(r, 0) < 8900 || irdb::rawSample(r, 0) > 9150 || r.freq != 38000) {
-          printf("user raw wrong: count %d first %d freq %u\n", r.count, irdb::rawSample(r, 0), (unsigned)r.freq); fails++;
+        const IrRawSig r = irdb::raw((int)irRawIndex(cp.d, cp.s));
+        uint16_t t16[16] = {0}; irdb::rawRead((int)irRawIndex(cp.d, cp.s), t16, 16);
+        if (r.count != 12 || t16[0] < 8900 || t16[0] > 9150 || r.freq != 38000) {
+          printf("user raw wrong: count %d first %d freq %u\n", r.count, t16[0], (unsigned)r.freq); fails++;
         }
       } else if (!irEncode(cp, false, sig)) { printf("user code %s does not encode\n", irdb::codeName(c)); fails++; }
       if (irdb::codeProfile(c) != p) { printf("user codeProfile wrong\n"); fails++; }
@@ -258,6 +264,64 @@ int main(int argc, char **argv) {
     bool covered = false;
     for (int i = 0; i < n; i++) if (irdb::sameSignal(cv[i].code, irdb::profileFindKey(p, KEY_POWER))) covered = true;
     if (!covered) { printf("user remote not in code search\n"); fails++; }
+  }
+
+  // The firmware doesn't hold the file in memory: it reads it through a reader and a page cache.
+  // Everything must come out the same that way - codes, raw signals, code searches.
+  {
+    irdb::userBegin(); irdb::userFinish();                 // main database only
+    struct Snap { std::vector<IrCode> codes; std::vector<uint64_t> v; };
+    auto snap = [&](Snap &sn) {
+      int nc = irdb::numCodes();
+      sn.codes.resize(nc);
+      for (int c = 0; c < nc; c += 1000) irdb::readCodes(c, sn.codes.data() + c, std::min(1000, nc - c));
+      static uint16_t t[2100];
+      for (int r = 0; r < irdb::numRaw(); r += 5) {
+        int n = irdb::rawRead(r, t, 2100); uint64_t h = irdb::raw(r).freq + n;
+        for (int i = 0; i < n; i++) h = h * 1000003u + t[i];
+        sn.v.push_back(h);
+      }
+      std::vector<irdb::ScanCand> cv(irdb::numProfiles());
+      auto scan = [&](irdb::ScanFilter f, uint8_t key) {
+        int n = irdb::buildScan(f, key, cv.data(), (int)cv.size());
+        sn.v.push_back(n);
+        for (int i = 0; i < n; i++) sn.v.push_back(((uint64_t)cv[i].code << 32) ^ ((uint64_t)cv[i].profile << 16) ^ cv[i].shared);
+      };
+      irdb::ScanFilter f; scan(f, KEY_POWER); scan(f, KEY_VOL_UP);
+      f.category = 0; scan(f, KEY_POWER);
+      f = irdb::ScanFilter(); f.group = 0; scan(f, KEY_MUTE);
+      for (int b = 0; b < irdb::numBrands(); b += 37) { f = irdb::ScanFilter(); f.brand = b; scan(f, KEY_POWER); }
+      for (int p = 0; p < irdb::numProfiles(); p += 11) sn.v.push_back(irdb::profileFindKey(p, KEY_POWER) + 7ll * irdb::profileFindKey(p, KEY_VOL_DOWN));
+    };
+    Snap mem, file;
+    snap(mem);
+    FILE *fp = fopen(argv[1], "rb");
+    fseek(fp, 0, SEEK_END); long flen = ftell(fp);
+    static long reads = 0;
+    irdb::Reader rd{[](void *ctx, uint32_t off, void *buf, uint32_t len) -> bool {
+                      reads++;
+                      return fseek((FILE *)ctx, off, SEEK_SET) == 0 && fread(buf, 1, len, (FILE *)ctx) == len;
+                    }, fp, (uint32_t)flen};
+    char err[128];
+    if (!irdb::useFile(rd, err, sizeof(err))) { printf("useFile failed: %s\n", err); fails++; }
+    else {
+      snap(file);
+      bool same = mem.v == file.v && mem.codes.size() == file.codes.size() &&
+                  !memcmp(mem.codes.data(), file.codes.data(), mem.codes.size() * sizeof(IrCode));
+      uint32_t x = 12345; int bad = 0;                     // random access: the cache evicts and re-reads
+      for (int i = 0; i < 50000; i++) {
+        x = x * 1664525u + 1013904223u;
+        int c = (int)(x % (uint32_t)irdb::numCodes());
+        IrCode k = irdb::code(c);
+        if (memcmp(&k, &mem.codes[c], sizeof(k))) bad++;
+      }
+      printf("file reader: %s, random access mismatches %d, %ld reads\n", same ? "same results as in memory" : "RESULTS DIFFER", bad, reads);
+      if (!same || bad) fails++;
+      if (!irdb::verify(err, sizeof(err))) { printf("verify through the reader failed: %s\n", err); fails++; }
+      // a card that stops answering: null codes, no crash
+      rd.read = [](void *, uint32_t, void *, uint32_t) -> bool { return false; };
+      if (irdb::useFile(rd, err, sizeof(err))) { printf("dead reader accepted\n"); fails++; }
+    }
   }
 
   printf("%s\n", fails ? "FAILED" : "ALL PASSED");

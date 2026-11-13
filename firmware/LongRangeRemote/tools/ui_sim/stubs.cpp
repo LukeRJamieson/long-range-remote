@@ -43,12 +43,13 @@ const char *profileName(int p) { static char b[40]; snprintf(b, sizeof(b), p % 2
 int profileBrand(int p) { return p / 2; } int profileCategory(int p) { return p % 2 ? 1 : 0; }
 int profileFirstCode(int p) { return p * 100; } int profileCodeCount(int p) { return keysOf(p).size(); }
 int profileFindKey(int p, uint8_t key) { auto v = keysOf(p); for (size_t i = 0; i < v.size(); i++) if (v[i] == key) return p * 100 + i; return -1; }
-const IrCode &code(int c) {      // NEC, device = profile % 7, function = key number; RC5 for every 5th profile
+IrCode code(int c) {      // NEC, device = profile % 7, function = key number; RC5 for every 5th profile
   static IrCode x; int p = c / 100, i = c % 100; auto v = keysOf(p);
   uint8_t key = i < (int)v.size() ? v[i] : 0; uint16_t d = p % 7, f = key;
   if (p % 5 == 4) x = IrCode{0, d, 0, (uint16_t)(f & 0x7F), IRP_RC5, key};
   else x = IrCode{0, (uint16_t)(d | ((~d & 0xFF) << 8)), 0, (uint16_t)(f | ((~f & 0xFF) << 8)), IRP_NEC, key};
   return x; }
+int readCodes(int first, IrCode *out, int n) { int m = 0; for (; m < n && first + m < numCodes(); m++) out[m] = code(first + m); return m; }
 const char *codeName(int c) { return IR_KEY_LABELS[keysOf(c / 100)[c % 100]]; }
 int buildScan(const ScanFilter &, uint8_t key, ScanCand *out, int max_out) { int n = 0; for (int p = 0; p < NB * 2 && n < max_out; p++) { int c = profileFindKey(p, key); if (c >= 0) out[n++] = ScanCand{c, p, (uint16_t)(p % 4 == 0 ? 12 : 1)}; } return n; }
 int countProfiles(const ScanFilter &f) { return f.category < 0 ? NB * 2 : f.category < 2 ? NB : 0; }
