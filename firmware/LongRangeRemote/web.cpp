@@ -18,9 +18,6 @@
 //   POST /api/upload?kind=ir&path=P    upload one of your own .ir files to /ir/P on the SD card
 //   /api/power?l=N                     LED power level (0 = full); the level is also in /api/state (lp, lpn)
 //   /api/scanauto?ms=N                 Code search Auto: ms between codes (shared with the screen; also in /api/state, auto)
-//   /api/ble?s=0|1|2[&clear=1]         Bluetooth scanner: the devices heard, sorted by signal / name / newest
-//                                      (asking keeps the radio scanning for 15 s; see hBle)
-//   POST /api/upload?kind=oui          the scanner's MAC prefix list (oui.bin) to the SD card, used at once
 //   /api/restart                       restart (loads the new codes)
 //   POST /api/format?confirm=FORMAT&keep=1|0   format the SD card (ERASES IT). keep=1: put the code
 //                                      database (from memory) and wifi.txt back afterwards
@@ -28,7 +25,6 @@
 #include "web_page.h"
 #include "config.h"
 #include "discover.h"
-#include "ble_scan.h"
 #include "hw.h"
 #include "ir_db.h"
 #include "ir_keys.h"
@@ -358,22 +354,19 @@ void hFav() {
 // ---- uploads to the SD card (streamed: the database is ~6 MB, far more than RAM) ----
 char up_err[128] = "";
 bool up_ok = false;
-bool up_oui = false;                  // the upload is oui.bin: the scanner reads it again when it's in
 
 void hUploadData() {
   HTTPUpload &u = server.upload();
   if (u.status == UPLOAD_FILE_START) {
     bool db = server.arg("kind") == "db";
-    up_oui = server.arg("kind") == "oui";
     up_err[0] = 0;
-    up_ok = sdstore::uploadStart(db, up_oui ? "oui.bin" : server.arg("path").c_str(), up_err, sizeof(up_err));
+    up_ok = sdstore::uploadStart(db, server.arg("path").c_str(), up_err, sizeof(up_err));
     logf("Upload %s: %s\n", db ? "database" : server.arg("path").c_str(), up_ok ? "started" : up_err);
   } else if (u.status == UPLOAD_FILE_WRITE) {
     if (up_ok && !sdstore::uploadWrite(u.buf, u.currentSize)) { up_ok = false; snprintf(up_err, sizeof(up_err), "write error (card full?)"); }
   } else if (u.status == UPLOAD_FILE_END) {
     if (up_ok) up_ok = sdstore::uploadFinish(up_err, sizeof(up_err));
     else sdstore::uploadAbort();
-    if (up_ok && up_oui) { blescan::reloadOui(); snprintf(up_err, sizeof(up_err), "oui.bin saved and loaded: MAC makers are shown now"); }
     logf("Upload done: %s\n", up_err);
   } else if (u.status == UPLOAD_FILE_ABORTED) {
     sdstore::uploadAbort();
@@ -397,57 +390,6 @@ void hScanAuto() {
   if (server.hasArg("ms")) settings::setScanAutoMs(server.arg("ms").toInt());
   ui::requestRedraw();
   server.send(200, "text/plain", String(settings::scanAutoMs()));
-}
-
-// Bluetooth scanner. {"status", "oui": oui.bin loaded, "devices": [{...}]} - one object per device:
-//   m MAC, k address kind, pub public address, r / a / x last / average / strongest dBm, ago ms since
-//   last heard, age ms since first, c adverts, l label, n name, b brand, bs from, t type, ts from,
-//   d detail, tr tracker, o MAC prefix maker, tx Tx power (or null), ap appearance, s services,
-//   md maker data, raw the last advertisement (hex)
-void hBle() {
-  blescan::want(15000);
-  if (server.hasArg("clear")) blescan::clear();
-  int sort = (int)argInt("s", 0);
-  static int order[blescan::MAX_DEVICES];
-  uint32_t now = millis();
-  int n = blescan::sorted(order, blescan::MAX_DEVICES, sort < 0 || sort >= blescan::N_SORTS ? 0 : sort, now);
-  Json j;
-  j.raw("{\"status\":").str(blescan::status()).raw(",\"oui\":").raw(blescan::ouiLoaded() ? "true" : "false");
-  j.raw(",\"devices\":[");
-  char b[200];
-  for (int i = 0; i < n; i++) {
-    const blescan::Device &d = blescan::device(order[i]);
-    if (i) j.raw(",");
-    blescan::macText(d.mac, b, sizeof(b));
-    j.raw("{\"m\":").str(b).raw(",\"k\":").str(bleid::addrKindText(d.kind));
-    j.raw(",\"pub\":").num(d.kind == bleid::ADDR_PUBLIC);
-    j.raw(",\"r\":").num(d.rssi).raw(",\"a\":").num(lroundf(d.rssi_avg)).raw(",\"x\":").num(d.rssi_max);
-    j.raw(",\"ago\":").num(now - d.last_ms).raw(",\"age\":").num(now - d.first_ms).raw(",\"c\":").num(d.count);
-    blescan::label(d, b, sizeof(b));
-    j.raw(",\"l\":").str(b).raw(",\"n\":").str(d.adv.name);
-    j.raw(",\"b\":").str(d.id.brand).raw(",\"bs\":").str(d.id.brand_src);
-    j.raw(",\"t\":").str(d.id.type).raw(",\"ts\":").str(d.id.type_src);
-    j.raw(",\"d\":").str(d.id.detail).raw(",\"tr\":").num(d.id.tracker).raw(",\"o\":").str(d.oui);
-    j.raw(",\"tx\":");
-    if (d.adv.has_tx) j.num(d.adv.tx_power); else j.raw("null");
-    const char *an = d.adv.has_app ? bleid::appearanceName(d.adv.appearance) : nullptr;
-    if (d.adv.has_app) snprintf(b, sizeof(b), "%04X %s", d.adv.appearance, an ? an : ""); else b[0] = 0;
-    j.raw(",\"ap\":").str(b);
-    bleid::servicesText(d.adv, b, sizeof(b));
-    j.raw(",\"s\":").str(b);
-    b[0] = 0;
-    if (d.adv.has_mfr) {
-      const char *co = bleid::companyName(d.adv.company);
-      int o = snprintf(b, sizeof(b), "%04X %s:", d.adv.company, co ? co : "");
-      for (int k = 0; k < d.adv.mfr_len && o < (int)sizeof(b) - 4; k++) o += snprintf(b + o, sizeof(b) - o, " %02X", d.adv.mfr[k]);
-    }
-    j.raw(",\"md\":").str(b);
-    int o = 0;
-    for (int k = 0; k < d.raw_len && o < (int)sizeof(b) - 3; k++) o += snprintf(b + o, sizeof(b) - o, "%02X", d.raw[k]);
-    b[o] = 0;
-    j.raw(",\"raw\":").str(b).raw("}");
-  }
-  j.raw("]}");
 }
 
 void hFormat() {
@@ -509,7 +451,6 @@ void begin() {
   on("/api/fav", hFav);
   on("/api/power", hPower);
   on("/api/scanauto", hScanAuto);
-  on("/api/ble", hBle);
   on("/api/restart", hRestart);
   on("/api/format", hFormat);
   server.on("/api/upload", HTTP_POST, hUploadDone, hUploadData);

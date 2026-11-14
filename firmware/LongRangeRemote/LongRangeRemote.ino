@@ -15,8 +15,6 @@
 //  * Phone web remote over Wi-Fi (own access point "LR-Remote", optional home Wi-Fi), with SD-card
 //    uploads for new codes. The home network is kept in /wifi.txt on the card and can be changed
 //    on the remote (Menu > Wi-Fi network).
-//  * Bluetooth scanner (Menu > Bluetooth scanner, web Bluetooth tab): the BLE devices nearby with
-//    their maker, type, address and signal (ble_scan.h). The radio runs only while it is open.
 //  * Never sleeps: the screen, keys, Wi-Fi and web page are always on.
 //  * Key sounds on the display board's speaker, with a volume / mute setting (Menu > Sound).
 //
@@ -26,7 +24,6 @@
 // Libraries: U8g2 (Library Manager). Core: esp32 by Espressif >= 3.0.
 #include <Arduino.h>
 #include "config.h"
-#include "ble_scan.h"
 #include "discover.h"
 #include "hw.h"
 #include "ir_db.h"
@@ -67,7 +64,6 @@ void loop() {
   ui::loop();
   discover::loop();
   discover::glueLoop();
-  blescan::loop();
   sound::loop();
   delay(2);
 }

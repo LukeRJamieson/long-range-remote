@@ -13,19 +13,6 @@ FAMS = [["NEC", "most Asian brands: TVs, amps, soundbars, LED lights", 256], ["N
 D = dict(mode="idle", all=0, done=0, fam=0, pos=0, func=0, fpos=0, learned=[], restart=0)
 LOG = []
 SENDS = []
-# Bluetooth scanner: what /api/ble returns (same fields as hBle in web.cpp)
-def _bd(m, r, l, b, bs, t, ts, d="", tr=0, pub=0, o="", n="", ago=500, s="", md=""):
-    return dict(m=m, k="public (fixed)" if pub else "random, changes every few min", pub=pub, r=r, a=r, x=r + 4, ago=ago,
-                age=60000, c=42, l=l, n=n, b=b, bs=bs, t=t, ts=ts, d=d, tr=tr, o=o, tx=None, ap="", s=s, md=md, raw="02011A")
-BLE_DEVICES = [
-    _bd("5A:11:22:33:44:55", -48, "AirPods Pro 2nd Gen", "Apple", "maker data", "Headphones", "Apple data", "AirPods Pro 2nd Gen", md="004C Apple: 07 19 01 14 20"),
-    _bd("6C:10:20:30:40:50", -58, "Windows laptop", "Microsoft", "maker data", "Computer", "Microsoft data", "Windows laptop"),
-    _bd("F0:D1:A9:10:20:30", -71, "[TV] Samsung Q80 Series", "Samsung Electronics", "maker data", "TV", "name", pub=1, o="Apple", n="[TV] Samsung Q80 Series"),
-    _bd("D2:AA:BB:CC:DD:EE", -82, "Find My: away from its owner", "Apple", "maker data", "Tracker", "Apple data", "Find My: away from its owner", tr=1),
-    _bd("E1:00:00:00:12:34", -90, "Tile tracker", "Tile", "service", "Tracker", "services", "Tile tracker", tr=1, s="Tile (FEED)"),
-    _bd("48:00:00:00:00:01", -77, "Unknown device", "", "", "Unknown", "", ago=45000),
-]
-BLE = dict(polls=0, cleared=False)
 AUTO = [1000]
 def state(err=""):
     s = dict(mode=D["mode"], all=D["all"], done=D["done"], sending=0, restart=D["restart"], err=err)
@@ -50,12 +37,7 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/api/scan": return self.out(json.dumps([[100 + i, i, "Brand%d" % i, "Remote %d" % i, 1] for i in range(40)]))
         if u.path == "/api/send":
             import time; SENDS.append([time.time(), int(q.get("c", -1))]); return self.out("ok", "text/plain")
-        if u.path == "/api/ble":
-            BLE["polls"] += 1
-            if "clear" in q: BLE["cleared"] = True
-            return self.out(json.dumps(dict(status="scanning", oui=False, devices=[] if BLE["cleared"] else BLE_DEVICES)))
         if u.path == "/api/scanauto": AUTO[0] = int(q["ms"]); return self.out(str(AUTO[0]), "text/plain")
-        if u.path == "/blepolls": return self.out(json.dumps(BLE))
         if u.path == "/sends": return self.out(json.dumps(SENDS))
         if u.path == "/api/disc":
             a = q.get("a", "state"); LOG.append(u.query)

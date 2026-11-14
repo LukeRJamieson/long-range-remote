@@ -36,8 +36,6 @@ It is based on the HifiRemote firmware, which is left unchanged in its own folde
   open http://192.168.4.1. It can also join your home Wi-Fi and is then at
   http://lrremote.local (see **Home Wi-Fi** below). The Settings tab uploads a new `irdb.bin` or
   your `.ir` files to the card.
-- **Bluetooth scanner:** lists the Bluetooth LE devices nearby with their maker, type, address and
-  signal strength, on the screen and on the web page (see **Bluetooth scanner** below).
 - **Always on:** it never sleeps, so the web page always answers. Switch it off with the PWR button.
 - **Batteries:** the header shows the AA pack (`AA nn%`, from a NiMH voltage curve) and the
   screen's own 18650 (`scr nn%`); the Status screen and the web page's Settings tab show both
@@ -144,39 +142,6 @@ page shows the same message, with the upload button.
 Chosen devices are saved under Menu (your devices, `*` = active). They are stored by name, so
 they survive power-off and database updates.
 
-### Bluetooth scanner
-
-**Menu → Bluetooth scanner** (or the web page's **Bluetooth** tab) lists the Bluetooth LE devices
-the remote can hear: phones, earbuds, watches, trackers, TVs, speakers, keyboards, sensors...
-
-- **The list:** strongest signal first, with signal bars and dBm. UP / DOWN move, OK (or RIGHT)
-  opens a device, hold OK to sort by signal, name or newest. Devices not heard for 30 s move to
-  the bottom as "gone". The web tab adds a text filter and a **Trackers only** switch.
-- **Details:** type, brand, the detail (e.g. "AirPods Pro 2nd Gen", "Windows laptop", "Find My:
-  away from its owner"), name, address and what kind it is, the MAC maker, when it was heard,
-  services, the maker data in hex, and a signal meter that updates every second, so you can walk
-  towards a device to find it.
-- **How it knows:** every brand and type says where it came from:
-  - *maker data*: the company ID in the advert, and for Apple and Microsoft the message after it
-    (AirPods / Beats model, AirTag and other Find My devices, iBeacon, HomeKit, AirPlay; Windows
-    PC, Xbox, Swift Pair);
-  - *services*: Bluetooth SIG services (heart rate, keyboard / mouse, LE Audio...), the service
-    numbers the SIG gives to companies (Tile, Google, Sonos...), Google Find Hub tags and
-    Eddystone beacons;
-  - *appearance*: the device's own "I am a watch / keyboard / ..." value;
-  - *name*: words in its name ("[TV] Samsung", "WH-1000XM5", "Pixel 8");
-  - *MAC prefix*: only for a fixed (public) address, from `oui.bin` on the SD card.
-- **Limits:**
-  - The ESP32-S3 has Bluetooth **LE** only. Devices that use nothing but classic Bluetooth
-    (older headsets and car kits) don't appear.
-  - Phones, earbuds and watches use a **random address that changes** every few minutes, so the
-    same phone can be listed twice, and its MAC says nothing about the maker.
-  - Many devices advertise very little until they are in pairing mode.
-- **Radio time:** the radio scans only while the screen or the web tab is open (and 15 s after),
-  and listens 60 % of the time, leaving the rest to Wi-Fi.
-- **oui.bin** (MAC prefix → maker) is optional: copy `../sd_card/oui.bin` to the card, or upload
-  it from the Bluetooth tab (it is used at once).
-
 ### Power
 
 - **On / off:** the display board's own PWR button (short press on, long press off). The AA pack
@@ -253,7 +218,6 @@ FAT32 microSD in the display board's TF slot. It is read at power-up.
 /ir/TVs/Kogan/KALED32.ir        Flipper-IRDB folder names set the device type (here: TV)
 /ir/AC/Bedroom.ir               ...as do this firmware's type names (TV, AVR, AC, SetTop, ...)
 /wifi.txt                       your home Wi-Fi (created by the remote; see Home Wi-Fi)
-/oui.bin                        MAC prefix -> maker for the Bluetooth scanner (optional, from firmware/sd_card)
 ```
 
 ### Updating the codes
@@ -365,21 +329,6 @@ The test checks:
 
 `tools/verify_*.py` cross-check the protocol conversions against IrpTransmogrifier.
 
-Bluetooth scanner:
-
-```sh
-g++ -std=c++17 -I. tools/ble_test/test.cpp ble_ident.cpp ble_scan.cpp -o /tmp/ble_test && /tmp/ble_test
-tools/ui_sim/build.sh script_ble.h /tmp/ble_screens
-cd tools/web_test && python3 mock.py ../../web_page.h & node run_ble.js
-```
-
-- `ble_test`: adverts built byte by byte (AirPods, Beats, iBeacon, AirTag, iPhone, HomeKit,
-  Windows laptop, Swift Pair, Google Find Hub, Eddystone, Tile, a heart-rate strap, a Samsung TV,
-  a public address) are identified correctly, truncated and garbage adverts are safe, and the
-  device list keeps names, counts and signal across adverts and makes room when full.
-- `script_ble.h` draws the list and details screens; `run_ble.js` checks the web tab on a phone
-  screen (polling only while it is open, details staying open, filters).
-
 Wi-Fi:
 
 ```sh
@@ -410,8 +359,6 @@ g++ -std=gnu++17 -Itools/wifi_sim/stub -I. tools/wifi_sim/sim.cpp wifi_mgr.cpp -
 | `web.*`, `web_page.h`, `wifi_mgr.*` | Phone web remote and SD uploads; home Wi-Fi connection and the network list for the menu |
 | `settings.*` | Saved devices, LED power level and sound volume / mute (NVS); the home Wi-Fi network (`wifi.txt`) |
 | `wifi_file.*` | Reads and writes `wifi.txt`, and checks a name / password before it is saved |
-| `ble_scan.*`, `ble_glue.cpp` | Bluetooth scanner: the list of devices heard (no Arduino code), and the radio on the core's BLE library |
-| `ble_ident.*`, `ble_db.h` | Reads an advert and works out the brand / type; the company, service and appearance tables (generated by `tools/ble_db/make_ble_db.py`, which also makes `oui.bin`) |
 
 ## Licences
 
@@ -430,13 +377,3 @@ IrpTransmogrifier (GPL-3.0) is used only at build time, to render codes. It is n
 firmware.
 
 The ST7305 driver glue comes from Waveshare's examples (Apache-2.0).
-
-Bluetooth scanner data (`ble_db.h`, `oui.bin`, made by `tools/ble_db/make_ble_db.py`):
-- company IDs, service UUIDs and appearance values: the Bluetooth SIG's assigned numbers, as
-  collected in NordicSemiconductor/bluetooth-numbers-database, and the company service UUIDs from
-  Wireshark's `packet-bluetooth.c`;
-- Apple message formats: Wireshark's Apple continuity dissector, and newer AirPods / Beats model
-  numbers from the Flipper Zero `ble_spam` app; Microsoft: the [MS-CDP] beacon and Swift Pair
-  documentation; Google Find Hub: Google's Find Hub Network Accessory Specification;
-- `oui.bin`: the IEEE OUI registry as listed in Nmap's `nmap-mac-prefixes`. The script can build it
-  from the IEEE's own `oui.csv` instead (`--oui-csv`).

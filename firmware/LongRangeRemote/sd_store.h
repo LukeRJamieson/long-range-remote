@@ -3,7 +3,6 @@
 //   /irdb.old      the previous database, kept by a web upload; used if irdb.bin fails to load
 //   /ir/**/*.ir    your own remotes (Flipper Zero format)
 //   /wifi.txt      your home Wi-Fi network (see wifi_file.h; read and written by settings.cpp)
-//   /oui.bin       MAC prefix -> maker, for the Bluetooth scanner (optional; ble_glue.cpp)
 // Nothing is compiled into the firmware, so the codes can be updated by swapping the file (or
 // uploading a new one from the web page) without reflashing.
 #pragma once
@@ -24,7 +23,6 @@ int userFiles();               // .ir files loaded
 //   database = true:  written to /irdb.new; finish() checks its header and size, keeps the current
 //                     file as /irdb.old and renames the new one to /irdb.bin.
 //   database = false: `relpath` below /ir (e.g. "Living room/TV.ir"); folders are created.
-//                     relpath "oui.bin": the Bluetooth scanner's MAC prefix file, checked and saved as /oui.bin.
 // The new codes are used after a restart.
 bool uploadStart(bool database, const char *relpath, char *err, size_t err_len);
 bool uploadWrite(const uint8_t *data, size_t len);

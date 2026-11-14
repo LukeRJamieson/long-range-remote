@@ -102,7 +102,6 @@ KiCad 7 format; it opens in KiCad 7, 8 or 9.
 | `bom/lite_core_electronics.csv` | Display ribbon and header (Core Electronics) |
 | `firmware/LongRangeRemote/` | **Universal remote firmware**: TVs, AV receivers, set-top boxes, soundbars, projectors, hi-fi, air-cons..., phone web remote. See its README |
 | `firmware/sd_card/irdb.bin` | **The IR code database (~6,800 remotes). Copy it to the SD card**: all codes live on the card, not in the firmware |
-| `firmware/sd_card/oui.bin` | MAC prefix → maker list for the Bluetooth scanner (optional; copy it to the SD card or upload it from the web page) |
 | `firmware/sd_card/wifi.example.txt` | Example of `wifi.txt`, the home Wi-Fi file on the card. The remote creates and updates `wifi.txt` itself (Menu → Wi-Fi network); this is for setting it on a PC |
 | `firmware/bringup/bringup.ino` | Bring-up firmware: keys, NEC transmit, LED arming, battery voltage |
 | `previews/*_front.png`, `*_back.png`, `*_schematic.png` | Both sides of each board and the schematics |
@@ -244,7 +243,6 @@ The keys use pins the Waveshare board brings out but doesn't need:
 - code search ordered by how common each code is;
 - your own Flipper `.ir` files from the SD card;
 - a phone web remote;
-- a Bluetooth scanner that lists nearby BLE devices with their maker, type, address and signal;
 - LED power levels (Full / Half / Low);
 - key sounds on the display board's speaker, with volume and mute (Menu → Sound).
 
