@@ -402,7 +402,8 @@ const SCANKEYS=['POWER','POWER_ON','VOL_UP','VOL_DOWN','MUTE','CH_UP','PLAY','IN
 function showScan(){
   const box=$('#sbox');box.style.display='';
   if(!SCAN.length){$('#spos').textContent='0/0';$('#sname').textContent='No code sets with that key for this brand';$('#scode').textContent='';return}
-  const [c,p,b,n,k,sh]=SCAN[SPOS];$('#spos').textContent=(SPOS+1)+' / '+SCAN.length;$('#sname').textContent=b+' · '+n;
+  const [c,p,b,n,sh]=SCAN[SPOS];$('#spos').textContent=(SPOS+1)+' / '+SCAN.length;$('#sname').textContent=b+' · '+n;
+  const k=$('#skey').selectedOptions[0]?$('#skey').selectedOptions[0].textContent:'';
   $('#scode').textContent='key: '+k+(sh>1?' · same code on '+sh+' remotes':'');
 }
 const scanSend=()=>{if(!SCAN.length)return Promise.resolve();const p=q('/api/send?c='+SCAN[SPOS][0]+'&a=tap');setTimeout(refreshState,500);return p};

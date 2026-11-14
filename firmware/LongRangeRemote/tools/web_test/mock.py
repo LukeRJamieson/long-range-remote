@@ -47,7 +47,7 @@ class H(BaseHTTPRequestHandler):
         if u.path == "/api/brands": return self.out(json.dumps([["Samsung", 2, 0], ["Sony", 2, 2]]))
         if u.path == "/api/groups": return self.out(json.dumps([["Most popular", 2, 4]]))
         if u.path == "/api/state": return self.out(json.dumps(dict(active=-1, favs=[], db=dict(brands=2, profiles=4, codes=100), power=0, powers=["Full", "Half", "Low"], auto=AUTO[0], last=dict(seq=len(SENDS), label="Power", proto="NEC", frames=1))))
-        if u.path == "/api/scan": return self.out(json.dumps([[100 + i, i, "Brand%d" % i, "Remote %d" % i, "Power", 1] for i in range(40)]))
+        if u.path == "/api/scan": return self.out(json.dumps([[100 + i, i, "Brand%d" % i, "Remote %d" % i, 1] for i in range(40)]))
         if u.path == "/api/send":
             import time; SENDS.append([time.time(), int(q.get("c", -1))]); return self.out("ok", "text/plain")
         if u.path == "/api/ble":

@@ -26,16 +26,21 @@ char g_db_path[16] = "";
 size_t g_db_len = 0;
 
 // irdb's reader: called from the main loop and the transmit task (never at once: irdb locks)
+// A seek within a big file walks its cluster chain on the card, so it is skipped when the read
+// carries on where the last one ended (lists read page after page).
+uint32_t g_dbf_pos = UINT32_MAX;
 bool dbRead(void *, uint32_t off, void *buf, uint32_t len) {
   if (!g_dbf) return false;
-  if (!g_dbf.seek(off)) return false;
-  return g_dbf.read((uint8_t *)buf, len) == len;
+  if (off != g_dbf_pos && !g_dbf.seek(off)) { g_dbf_pos = UINT32_MAX; return false; }
+  bool ok = g_dbf.read((uint8_t *)buf, len) == len;
+  g_dbf_pos = ok ? off + len : UINT32_MAX;
+  return ok;
 }
 
 // Open one database file and load its index into PSRAM. false (with err) if missing or invalid.
 bool loadDatabaseFile(const char *path, char *err, size_t en) {
   uint32_t t0 = millis();
-  g_dbf = SD_MMC.open(path, FILE_READ);
+  g_dbf_pos = UINT32_MAX; g_dbf = SD_MMC.open(path, FILE_READ);
   if (!g_dbf) { snprintf(err, en, "not found"); return false; }
   size_t len = g_dbf.size();
   if (!irdb::useFile(irdb::Reader{dbRead, nullptr, (uint32_t)len}, err, en)) { g_dbf.close(); return false; }
@@ -252,7 +257,7 @@ bool format(bool keep, char *msg, size_t mn) {
     setMountedStatus("formatted - irdb.bin missing: upload it");
     return true;
   }
-  g_dbf = SD_MMC.open(SD_DB_FILE, FILE_READ);            // same bytes as before: carry on reading codes from it
+  g_dbf_pos = UINT32_MAX; g_dbf = SD_MMC.open(SD_DB_FILE, FILE_READ);            // same bytes as before: carry on reading codes from it
   snprintf(g_db_path, sizeof(g_db_path), "%s", SD_DB_FILE);
   logf("SD: irdb.bin written back (%u KB) in %lu ms\n", (unsigned)(image_len / 1024), (unsigned long)(millis() - t0));
   snprintf(msg, mn, "Card formatted and irdb.bin put back (%u KB).", (unsigned)(image_len / 1024));
@@ -336,7 +341,7 @@ bool uploadFinish(char *msg, size_t mn) {
     SD_MMC.rename(SD_DB_FILE, SD_DB_OLD);
   }
   bool renamed = SD_MMC.rename(SD_DB_NEW, SD_DB_FILE);
-  if (was_main) { g_dbf = SD_MMC.open(SD_DB_OLD, FILE_READ); snprintf(g_db_path, sizeof(g_db_path), "%s", SD_DB_OLD); }
+  if (was_main) { g_dbf_pos = UINT32_MAX; g_dbf = SD_MMC.open(SD_DB_OLD, FILE_READ); snprintf(g_db_path, sizeof(g_db_path), "%s", SD_DB_OLD); }
   if (!renamed) { snprintf(msg, mn, "rename failed"); return false; }
   snprintf(msg, mn, "irdb.bin updated (%u KB); the previous one is kept as irdb.old", (unsigned)(g_up_len / 1024));
   return true;

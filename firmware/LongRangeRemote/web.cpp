@@ -10,7 +10,8 @@
 //   /api/manual?proto=NEC1&d=&s=&f=&a= send any code in IRP terms (s=-1 for default)
 //   /api/groups                        brand groups [[name, brandCount, remoteCount], ...]
 //   /api/scan?b=ID|g=GROUP&t=TYPE&k=KEY code-search candidates, one per distinct code (b/g/t optional):
-//                                      [[code, profile, brand, profileName, codeName, remotesSharingIt], ...]
+//                                      [[code, profile, brand, profileName, remotesSharingIt], ...]
+//                                      (no code names: each is a separate read from the card, thousands per list)
 //   /api/fav?op=add|del|active&p=ID    manage "My devices"   (/api/fav?op=clear removes all)
 //   POST /api/upload?kind=db           upload a new code database (irdb.bin) to the SD card
 //   GET  /api/disc?a=...               Discover: a device that is not in the database (see hDisc)
@@ -312,11 +313,14 @@ void hScan() {
   int n = irdb::buildScan(f, (uint8_t)k, cands, MAX);
   Json j;
   j.raw("[");
+  // Everything here comes from the index in memory. The code's own name would be one more read from
+  // the card per candidate (thousands, scattered over the code table: tens of seconds), and every
+  // candidate is the key that was asked for anyway.
   for (int i = 0; i < n; i++) {
     int c = cands[i].code, p = cands[i].profile;
     if (i) j.raw(",");
     j.raw("[").num(c).raw(",").num(p).raw(",").str(irdb::brandName(irdb::profileBrand(p))).raw(",")
-      .str(irdb::profileName(p)).raw(",").str(irdb::codeName(c)).raw(",").num(cands[i].shared).raw("]");
+      .str(irdb::profileName(p)).raw(",").num(cands[i].shared).raw("]");
   }
   j.raw("]");
   delete[] cands;
