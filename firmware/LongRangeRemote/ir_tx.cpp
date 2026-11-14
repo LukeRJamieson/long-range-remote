@@ -34,7 +34,18 @@ struct Msg {
   int code;                 // >= 0: database code, -1: use params
   IrCodeParams params;
   char label[64];
+  int8_t raw_slot;          // raw capture: its samples, read at post() time (-1: none)
+  uint32_t raw_gen;         // the slot's generation when it was filled (stale if it was reused since)
 };
+
+// Raw captures are read from the SD card when the key is pressed (post(), in the caller's task),
+// never by the transmit task: card reads from that task failed on the device. A few slots, so a
+// press or two queued behind the one being sent keep their samples.
+const int RAW_SLOTS = 3, RAW_MAX = 2000;
+struct RawSlot { uint16_t t[RAW_MAX]; int count; IrRawSig sig; volatile uint32_t gen; };
+RawSlot g_raw[RAW_SLOTS];
+int g_raw_next = 0;
+uint32_t g_raw_gen = 0;
 
 QueueHandle_t g_queue = nullptr;
 SemaphoreHandle_t g_last_mux = nullptr;
@@ -101,9 +112,7 @@ size_t buildSymbols(const uint32_t *t, uint16_t count) {
 }
 
 // Raw signals are stored as uint16 durations in flash.
-size_t buildRawSymbols(int raw_index) {
-  static uint16_t t[2000];                                   // (only the transmit task comes here)
-  int count = irdb::rawRead(raw_index, t, 2000);             // from the SD card for database codes
+size_t buildRawSymbols(const uint16_t *t, int count) {
   SymWriter w;
   for (int i = 0; i < count; i++) {
     uint32_t d = t[i];
@@ -175,10 +184,13 @@ bool runAction(const Msg &m, Msg &pending) {
   g_toggle = !g_toggle;                                  // new key press -> flip RC5/RC6 toggle
   if (is_raw) {
     const int ri = (int)irRawIndex(p.d, p.s);
-    const IrRawSig r = irdb::raw(ri);
-    if (r.count == 0) { logf("IR: not sent: raw signal %d of \"%s\" can't be read from the card\n", ri, m.label); return false; }
+    const RawSlot *rs = (m.raw_slot >= 0 && m.raw_slot < RAW_SLOTS) ? &g_raw[m.raw_slot] : nullptr;
+    if (!rs || rs->gen != m.raw_gen) { logf("IR: not sent: raw signal %d of \"%s\" was replaced by newer presses\n", ri, m.label); return false; }
+    if (rs->count <= 0) { logf("IR: not sent: raw signal %d of \"%s\" can't be read from the card\n", ri, m.label); return false; }
+    const IrRawSig &r = rs->sig;
     applyCarrier(r.freq ? r.freq : 38000, r.duty ? r.duty : 33);
-    n_first = buildRawSymbols(ri);
+    n_first = buildRawSymbols(rs->t, rs->count);
+    if (rs->gen != m.raw_gen) return false;                  // refilled by a newer press while it was copied
     setLast(m, p, r.freq);
   } else {
     if (!irEncode(p, g_toggle, g_sig)) {
@@ -273,6 +285,19 @@ void post(MsgType t, int code, const IrCodeParams *p, const char *label) {
     m.params = irdb::codeParams(code);               // read here (caller's task), not in the transmit task
     if (m.params.proto == IRP_RAW && irRawIndex(m.params.d, m.params.s) == 0 && irdb::code(code).name == 0)
       logf("IR: code %d could not be read from the card\n", code);
+  }
+  m.raw_slot = -1;
+  if (m.params.proto == IRP_RAW) {                   // the capture's samples too (a slot the transmitter isn't using)
+    const int ri = (int)irRawIndex(m.params.d, m.params.s);
+    int slot = g_raw_next;
+    g_raw_next = (g_raw_next + 1) % RAW_SLOTS;
+    RawSlot &rs = g_raw[slot];
+    rs.gen = 0;                                      // invalid while being filled
+    rs.sig = irdb::raw(ri);
+    rs.count = rs.sig.count ? irdb::rawRead(ri, rs.t, RAW_MAX) : 0;
+    rs.gen = ++g_raw_gen;
+    m.raw_slot = slot;
+    m.raw_gen = rs.gen;
   }
   if (label) strncpy(m.label, label, sizeof(m.label) - 1);
   xQueueSend(g_queue, &m, pdMS_TO_TICKS(50));
