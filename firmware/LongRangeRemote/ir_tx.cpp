@@ -7,6 +7,7 @@
 #include "ir_db.h"
 #include "config.h"
 #include "hw.h"
+#include "log.h"
 #include "sound.h"
 
 #include <Arduino.h>
@@ -160,7 +161,9 @@ void addFrames(uint32_t n) {
 
 // Send one key action. Returns a message that interrupted it (new key) via `pending`.
 bool runAction(const Msg &m, Msg &pending) {
-  IrCodeParams p = (m.code >= 0) ? irdb::codeParams(m.code) : m.params;
+  // A database code's protocol and numbers were looked up by the caller (post()), so for anything
+  // but a raw capture this task doesn't read the SD card.
+  IrCodeParams p = m.params;
   const bool is_raw = (p.proto == IRP_RAW);
   bool holding = (m.type == MSG_HOLD);
   uint32_t start = millis();
@@ -173,12 +176,15 @@ bool runAction(const Msg &m, Msg &pending) {
   if (is_raw) {
     const int ri = (int)irRawIndex(p.d, p.s);
     const IrRawSig r = irdb::raw(ri);
-    if (r.count == 0) return false;                          // card not readable: nothing to send
+    if (r.count == 0) { logf("IR: not sent: raw signal %d of \"%s\" can't be read from the card\n", ri, m.label); return false; }
     applyCarrier(r.freq ? r.freq : 38000, r.duty ? r.duty : 33);
     n_first = buildRawSymbols(ri);
     setLast(m, p, r.freq);
   } else {
-    if (!irEncode(p, g_toggle, g_sig)) return false;
+    if (!irEncode(p, g_toggle, g_sig)) {
+      logf("IR: not sent: \"%s\" (%s D=%u S=%u F=%u) can't be encoded\n", m.label, irProtoName(p.proto), p.d, p.s, p.f);
+      return false;
+    }
     applyCarrier(g_sig.carrier_hz, g_sig.duty_pct);
     min_frames = g_sig.min_frames;
     n_rep = buildSymbols(g_sig.repeat, g_sig.n_repeat);
@@ -215,6 +221,9 @@ bool runAction(const Msg &m, Msg &pending) {
   }
   addFrames(frames);
   g_sending = false;
+  if (is_raw) logf("IR: sent \"%s\" (raw, %u samples) x%u in %lu ms\n", m.label, (unsigned)n_first, (unsigned)frames, (unsigned long)(millis() - start));
+  else logf("IR: sent \"%s\" (%s D=%u S=%u F=%u, %u Hz) x%u in %lu ms\n", m.label, irProtoName(p.proto), p.d, p.s, p.f,
+            (unsigned)g_sig.carrier_hz, (unsigned)frames, (unsigned long)(millis() - start));
   return interrupted;
 }
 
@@ -234,6 +243,7 @@ void txTask(void *) {
     float rest = hw::packVolts();                 // cached resting value (0 = no cells at the last read)
     bool flat = rest > 0.5f && rest < PACK_CUTOFF_V;
     if (!hw::packOn() || flat) {
+      logf("IR: not sent: LED pack %s (%.2f V)\n", !hw::packOn() ? "not detected" : "flat", rest);
       // No cells in, or flat (sending would only drain NiMH cells further): drop this press and
       // anything queued behind it; the screen says "AA out" / "flat", and the speaker buzzes.
       while (xQueueReceive(g_queue, &m, 0) == pdTRUE) {}
@@ -259,6 +269,11 @@ void post(MsgType t, int code, const IrCodeParams *p, const char *label) {
   g_gen_posted = m.gen;
   g_keepalive_ms = millis();
   if (p) m.params = *p;
+  else if (code >= 0) {
+    m.params = irdb::codeParams(code);               // read here (caller's task), not in the transmit task
+    if (m.params.proto == IRP_RAW && irRawIndex(m.params.d, m.params.s) == 0 && irdb::code(code).name == 0)
+      logf("IR: code %d could not be read from the card\n", code);
+  }
   if (label) strncpy(m.label, label, sizeof(m.label) - 1);
   xQueueSend(g_queue, &m, pdMS_TO_TICKS(50));
 }

@@ -587,7 +587,10 @@ void buildCats() {
 
 void buildScan() {
   scan_pos = 0;
+  uint32_t t0 = millis();
   n_scan = scan_cands ? irdb::buildScan(scanFilter(scan_cat), scan_key, scan_cands, scan_cap) : 0;
+  logf("Code search: %s, %d codes to try (%lu ms)%s\n", IR_KEY_LABELS[scan_key], n_scan, (unsigned long)(millis() - t0),
+       scan_cands ? "" : " - no memory for the list");
 }
 
 void stopSend() {
