@@ -61,13 +61,17 @@ front, so the whole remote reads as a single piece.
   - USB-C and TF-card slots for the display in the right wall.
 
 - **Door.** Flush with the bottom. Its tongue hooks into the slot at the front; one **M3 × 10
-  countersunk** screw holds the back. To swap cells: undo the screw, lift the door out by the
+  socket (cup) head** screw holds the back, into a captive nut. Its head sits in a Ø6.0 counterbore
+  but stands 1.2 mm proud of the bottom face: the door is only 3 mm thick, and deepening it would
+  mean reprinting the body. To swap cells: undo the screw, lift the door out by the
   finger notch beside the screw, swap the four cells in the holder, and refit (tongue in first, at a slight
   angle, then swing the back up).
 - **Lid** (the top deck). It carries the display window with a snap-in sleeve underneath, and the
-  control board on four bosses behind it, keys up through the lid. 4 × M3 × 10 countersunk screws fix
-  it (front pair at x ±43.7, back pair at x ±45.6, 136.6 mm behind the cavity's rear wall), each
-  countersink fully inside the lid's rounded corner, with at least 0.8 mm of lid round it.
+  control board on four bosses behind it, keys up through the lid. 4 × M3 × 10 socket (cup) head screws fix
+  it (front pair at x ±43.7, back pair at x ±45.6, 136.6 mm behind the cavity's rear wall), each in a
+  Ø6.0 counterbore fully inside the lid's rounded corner, with at least 1 mm of lid round it. The lid
+  is 3 mm thick, so each head stands 1.2 mm proud with 1.2 mm of lid under it; the screw goes 8.8 mm
+  into its column.
   - **Display retention:** four snap hooks (x ±28, on the front and rear walls) catch the display's
     flat back plate by 1.0 mm, on 13 mm flexing arms, 15 mm wide. The sleeve's long walls have a 2 mm
     45° chamfer along the outside of their joint with the lid, where a hook first snapped off (the lid
@@ -146,7 +150,7 @@ front, so the whole remote reads as a single piece.
 | `bezel` | front face down, posts up | 107.4 × 52 × 8.7 |
 | `body` | floor down | 107.4 × 163.8 × 52 |
 | `lid` | top face down | 100.9 × 138.5 × 19.5 |
-| `door` | inside face (tongue) down; the countersink opens upward | 70 × 75.6 × 3 |
+| `door` | inside face (tongue) down; the counterbore opens upward | 70 × 75.6 × 3 |
 | `pwr_lever` | on its side (pin hole vertical); 100 % infill | 5.9 × 12.4 × 6 |
 | `keycap_dpad` | base down — **print 4** | 13.2 Ø × 9.7 |
 | `keycap_select` | base down | 14 Ø × 9.7 |
@@ -169,9 +173,9 @@ without support (use a brim only if your bed adhesion is marginal).
 | Qty | Item | Used for |
 |---|---|---|
 | 4 | **M3 × 10** socket (cup) head (ISO 4762 / DIN 912) | bezel → LED head → body columns (5.5 mm of thread) |
-| 4 | M3 × 10 countersunk | lid → tray columns |
+| 4 | M3 × 10 socket (cup) head | lid → tray columns |
 | 4 | M3 × 8 pan head | control board → lid bosses |
-| 1 | **M3 × 10 countersunk + M3 nut** | battery door (the nut drops into the hex pocket from inside the tray) |
+| 1 | **M3 × 10 socket (cup) head + M3 nut** | battery door (the nut drops into the hex pocket from inside the tray) |
 | 1 | Keystone 2478 4 × AA holder, 6" leads | the AA pack (in the BOM) |
 | — | JST XH 2-pin plug (XHP-2 + 2 crimps), from stock | holder leads → control J1. Or solder the leads straight into J1's holes |
 | — | double-sided foam tape | holds the holder to the bay roof |

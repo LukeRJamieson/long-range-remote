@@ -29,13 +29,13 @@ Side view (front = left), y up, z towards the back, x to the right as seen from 
              the cavity's rear wall at floor level and rises over the bay's roof.
              Under the display, a closed BATTERY BAY for a Keystone 2478 4 x AA holder
              (63 x 58 x 16 mm, open side down, taped to the roof), opened from underneath: the DOOR hooks
-             in at the front with a tongue and is held at the back by one M3 x 10 countersunk screw into
+             in at the front with a tongue and is held at the back by one M3 x 10 socket head screw into
              a captive nut. Display USB-C (to charge the screen's 18650) and TF card slots in the right
              wall.
   * LID      display window + snap-in sleeve, control board on four bosses (from housing_base.py),
              triangular D-pad holes, a round SELECT hole, a square BACK hole, a slot to reach the
              display's own buttons.
-             4 x M3 x 10 countersunk.
+             4 x M3 x 10 socket (cup) head, in counterbores (heads 1.2 mm proud of the deck).
   * CAPS     one triangular D-pad cap (printed 4x, turned to point outwards), a plain round SELECT and a
              square BACK, each with a thick round base under the lid: no stem, no engraving, prints
              base-down.
@@ -91,7 +91,7 @@ TOP_R = 1.5                              # every top edge (round the deck rim)
 DY = Y_TOP - H.Y_TOP                     # the base frame's lid, display and control board, moved down to this height
 Z_BODY1, Z_TRAY_IN0, Z_TRAY_IN1 = H.Z_BODY1, H.Z_TRAY_IN0, H.Z_TRAY_IN1   # 183.5, 41.5, 180.5
 LID_COLUMN_R = H.LID_COLUMN_R
-# lid screws: placed so each countersink (R3.2) sits fully inside the lid's R6.75 corner, with at least
+# lid screws: placed so each counterbore (R3.0; R3.2 countersinks before) sits fully inside the lid's R6.75 corner, with at least
 # 0.8 mm of lid round it.
 # Front pair: as far forward as the display sleeve allows; rear pair: clear of the control board.
 LID_SCREWS = [(-43.7, H.Z_HEAD1 + 7.0), (43.7, H.Z_HEAD1 + 7.0), (-45.6, H.Z_HEAD1 + 136.6), (45.6, H.Z_HEAD1 + 136.6)]   # z measured from the head's rear face (45.5 / 175.5 at 38.5)
@@ -157,6 +157,8 @@ DOOR_GAP = 0.25                          # door to recess, each side
 TONGUE_W, TONGUE_L, TONGUE_T = 30.0, 3.0, 1.2      # tongue on the door's inner face
 SLOT_Y0 = 1.2                            # lip under the tongue's slot (from the bottom face)
 NUT_AF, NUT_T = 5.5, 2.4                 # M3 nut
+DOOR_CBORE_DEPTH = DOOR_T - H.CBORE_FLOOR    # 1.8: the M3 x 10 socket head stands 1.2 mm proud
+DOOR_SCREW_TIP = Y_BOT + DOOR_CBORE_DEPTH + 10.0   # 1.8 mm through the nut's pocket into the tray
 WIRE_HOLE = (24.0, BAY_Z1 - 6.0, 3.5)    # x, z, radius: the holder's leads up to control J1
 
 KEYS = H.KEYS                            # names and positions (the switch centres on the control board)
@@ -434,11 +436,11 @@ def make_door():
     # tongue at the front edge, on the door's inner half, slides into the slot in front of the recess
     d = d.union(box(-TONGUE_W / 2, TONGUE_W / 2, Y_BOT + DOOR_T - TONGUE_T, Y_BOT + DOOR_T,
                     DOOR_Z0 - TONGUE_L, DOOR_Z0 + 0.5))
-    # countersunk M3 hole at the back (head flush with the outside)
+    # M3 x 10 socket (cup) head at the back: counterbored into the outside face, leaving CBORE_FLOOR
+    # under the head (the head stands DOOR_T - DOOR_CBORE_DEPTH proud of the bottom face)
     d = d.cut(ycyl(0, SCREW_Z, H.CLEAR_M3 / 2, Y_BOT - 1, Y_BOT + DOOR_T + 1))
-    d = d.cut(cq.Workplane("XZ").workplane(offset=-Y_BOT).center(0, SCREW_Z).circle(3.2)
-              .workplane(offset=-1.7).circle(H.CLEAR_M3 / 2).loft())
-    # soften the outside edge (it prints on top): 0.6 mm chamfer round the outline, not the countersink
+    d = d.cut(ycyl(0, SCREW_Z, H.CBORE_D / 2, Y_BOT - 1, Y_BOT + DOOR_CBORE_DEPTH))
+    # soften the outside edge (it prints on top): 0.6 mm chamfer round the outline, not the counterbore
     d = pick_edges(d, "<Y", lambda e: e.Center().z < SCREW_Z - 4 or abs(e.Center().x) > 5).chamfer(0.6)
     return d
 
@@ -569,7 +571,7 @@ def make_lid():
     outer = lambda e: (abs(abs(e.Center().x) - x1) < 0.05 or abs(e.Center().z - z0) < 0.05
                        or abs(e.Center().z - z1) < 0.05
                        or (e.geomType() == "CIRCLE" and e.radius() > 6.0))      # the R6.75 corners
-    lid = pick_edges(lid, ">Y", outer).chamfer(0.3)   # 0.3: the countersinks are 0.5 mm in from the edge
+    lid = pick_edges(lid, ">Y", outer).chamfer(0.3)   # 0.3: the counterbores are 0.7 mm in from the edge
     # ... and 0.4 mm round each key hole
     centres = [H.key_xz(u, v) for _, u, v, _, _ in KEYS]
     near_key = lambda e: any((e.Center().x - x) ** 2 + (e.Center().z - z) ** 2 < 8.0 ** 2 for x, z in centres)
@@ -626,7 +628,7 @@ def access_solids():
         box(-3.5, 17.5, Y_ROOF1 + 0.1, Y_ROOF1 + 1.5, z_sock, z_cell)).union(                 # under the 18650
         box(-3.5, 17.5, Y_ROOF1 + 0.1, H.Y_BTN + DY - PCB_T - 13.0, z_cell, z_cell + 6.0))  # up to J2's socket
     # M3 x 10 door screw and the nut
-    a["door_screw"] = ycyl(0, SCREW_Z, 1.5, Y_BOT + DOOR_T, Y_BOT + 10.0)      # M3 x 10 countersunk
+    a["door_screw"] = ycyl(0, SCREW_Z, 1.5, Y_BOT + DOOR_T, DOOR_SCREW_TIP)      # M3 x 10 socket head
     return a
 
 

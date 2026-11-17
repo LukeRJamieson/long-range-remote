@@ -28,6 +28,9 @@ R_OUT = 10.0                   # outside corner radius of the body (the lid's co
 R_IN = R_OUT - WALL
 PILOT_M3 = 2.7                 # self-tapping M3 into PETG/PLA
 CLEAR_M3 = 3.4
+# M3 socket (cup) head screws, ISO 4762 / DIN 912: head 5.5 dia x 3.0
+CBORE_D = 6.0                  # counterbore for the head
+CBORE_FLOOR = 1.2              # plastic left under a head in a 3 mm plate (lid, battery door)
 
 # --- z stations (head)
 BEZEL_T = 3.0
@@ -53,6 +56,7 @@ BODY_L = 145.0
 Y_BOT = -HO                                     # -53.7
 Y_TOP = Y_BOT + BODY_H                          # lid top in this frame (housing_lite.py: + DY)
 LID_T = 3.0
+LID_CBORE_DEPTH = LID_T - CBORE_FLOOR           # 1.8: lid screw heads stand 1.2 mm proud of the deck
 Y_LID = Y_TOP - LID_T                           # lid underside
 Z_BODY1 = Z_HEAD1 + BODY_L                      
 Z_TRAY_IN0 = Z_HEAD1 + WALL                     # tray front wall inner face
@@ -172,8 +176,8 @@ def key_xz(u, v):
 # ============================================================================ parts
 def make_lid(lid_screws=None, key_holes=True):
     """The lid: top deck with the display window, the display sleeve and snap hooks, the control board's
-    bosses and the countersunk lid screws, in the base frame (housing_lite.py moves it by DY).
-    lid_screws: (x, z) of the four countersunk lid screws (default LID_SCREWS).
+    bosses and the counterbored lid screws, in the base frame (housing_lite.py moves it by DY).
+    lid_screws: (x, z) of the four lid screws (default LID_SCREWS).
     key_holes: cut round key holes (False: the caller cuts its own)."""
     lid_screws = LID_SCREWS if lid_screws is None else lid_screws
     x0, x1 = -HI + LID_CLEAR, HI - LID_CLEAR
@@ -243,11 +247,12 @@ def make_lid(lid_screws=None, key_holes=True):
     for name, u, v, d, _ in (KEYS if key_holes else []):
         x, z = key_xz(u, v)
         l = l.cut(ycyl(x, z, (d + KEY_HOLE_CLEAR) / 2, Y_LID - 1, Y_TOP + 1))
-    # countersunk screw holes into the tray columns
+    # M3 x 10 socket (cup) head screws into the tray columns: a counterbore in the top face, as deep
+    # as the 3 mm lid allows while leaving LID_CBORE_FLOOR under the head (so the head stands
+    # 3.0 - LID_CBORE_DEPTH proud)
     for (x, z) in lid_screws:
         l = l.cut(ycyl(x, z, CLEAR_M3 / 2, Y_LID - 1, Y_TOP + 1))
-        l = l.cut(cq.Workplane("XZ").workplane(offset=-Y_TOP).center(x, z).circle(3.2)
-                  .workplane(offset=1.7).circle(CLEAR_M3 / 2).loft())
+        l = l.cut(ycyl(x, z, CBORE_D / 2, Y_TOP - LID_CBORE_DEPTH, Y_TOP + 1))
     return l
 
 
