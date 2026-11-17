@@ -43,9 +43,10 @@ front, so the whole remote reads as a single piece.
 
 - **LED cavity (the head end of the body).** There is no separate head: the cavity at the front of the body
   is open to the bezel and closed behind by a single 3 mm wall. The LED head (99.8 × 44.8 mm, R3 corners, M3 holes at (±44.2, ±14.0)) slides in
-  from the front and is clamped with 4 × **M3 × 25** countersunk screws through
+  from the front and is clamped with 4 × **M3 × 10 socket (cup) head** screws through
   the bezel and its short (2 mm) posts into columns at the back of the cavity, fused into the side
-  walls. A 4 mm deep pocket in the bezel's back over J1 leaves its pin tails 6 mm of room, so they
+  walls. Each head sits in a Ø6.0 counterbore, 2.8 mm below the face; the screw bites 5.5 mm into
+  its column. A 4 mm deep pocket in the bezel's back over J1 leaves its pin tails 6 mm of room, so they
   don't need trimming. J1 lies
   along the board's bottom edge, centred: the 10-way ribbon goes straight back through the opening
   at floor level, then rises over the battery bay's roof and runs under the display to the control
@@ -111,9 +112,10 @@ front, so the whole remote reads as a single piece.
   every key pressed on the first build), so at rest a cap's base sits about 1.2 mm above its switch.
 - **Bezel window.** Shaped like the LED field: full width across the middle three rows, cut back at
   the four corners where the holes are, every corner R2. Each post has 3.6 mm of bezel round it.
-  Each screw's countersink (Ø6.4 at the face) comes within 0.4 mm of the window there, so for the first
-  0.45 mm the countersink opens into the window's corner. Otherwise the face, which prints first, would
-  have a feather-thin ring round each screw.
+  Each screw's counterbore (Ø6.0, 5.8 mm deep) comes within 0.6 mm of the window there, so it opens
+  into the window's corner through a narrow gap. Otherwise a feather-thin wall would stand
+  between them the whole depth of the counterbore. Under each head, 2.9 mm of bezel and post press on
+  the LED board. The counterbore floors print as small bridges (the bezel prints face-down).
 
 ## Files
 
@@ -165,7 +167,7 @@ without support (use a brim only if your bed adhesion is marginal).
 
 | Qty | Item | Used for |
 |---|---|---|
-| 4 | **M3 × 25** countersunk (DIN 7991 / ISO 10642) | bezel → LED head → body columns (15 mm of thread) |
+| 4 | **M3 × 10** socket (cup) head (ISO 4762 / DIN 912) | bezel → LED head → body columns (5.5 mm of thread) |
 | 4 | M3 × 10 countersunk | lid → tray columns |
 | 4 | M3 × 8 pan head | control board → lid bosses |
 | 1 | **M3 × 10 countersunk + M3 nut** | battery door (the nut drops into the hex pocket from inside the tray) |
@@ -182,7 +184,7 @@ without support (use a brim only if your bed adhesion is marginal).
       the roof with foam tape (about 1 mm thick; the bay allows for it), open side down.
    3. Drop the M3 nut into the hex pocket behind the bay (from inside the tray).
 2. **LED head.** Feed the 10-way ribbon through the opening in the cavity's rear wall from the tray side,
-   plug it into J1 (pin 1 marked) with the board held in front of the cavity, J1 at the **bottom**, then slide the board in, then the bezel and 4 × M3 × 25. J1's pin
+   plug it into J1 (pin 1 marked) with the board held in front of the cavity, J1 at the **bottom**, then slide the board in, then the bezel and 4 × M3 × 10 socket head. J1's pin
    tails can stay as they are: the bezel has a pocket for them.
 3. **Lid.** Drop the caps into their holes from underneath: the four triangles each point outwards
    (UP towards the LED head), SELECT on the right, the square BACK at the D-pad's lower right.

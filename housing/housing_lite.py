@@ -23,8 +23,8 @@ Side view (front = left), y up, z towards the back, x to the right as seen from 
              across the join.
   * BODY     one part: the LED cavity at the front, then the tray. The LED head (99.8 x 44.8, R3
              corners, M3 holes at (+-44.2, +-14.0)) slides into the cavity from the front and is
-             clamped by 4 x M3 x 25 countersunk screws: bezel -> 2 mm posts -> LED head -> pilot holes
-             in four columns at the back of the cavity, fused into the side walls. J1 lies along the
+             clamped by 4 x M3 x 10 socket (cup) head screws, heads sunk in counterbores in the bezel:
+             bezel -> 2 mm posts -> LED head -> pilot holes in four columns at the back of the cavity, fused into the side walls. J1 lies along the
              board's bottom edge, centred: the 10-way ribbon goes straight back through the opening in
              the cavity's rear wall at floor level and rises over the bay's roof.
              Under the display, a closed BATTERY BAY for a Keystone 2478 4 x AA holder
@@ -40,7 +40,7 @@ Side view (front = left), y up, z towards the back, x to the right as seen from 
              square BACK, each with a thick round base under the lid: no stem, no engraving, prints
              base-down.
   * BEZEL    front plate (the same cross-section), 6.7 mm thick and flush with the LED tips, with four
-             posts that press on the LED head and a relief over J1's pin tails.
+             counterbored screw holes, posts that press on the LED head and a relief over J1's pin tails.
 
 Every part fits a Prusa MINI (180 x 180 x 180). Only the battery bay's roof needs support (an enforcer
 STL is exported for it); everything else prints without, in its STL orientation.
@@ -109,7 +109,7 @@ POST_D = H.POST_D
 # window is too - rows 2-4 full width, the end columns cut back - with every corner rounded R2:
 #   middle band  u +-47.6 (collars reach 47.1), v +-10.3 (rows +-7 + 2.9 collar + 0.4)
 #   full height  u +-40.6 (collars of columns 2..13 reach 40.3), v +-17.4 (collars reach 16.9)
-# A post (and its countersink, R3.2) sits 3.6 / 3.7 mm from the nearest window edge.
+# A post (and its screw's counterbore, R3.0) sits 3.6 / 3.7 mm from the nearest window edge.
 WIN_WIDE = (47.6, 10.3)
 WIN_TALL = (40.6, 17.4)
 WIN_R = 2.0
@@ -123,7 +123,12 @@ ZF = Z_LEDPCB - H.LED_H                  # 4.0: the front face of the remote = t
 BEZEL_THICK = Z_HEAD0 - ZF               # 6.7
 LED_PROUD = ZF - (Z_LEDPCB - H.LED_H)    # 0: flush
 J1_RELIEF = 4.0                          # pocket in the bezel's back over J1's pin tails
-HEAD_SCREW_L = 25.0                      # M3 x 25 countersunk: bezel -> LED head -> 15 mm into the columns
+# LED head screws: M3 x 10 socket (cup) head, ISO 4762 / DIN 912 (head 5.5 dia x 3.0). Each head sits in a
+# 6.0 mm counterbore 5.8 mm deep, so it stays 2.8 mm below the face; under it 2.9 mm of bezel + post
+# presses on the board, and the 10 mm shank ends 5.5 mm into its column (which starts at Z_LEDBACK).
+HEAD_SCREW_L = 10.0
+CBORE_D = 6.0
+Z_SCREW_SEAT = 9.8                       # counterbore floor = the head's underside
 Z_HEAD_RW, Z_HEAD1 = H.Z_HEAD_RW, H.Z_HEAD1                            # 35.5, 38.5 (same J1 + ribbon space)
 BEZEL_T, PCB_T = H.BEZEL_T, H.PCB_T
 
@@ -290,24 +295,23 @@ def section(x0, x1, y0, y1, z0, z1, r_bot, r_top=0.0):
     return b
 
 
-def face_sliver_cut(wide, tall, csk_r, depth, min_w):
+def face_sliver_cut(wide, tall, hole_r, depth, min_w):
     """Solid to cut from the bezel's front face: the bits of its outline narrower than min_w between the
-    window and the countersinks (2D opening, shapely), within 6 mm of each hole, ZF .. ZF + depth."""
+    window and the counterbores (2D opening, shapely), within 6 mm of each hole, ZF .. ZF + depth."""
     from shapely.geometry import box as sbox, Point
     from shapely.ops import unary_union
     (wx, wy), (tx, ty) = wide, tall
     rnd = lambda g, r: g.buffer(-r, join_style=1).buffer(r, join_style=1)
     win = unary_union([rnd(sbox(-wx, YC - wy, wx, YC + wy), WIN_R), rnd(sbox(-tx, YC - ty, tx, YC + ty), WIN_R)])
     win = win.buffer(WIN_R, join_style=1).buffer(-WIN_R, join_style=1)         # R2 in the concave corners too
-    holes = [Point(x, y).buffer(csk_r, 128) for x, y in corners()]
+    holes = [Point(x, y).buffer(hole_r, 128) for x, y in corners()]
     mat = sbox(-BHO, YC - BODY_H, BHO, YC + BODY_H).difference(win).difference(unary_union(holes))
     keep = mat.buffer(-min_w / 2, join_style=1).buffer(min_w / 2, join_style=1)
     # keep only the main frame: small separate crescents left between a hole and the window would be
     # loose specks on the face
     keep = max(getattr(keep, "geoms", [keep]), key=lambda g: g.area)
     near = unary_union([Point(x, y).buffer(6.0, 64) for x, y in corners()])
-    # the countersinks themselves go in the cut too, as a short straight counterbore at the face diameter:
-    # the cone narrows with depth, so a straight cut beside it would leave a thin ring below the face
+    # the holes (the screw counterbores) themselves go in the cut too
     drop = mat.difference(keep).intersection(near).union(unary_union(holes))
     # grow 0.1 mm so the cut overlaps the true circles / arcs (the 2D outline is a polygon approximation:
     # cut exactly to it, it would leave microscopic lens slivers along every curved edge)
@@ -333,14 +337,13 @@ def make_bezel():
     for x, y in corners():
         b = b.union(zcyl(x, y, POST_D / 2, Z_HEAD0 - 0.5, Z_LEDPCB))          # short posts onto the board
         b = b.cut(zcyl(x, y, H.CLEAR_M3 / 2, ZF - 1, Z_LEDPCB + 1))
-        b = b.cut(cq.Workplane("XY").workplane(offset=ZF).center(x, y).circle(3.2)
-                  .workplane(offset=1.7).circle(H.CLEAR_M3 / 2).loft())
-    # The M3 countersinks (6.4 at the face) come within ~0.4 mm of the window's cut-back corners, which
-    # would print as feather-thin slivers on the first layers (the bezel prints face-down). On the front
-    # face's outline (bezel minus window minus countersinks), a morphological opening (shrink, then grow,
-    # by 0.4 mm) keeps only material at least 0.8 mm wide - two perimeters; whatever it drops near a
-    # hole is cut away for the first 0.45 mm, below which the countersink cone has narrowed enough.
-    b = b.cut(face_sliver_cut((wx, wy), (tx, ty), 3.2, depth=0.45, min_w=0.8))
+    # Counterbores for the socket heads. Each one (R3.0) comes within ~0.6 mm of the window's cut-back
+    # corner, which would print as a feather-thin wall all the way down (the bezel prints face-down).
+    # On the outline (bezel minus window minus counterbores), a morphological opening (shrink, then grow,
+    # by 0.4 mm) keeps only material at least 0.8 mm wide - two perimeters; whatever it drops near a hole
+    # is cut away with the counterbore, over its full depth: the counterbore opens into the window there.
+    # face_sliver_cut cuts the counterbores too (grown 0.1 mm), so it is given R - 0.1.
+    b = b.cut(face_sliver_cut((wx, wy), (tx, ty), CBORE_D / 2 - 0.1, depth=Z_SCREW_SEAT - ZF, min_w=0.8))
     # relief over J1's soldered pin stubs on the LED side of the board (bottom centre)
     # (runs on into the window, which is open anyway: stopping 0.8 mm past its edge left slivers at the corners)
     b = b.cut(rbox_z(-7.5, 7.5, YC - 21.9, YC - 14.0, Z_HEAD0 - J1_RELIEF, Z_HEAD0 + 0.1, 1.0))
@@ -370,7 +373,7 @@ def make_body():
         col = col.union(box(min(x, ex), max(x, ex), y - COLUMN_R, y + COLUMN_R, z0, z1))
         col = col.union(box(x - COLUMN_R, x + COLUMN_R, min(y, ey), max(y, ey), z0, z1))
         t = t.union(col)
-        t = t.cut(zcyl(x, y, H.PILOT_M3 / 2, Z_LEDBACK - 1, ZF + HEAD_SCREW_L + 0.5))   # ends inside the column
+        t = t.cut(zcyl(x, y, H.PILOT_M3 / 2, Z_LEDBACK - 1, Z_SCREW_SEAT + HEAD_SCREW_L + 1.0))   # 1 mm past the tip
     # inside: same outline as the lid's (R7 corners, 0.25 mm round the R6.75 lid)
     inner = box(-BHI, BHI, Y_FLOOR, Y_TOP + 1, Z_TRAY_IN0, Z_TRAY_IN1).edges("|Y").fillet(B_R_IN)
     t = t.cut(inner)
