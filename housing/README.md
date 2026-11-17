@@ -46,7 +46,8 @@ front, so the whole remote reads as a single piece.
   from the front and is clamped with 4 × **M3 × 10 socket (cup) head** screws through
   the bezel and its short (2 mm) posts into columns at the back of the cavity, fused into the side
   walls. Each head sits in a Ø6.0 counterbore, 2.8 mm below the face; the screw bites 5.5 mm into
-  its column. A 4 mm deep pocket in the bezel's back over J1 leaves its pin tails 6 mm of room, so they
+  its column. The columns' pilot holes are still the 15 mm deep ones made for the original M3 × 25
+  countersunk screws, so a body printed for those takes the new bezel and screws unchanged. A 4 mm deep pocket in the bezel's back over J1 leaves its pin tails 6 mm of room, so they
   don't need trimming. J1 lies
   along the board's bottom edge, centred: the 10-way ribbon goes straight back through the opening
   at floor level, then rises over the battery bay's roof and runs under the display to the control

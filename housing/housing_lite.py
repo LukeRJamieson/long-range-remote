@@ -129,6 +129,7 @@ J1_RELIEF = 4.0                          # pocket in the bezel's back over J1's 
 HEAD_SCREW_L = 10.0
 CBORE_D = 6.0
 Z_SCREW_SEAT = 9.8                       # counterbore floor = the head's underside
+PILOT_DEPTH = 25.5                       # column pilot holes end 25.5 mm behind the face (15.2 mm deep)
 Z_HEAD_RW, Z_HEAD1 = H.Z_HEAD_RW, H.Z_HEAD1                            # 35.5, 38.5 (same J1 + ribbon space)
 BEZEL_T, PCB_T = H.BEZEL_T, H.PCB_T
 
@@ -373,7 +374,9 @@ def make_body():
         col = col.union(box(min(x, ex), max(x, ex), y - COLUMN_R, y + COLUMN_R, z0, z1))
         col = col.union(box(x - COLUMN_R, x + COLUMN_R, min(y, ey), max(y, ey), z0, z1))
         t = t.union(col)
-        t = t.cut(zcyl(x, y, H.PILOT_M3 / 2, Z_LEDBACK - 1, Z_SCREW_SEAT + HEAD_SCREW_L + 1.0))   # 1 mm past the tip
+        # pilot holes kept at their original depth (made for M3 x 25 screws), so a body already printed
+        # still fits: an M3 x 10 just uses the first 5.5 mm of each
+        t = t.cut(zcyl(x, y, H.PILOT_M3 / 2, Z_LEDBACK - 1, ZF + PILOT_DEPTH))
     # inside: same outline as the lid's (R7 corners, 0.25 mm round the R6.75 lid)
     inner = box(-BHI, BHI, Y_FLOOR, Y_TOP + 1, Z_TRAY_IN0, Z_TRAY_IN1).edges("|Y").fillet(B_R_IN)
     t = t.cut(inner)
