@@ -225,9 +225,12 @@ NUB_GAP = 0.3                             # nub to plunger at rest in Waveshare'
 # Real board [user, printed lever]: at its stop the nub didn't quite reach PWR, so it juts out NUB_EXTRA
 # further than the model says it needs (the loose pin holes take up some of the travel too). So that it
 # can never hold PWR down at rest, the lever's rear face is relieved by LEV_RELIEF where it passes
-# through the lid: it can now swing back ~1 mm at the nub, and PWR's own spring pushes it off.
-NUB_EXTRA = 1.0
-LEV_RELIEF = 1.0
+# through the lid: it can now swing back ~1 mm at the nub (~1.5 mm with LEV_RELIEF 1.5), and PWR's own
+# spring pushes it off.
+# Second print [user]: still needed finessing to catch PWR now and then, so the nub juts out another
+# 0.5 mm (1.0 -> 1.5) and the relief grows with it, so it still can't hold PWR down at rest.
+NUB_EXTRA = 1.5
+LEV_RELIEF = 1.5
 SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin
 LEV_SIDE_CLEAR, LEV_REAR_CLEAR = 0.35, 0.3
 CHEEK_T, CHEEK_DROP = 2.2, 3.3            # cheek thickness (x) and how far below the lid they reach
