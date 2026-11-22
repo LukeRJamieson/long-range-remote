@@ -89,23 +89,22 @@ front, so the whole remote reads as a single piece.
   - **To take the display out:** lid off, then push each hook arm outwards with a thumbnail or a small
     screwdriver while you press the back of the display; it comes out towards you.
 - **PWR lever.** The display's PWR button sits on its front edge and is pressed sideways, so a small
-  lever does it from the face of the lid. Its tab stands 3 mm proud of the lid just in front of the
+  lever does it from the face of the lid. Its tab stands 5 mm proud of the lid just in front of the
   screen, in the middle. **Flick the tab forwards** (towards the LED head): the lever pivots on a
   1.75 mm filament pin in two cheeks under the lid, and a nub on its lower end pushes PWR's plunger.
   A short flick turns the screen on; hold it forwards to turn it off. The button's own spring
   returns it, and the slot in the lid stops the tab at 11°, so the nub can't push harder than the
   switch needs.
-  - Checked against Waveshare's 3D model: at rest it touches nothing; at its stop the nub reaches
-    0.45 mm past the plunger's tip (the switch travels ~0.25 mm), below the board edge and well short
-    of the switch body.
-  - On a real (V2) board the nub needed to reach further than Waveshare's model says, so it juts out
-    an extra 1 mm (`NUB_EXTRA` in `housing_lite.py`). The lever's back face is relieved where it passes
-    through the lid, so it can swing back ~1 mm at the nub: PWR's own spring always pushes it off, and
-    the longer nub can't hold PWR down.
   - The nub's pushing face runs from the lever's bottom up to 0.65 mm into the plunger's height,
     1.3 mm tall (it was a 0.6 mm blade that the pin's play could put above or below most of the plunger).
     The flick lifts the nub as it swings, so by the stop the face covers the plunger's whole height.
-  - **If a flick doesn't click PWR,** raise `NUB_EXTRA`; if the screen turns itself off, lower it.
+  - Its reach is set by `NUB_EXTRA` in `housing_lite.py` (0.2 mm past what Waveshare's model needs).
+    Checked against that model: at rest the nub is 0.1 mm clear of the plunger and touches nothing; at
+    its stop it reaches 0.72 mm past the plunger's tip (the switch travels ~0.25 mm), 0.32 mm below the
+    board and short of the switch body. With the old 0.6 mm blade 1 mm extra was needed; with the
+    full face, 1 mm held PWR down.
+  - **If a flick doesn't click PWR,** raise `NUB_EXTRA` (0.1-0.2 mm steps); if the screen turns itself off
+    or PWR is held down, lower it.
     Reprint only the lever (a 5-minute print).
   - KEY and BOOT, either side of PWR, can't be reached with the lever fitted. They don't need to be:
     KEY is the same GPIO as UP, and BOOT the same as SELECT (hold SELECT at power-up for the

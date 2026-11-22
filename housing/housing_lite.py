@@ -212,7 +212,8 @@ PWR_LEVER = True
 LEV_W = 6.0                               # lever width (x)
 LEV_REAR, LEV_FRONT = -0.9, -5.0          # lever faces at rest (z); 0.9 mm clear of the display's edge
 PLUNGER_Y = (-5.15 - H.DISP_DROP, -4.15 - H.DISP_DROP)  # plunger bottom / top, below the glass
-LEV_TOP, LEV_BOT = 6.0, PLUNGER_Y[0] - 0.65   # tab top 3 mm above the lid's top face; lower end
+# tab top 5 mm above the lid's top face (was 3: too short to flick easily [user]); lower end
+LEV_TOP, LEV_BOT = 8.0, PLUNGER_Y[0] - 0.65
 LEV_PIVOT = (-2.9, -1.0)                  # (z, y) of the pin: the pin clears the sleeve's front wall, so it
                                           # slides in from the side through one cheek
 LEV_PIN_D = 1.75                          # a piece of 1.75 mm filament, LEV_PIN_LEN long
@@ -233,7 +234,11 @@ NUB_GAP = 0.3                             # nub to plunger at rest in Waveshare'
 # further than the model says it needs (the loose pin holes take up some of the travel too). So that it
 # can never hold PWR down at rest, the lever's rear face is relieved by LEV_RELIEF where it passes
 # through the lid: it can now swing back ~1 mm at the nub, and PWR's own spring pushes it off.
-NUB_EXTRA = 1.0
+# Third print [user]: with the full-depth face (below) NUB_EXTRA 1.0 held PWR down at rest, so the real
+# plunger is nearer than 0.89 mm in; back to 0.2: at rest 0.1 mm clear of the modelled plunger,
+# at the stop 0.65 mm past its tip. (Raise it in 0.1-0.2 mm steps if a flick misses, lower it if the
+# screen turns itself off.)
+NUB_EXTRA = 0.2
 LEV_RELIEF = 1.0
 SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin
 LEV_SIDE_CLEAR, LEV_REAR_CLEAR = 0.35, 0.3
