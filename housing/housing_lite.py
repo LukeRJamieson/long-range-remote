@@ -219,23 +219,27 @@ LEV_PIN_D = 1.75                          # a piece of 1.75 mm filament, LEV_PIN
 # Pin holes, generous: 2.0 / 1.8 printed far too tight to get the filament through [user, first print].
 # Small printed holes come out undersize, the cheeks' (printed sideways) most of all.
 LEV_HOLE_D, CHEEK_HOLE_D = 2.4, 2.2       # pin free in both; a melted head on one end keeps it in
-NUB_Y = (PLUNGER_Y[0] + 0.05, PLUNGER_Y[0] + 0.65)     # nub height, inside the plunger's, below the board
+# The nub's face: from the lever's bottom up to 0.65 mm into the plunger's height (1.3 mm tall). It was
+# 0.6 mm (0.05-0.65), a thin blade that the pin holes' ~0.5 mm of play could put above or below most of
+# the plunger, so it needed finessing to catch PWR [user, second print]. The flick also lifts the nub
+# ~0.75 mm as it swings, so the face's lower half is what meets the plunger at the end of the throw.
+# Its top is unchanged, still clear of the board at the stop; below the plunger there is nothing in
+# Waveshare's model (checked down to 3 mm under the switch).
+NUB_Y = (PLUNGER_Y[0] - 0.65, PLUNGER_Y[0] + 0.65)     # nub face bottom (= LEV_BOT) / top
+_NUB_CONTACT_Y = PLUNGER_Y[0] + 0.35                   # where it meets the plunger (sets the lever ratio)
 PLUNGER_TIP = 0.19                        # [STEP]
 NUB_GAP = 0.3                             # nub to plunger at rest in Waveshare's model
 # Real board [user, printed lever]: at its stop the nub didn't quite reach PWR, so it juts out NUB_EXTRA
 # further than the model says it needs (the loose pin holes take up some of the travel too). So that it
 # can never hold PWR down at rest, the lever's rear face is relieved by LEV_RELIEF where it passes
-# through the lid: it can now swing back ~1 mm at the nub (~1.5 mm with LEV_RELIEF 1.5), and PWR's own
-# spring pushes it off.
-# Second print [user]: still needed finessing to catch PWR now and then, so the nub juts out another
-# 0.5 mm (1.0 -> 1.5) and the relief grows with it, so it still can't hold PWR down at rest.
-NUB_EXTRA = 1.5
-LEV_RELIEF = 1.5
+# through the lid: it can now swing back ~1 mm at the nub, and PWR's own spring pushes it off.
+NUB_EXTRA = 1.0
+LEV_RELIEF = 1.0
 SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin
 LEV_SIDE_CLEAR, LEV_REAR_CLEAR = 0.35, 0.3
 CHEEK_T, CHEEK_DROP = 2.2, 3.3            # cheek thickness (x) and how far below the lid they reach
 LEV_STROKE = NUB_GAP + SWITCH_TRAVEL + OVERTRAVEL        # nub movement at the stop (0.75)
-_NUB_ARM = LEV_PIVOT[1] - sum(NUB_Y) / 2                 # pin to nub centre (3.8)
+_NUB_ARM = LEV_PIVOT[1] - _NUB_CONTACT_Y                # pin to the nub's contact point (3.8)
 LEV_THETA = LEV_STROKE / _NUB_ARM                         # throw at the stop, rad (~11 deg)
 LEV_SLOT_FRONT = LEV_THETA * (H.LID_T - LEV_PIVOT[1])     # front stop: tab hits the slot's front edge at the lid top
 # 9.5 mm: 1.4 mm into each 2.2 mm cheek, and ~4 mm shorter than the clear run beside a cheek, so it
@@ -521,8 +525,8 @@ def make_pwr_lever(theta=0.0, extra=None):
     zn = PLUNGER_TIP - NUB_GAP + (NUB_EXTRA if extra is None else extra)   # nub tip at rest
     n0, n1 = NUB_Y
     r = LEV_RELIEF
-    prof = [(zf, yb), (zr, yb), (zr, n0 - 0.4), (zn, n0), (zn, n1),       # nub, with sloped faces above
-            (zr, n1 + 0.4), (zr, 0.3), (zr - r, 0.3 + r),                # and below it; rear face relieved
+    prof = [(zf, yb), (zn - 0.3, yb), (zn, n0 + 0.3), (zn, n1),           # nub: full-depth face (0.3 chamfer
+            (zr, n1 + 0.4), (zr, 0.3), (zr - r, 0.3 + r),                # at its foot), sloped above; rear face relieved
             (zr - r, yt), (zf, yt)]                                      # through the lid (45 deg ramp)
     # YZ workplane: local x = global y, local y = global z
     lev = (cq.Workplane("YZ").workplane(offset=-LEV_W / 2)

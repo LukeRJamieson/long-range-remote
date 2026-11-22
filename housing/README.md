@@ -99,10 +99,12 @@ front, so the whole remote reads as a single piece.
     0.45 mm past the plunger's tip (the switch travels ~0.25 mm), below the board edge and well short
     of the switch body.
   - On a real (V2) board the nub needed to reach further than Waveshare's model says, so it juts out
-    an extra 1.5 mm (`NUB_EXTRA` in `housing_lite.py`; 1 mm still needed finessing now and then). The
-    lever's back face is relieved by 1.5 mm where it passes through the lid, so it can swing back
-    ~1.4 mm at the nub: PWR's own spring always pushes it off, and
+    an extra 1 mm (`NUB_EXTRA` in `housing_lite.py`). The lever's back face is relieved where it passes
+    through the lid, so it can swing back ~1 mm at the nub: PWR's own spring always pushes it off, and
     the longer nub can't hold PWR down.
+  - The nub's pushing face runs from the lever's bottom up to 0.65 mm into the plunger's height,
+    1.3 mm tall (it was a 0.6 mm blade that the pin's play could put above or below most of the plunger).
+    The flick lifts the nub as it swings, so by the stop the face covers the plunger's whole height.
   - **If a flick doesn't click PWR,** raise `NUB_EXTRA`; if the screen turns itself off, lower it.
     Reprint only the lever (a 5-minute print).
   - KEY and BOOT, either side of PWR, can't be reached with the lever fitted. They don't need to be:
