@@ -93,19 +93,30 @@ front, so the whole remote reads as a single piece.
   screen, in the middle. **Flick the tab forwards** (towards the LED head): the lever pivots on a
   1.75 mm filament pin in two cheeks under the lid, and a nub on its lower end pushes PWR's plunger.
   A short flick turns the screen on; hold it forwards to turn it off. The button's own spring
-  returns it, and the slot in the lid stops the tab at 11°, so the nub can't push harder than the
-  switch needs.
-  - The nub's pushing face runs from the lever's bottom up to 0.65 mm into the plunger's height,
-    1.3 mm tall (it was a 0.6 mm blade that the pin's play could put above or below most of the plunger).
-    The flick lifts the nub as it swings, so by the stop the face covers the plunger's whole height.
-  - Its reach is set by `NUB_EXTRA` in `housing_lite.py` (0.2 mm past what Waveshare's model needs).
-    Checked against that model: at rest the nub is 0.1 mm clear of the plunger and touches nothing; at
-    its stop it reaches 0.72 mm past the plunger's tip (the switch travels ~0.25 mm), 0.32 mm below the
-    board and short of the switch body. With the old 0.6 mm blade 1 mm extra was needed; with the
-    full face, 1 mm held PWR down.
-  - **If a flick doesn't click PWR,** raise `NUB_EXTRA` (0.1-0.2 mm steps); if the screen turns itself off
-    or PWR is held down, lower it.
-    Reprint only the lever (a 5-minute print).
+  returns it.
+  - **The stop is at the nub, not the tab.** Two ears beside the nub meet the face of the sleeve's
+    front wall (either side of the lever's channel) after a 15° flick. Stops at the tab (the old
+    design) sit on the far side of the pin from the nub, so the pin holes' play, up to ~0.35 mm once
+    printed, moved the nub about twice that. The ears are level with the nub, so the play barely moves
+    it. The lid's slot edge is still there as a backstop, ~11° later. The tab is set back through the
+    lid so it can't reach the slot edge first, and it's full thickness above the lid.
+  - **Reach from a tolerance stack**, not trial and error. Pushing the plunger also pushes the
+    display back against the sleeve's rear crush ribs (0.15-0.3 mm), so under load the plunger's tip
+    is ~0.42 mm behind the display edge (0.19 as modelled). Add the 0.25 mm switch travel and RSS
+    tolerances of ±0.1 each for the switch on its board, the sleeve, the lever and the lid's wall, and
+    ±0.08 for the display's seat: the nub stops at 0.90 mm. Worst-case overtravel (~0.45 mm) goes
+    into the display sliding into its ribs.
+  - **The pushing face is square to the plunger at the stop** and covers its full height (0.1 mm
+    spare below, 0.3 mm under the board). The flick lifts the lower end ~1 mm, so the face is
+    drawn tilted on the upright lever. Earlier faces were drawn upright: a 0.6 mm blade that needed
+    finessing, then a taller face that met only the plunger's top by the end of the throw.
+  - **At rest** the plunger's spring pushes the lever back until its lower end meets the channel's
+    bottom edge, leaving the nub ≥0.6 mm clear of the plunger's tip (0.36 mm with the lever upright).
+  - Checked against Waveshare's 3D model: upright it touches nothing; at the stop it presses only the
+    plunger, and nothing else on the display.
+  - Parameters (`housing_lite.py`): `NUB_STOP` (reach), `LEV_STOP_THETA` (throw), `FACE_Y_STOP`.
+    Reprint only the lever (a 5-minute print). It fits as before, from under the lid before the
+    display goes in (the ears stay below the lid).
   - KEY and BOOT, either side of PWR, can't be reached with the lever fitted. They don't need to be:
     KEY is the same GPIO as UP, and BOOT the same as SELECT (hold SELECT at power-up for the
     bootloader).

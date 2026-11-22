@@ -220,26 +220,46 @@ LEV_PIN_D = 1.75                          # a piece of 1.75 mm filament, LEV_PIN
 # Pin holes, generous: 2.0 / 1.8 printed far too tight to get the filament through [user, first print].
 # Small printed holes come out undersize, the cheeks' (printed sideways) most of all.
 LEV_HOLE_D, CHEEK_HOLE_D = 2.4, 2.2       # pin free in both; a melted head on one end keeps it in
-# The nub's face: from the lever's bottom up to 0.65 mm into the plunger's height (1.3 mm tall). It was
-# 0.6 mm (0.05-0.65), a thin blade that the pin holes' ~0.5 mm of play could put above or below most of
-# the plunger, so it needed finessing to catch PWR [user, second print]. The flick also lifts the nub
-# ~0.75 mm as it swings, so the face's lower half is what meets the plunger at the end of the throw.
-# Its top is unchanged, still clear of the board at the stop; below the plunger there is nothing in
-# Waveshare's model (checked down to 3 mm under the switch).
-NUB_Y = (PLUNGER_Y[0] - 0.65, PLUNGER_Y[0] + 0.65)     # nub face bottom (= LEV_BOT) / top
-_NUB_CONTACT_Y = PLUNGER_Y[0] + 0.35                   # where it meets the plunger (sets the lever ratio)
+# The nub's face is defined where it must be AT THE STOP: square to the plunger, covering its full height
+# with 0.1 mm to spare below and stopping 0.3 mm under the board. (A face drawn on the upright lever rose
+# ~1 mm by the end of the throw and met only the plunger's top 0.3 mm.) Earlier: a 0.6 mm blade the pin's
+# play could put above or below most of the plunger - it needed finessing [user, second print].
+FACE_Y_STOP = (PLUNGER_Y[0] - 0.1, PLUNGER_Y[1] + 0.1)   # (-5.85, -4.65) at the stop; board's underside -4.35
+_NUB_CONTACT_Y = PLUNGER_Y[0] + 0.35                   # (old lever ratio: sets the lid slot, below)
 PLUNGER_TIP = 0.19                        # [STEP]
-NUB_GAP = 0.3                             # nub to plunger at rest in Waveshare's model
-# Real board [user, printed lever]: at its stop the nub didn't quite reach PWR, so it juts out NUB_EXTRA
-# further than the model says it needs (the loose pin holes take up some of the travel too). So that it
-# can never hold PWR down at rest, the lever's rear face is relieved by LEV_RELIEF where it passes
-# through the lid: it can now swing back ~1 mm at the nub, and PWR's own spring pushes it off.
-# Third print [user]: with the full-depth face (below) NUB_EXTRA 1.0 held PWR down at rest, so the real
-# plunger is nearer than 0.89 mm in; back to 0.2: at rest 0.1 mm clear of the modelled plunger,
-# at the stop 0.65 mm past its tip. (Raise it in 0.1-0.2 mm steps if a flick misses, lower it if the
-# screen turns itself off.)
-NUB_EXTRA = 0.2
-LEV_RELIEF = 1.0
+NUB_GAP = 0.3                             # (sets the lid slot's stop, LEV_THETA, below: kept so the lid is unchanged)
+# --- Where the nub stops, from a tolerance stack (all z behind the display's front edge) -------------
+# History [user]: as modelled (reach 0.64 at the tab stop) it didn't quite click; +1 mm with a 0.6 mm
+# blade needed finessing; +1 mm with a full-depth face held PWR down at rest. Not a model error - the
+# stack below explains all three. The old design put both ends of the throw on the TAB (slot edges at
+# the lid's top face), on the far side of the pin from the nub, so the pin holes' play (up to ~0.25 mm
+# radial once printed) was amplified ~2x at the nub, and nothing allowed for the display floating.
+#   Effective plunger tip under load. The nub pushes the plunger, the plunger pushes the display back
+#   until it seats on the sleeve's rear crush ribs: 0.15 mm (ribs intact) to 0.3 (ribs crushed)
+#   behind its modelled (centred) place -> 0.19 + 0.23 = 0.42 nominal, +/-0.08.
+#   Switch/board placement on the display, and the sleeve as printed: +/-0.1 each.
+#   Switch actuation: within its 0.25 mm travel (taken as 0.25, +/-0.1).
+#   Nub-to-stop on the lever, and the stop face on the lid, as printed: +/-0.1 each.
+#   RSS of those: +/-0.23 -> stop the nub at 0.42 + 0.25 + 0.23 = 0.90.
+# The stop is now on the LEVER'S LOWER END: two ears beside the nub hit the face of the sleeve's front
+# wall (z -1.9, either side of the lever's channel), level with the nub, so the pin's play no longer
+# moves the stop (the nub and the ears are within 0.5 mm of the same height: <0.1x the pin's shift).
+# Worst-case overtravel past the switch's bottom is then ~0.45 mm, taken up by the display sliding into
+# its ribs. At rest the plunger's own spring pushes the nub off: the lever can swing back until its
+# relieved rear face meets the slot (LEV_RELIEF), which leaves the nub well clear of the plunger even
+# with the pin's play amplified at the tab (checked: see LEV_BACK_THETA).
+NUB_STOP = 0.90                           # nub face when the ears hit the wall
+LEV_STOP_THETA = 0.26                     # flick from upright to the stop, rad (14.9 deg); upright, the
+                                          # face is 0.36 clear of the plunger's (unloaded) tip
+WALL_Z = -H.SLEEVE_CLEAR - H.SLEEVE_T     # -1.9: face of the sleeve's front wall, beside the channel
+EAR_X = (2.9, 5.0)                        # ears either side, |x| (lever is 6 wide; channel 6.7)
+EAR_Y = (None, -4.0)                      # from the lever's bottom up to 0.7 mm under the pin cheeks
+# The tab's front face is set back by LEV_TAB_RECESS through the lid (lever only - the lid's slot is
+# unchanged), so the old slot-edge stop now comes well after the ears do, even with the pin's play.
+LEV_TAB_RECESS = 1.4
+LEV_TAB_FULL_Y = H.LID_T + 0.8              # above this the handle is full thickness again (clears the lid top
+                                          # at the old stop)
+LEV_RELIEF = 0.3                          # (was 1.0) the back swing it allows is still ample: see the check
 SWITCH_TRAVEL, OVERTRAVEL = 0.25, 0.20    # side tact switch travel (typ.), plus margin
 LEV_SIDE_CLEAR, LEV_REAR_CLEAR = 0.35, 0.3
 CHEEK_T, CHEEK_DROP = 2.2, 3.3            # cheek thickness (x) and how far below the lid they reach
@@ -522,21 +542,40 @@ def _ze_yg():
     return H.Z_DISP_C - H.DISP_H / 2, H.Y_GLASS + DY
 
 
-def make_pwr_lever(theta=0.0, extra=None):
-    """The PWR lever in place (theta = rad of flick, 0 = at rest; >0 = tab forwards, nub rearwards).
-    extra: how much further the nub juts out than the model needs (default NUB_EXTRA; 0 = as modelled)."""
+def _rot(z, y, theta):
+    """(z, y) of a lever point (rel. display edge / glass top) after a flick of theta rad about the pin."""
+    pz, py = LEV_PIVOT
+    dz, dy = z - pz, y - py
+    return (pz + dz * math.cos(theta) - dy * math.sin(theta), py + dy * math.cos(theta) + dz * math.sin(theta))
+
+
+# the face on the upright lever, and where the ears' bottom rear corners (the first to touch) must be
+# upright to meet the wall face at the stop
+FACE_TOP = _rot(NUB_STOP, FACE_Y_STOP[1], -LEV_STOP_THETA)
+FACE_BOT = _rot(NUB_STOP, FACE_Y_STOP[0], -LEV_STOP_THETA)
+EAR_REAR = (LEV_PIVOT[0] + (WALL_Z - LEV_PIVOT[0] + (LEV_BOT - LEV_PIVOT[1]) * math.sin(LEV_STOP_THETA))
+            / math.cos(LEV_STOP_THETA))
+
+
+def make_pwr_lever(theta=0.0):
+    """The PWR lever in place (theta = rad of flick, 0 = upright; >0 = tab forwards, nub rearwards)."""
     ze, yg = _ze_yg()
     zr, zf, yt, yb = LEV_REAR, LEV_FRONT, LEV_TOP, LEV_BOT
-    zn = PLUNGER_TIP - NUB_GAP + (NUB_EXTRA if extra is None else extra)   # nub tip at rest
-    n0, n1 = NUB_Y
-    r = LEV_RELIEF
-    prof = [(zf, yb), (zn - 0.3, yb), (zn, n0 + 0.3), (zn, n1),           # nub: full-depth face (0.3 chamfer
-            (zr, n1 + 0.4), (zr, 0.3), (zr - r, 0.3 + r),                # at its foot), sloped above; rear face relieved
-            (zr - r, yt), (zf, yt)]                                      # through the lid (45 deg ramp)
+    (bz, by), (az, ay) = FACE_BOT, FACE_TOP
+    r, tf = LEV_RELIEF, zf + LEV_TAB_RECESS
+    prof = [(zf, yb), (bz - 0.5, yb), (bz, by), (az, ay),                # nub: face (tilted upright, square
+            (zr, ay + 0.6), (zr, 0.3), (zr - r, 0.3 + r),                # at the stop), sloped above; rear face relieved
+            (zr - r, yt), (zf, yt),                                      # through the lid (45 deg ramp);
+            (zf, LEV_TAB_FULL_Y + LEV_TAB_RECESS), (tf, LEV_TAB_FULL_Y), # front face set back through the lid
+            (tf, -0.3), (zf, -0.3 - LEV_TAB_RECESS)]                     # only (full thickness for the finger above)
     # YZ workplane: local x = global y, local y = global z
     lev = (cq.Workplane("YZ").workplane(offset=-LEV_W / 2)
            .polyline([(yg + y, ze + z) for z, y in prof]).close().extrude(LEV_W))
     lev = lev.edges("|X and >Y").fillet(1.0)                    # round the tab's top
+    # the stop: two ears beside the nub, in front of the sleeve's front wall
+    for sx in (-1, 1):
+        x0, x1 = sorted((sx * EAR_X[0], sx * EAR_X[1]))
+        lev = lev.union(box(x0, x1, yg + yb, yg + EAR_Y[1], ze + zf, ze + EAR_REAR))
     pz, py = ze + LEV_PIVOT[0], yg + LEV_PIVOT[1]
     lev = lev.cut(cq.Workplane("YZ").workplane(offset=-LEV_W / 2 - 1).center(py, pz)
                   .circle(LEV_HOLE_D / 2).extrude(LEV_W + 2))
@@ -748,11 +787,7 @@ def main():
     keep = {**ref, **acc, **env}
     key_paths = {k for k in acc if k.startswith("key_path_")}
     # the door closes the bay, so it is left out of the "cells out" check (that's with the door off).
-    # The PWR lever is checked as modelled: its NUB_EXTRA reaches under the display board (by design,
-    # for the real board), which the display's keep-out box doesn't model.
     chk = dict(parts)
-    if PWR_LEVER:
-        chk["pwr_lever"] = make_pwr_lever(extra=0.0)
     lines = interference({k: v for k, v in chk.items() if k != "door"},
                          {k: v for k, v in keep.items() if k != "door_screw"})
     lines += interference({"door": parts["door"]},
